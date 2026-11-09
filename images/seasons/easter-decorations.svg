@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 220">
+  <style>.easter-scene{transform-box:fill-box;transform-origin:center;animation:easter-float 3.2s ease-in-out infinite alternate}@keyframes easter-float{from{transform:translateY(4px) rotate(-1deg)}to{transform:translateY(-5px) rotate(1deg)}}</style>
+  <g class="easter-scene">
+  <ellipse cx="152" cy="193" rx="112" ry="13" fill="#142219" opacity=".12"/>
+  <g transform="rotate(-12 75 158)"><ellipse cx="75" cy="153" rx="25" ry="34" fill="#f7cf74"/><path d="M52 151q22 13 46 0" fill="none" stroke="#fff3c7" stroke-width="6"/></g>
+  <g transform="rotate(13 235 160)"><ellipse cx="235" cy="158" rx="24" ry="32" fill="#c6a8f1"/><path d="M213 155q22 13 44 0" fill="none" stroke="#f5e7ff" stroke-width="6"/></g>
+  <g fill="#f5eee2" stroke="#bba998" stroke-width="2">
+    <ellipse cx="155" cy="145" rx="48" ry="53"/>
+    <ellipse cx="128" cy="58" rx="15" ry="49" transform="rotate(-12 128 58)"/>
+    <ellipse cx="174" cy="57" rx="15" ry="49" transform="rotate(11 174 57)"/>
+  </g>
+  <ellipse cx="130" cy="60" rx="7" ry="31" fill="#f2b2c3" transform="rotate(-12 130 60)"/>
+  <ellipse cx="174" cy="59" rx="7" ry="31" fill="#f2b2c3" transform="rotate(11 174 59)"/>
+  <circle cx="140" cy="136" r="4" fill="#49372f"/><circle cx="170" cy="136" r="4" fill="#49372f"/>
+  <ellipse cx="155" cy="149" rx="7" ry="5" fill="#e9959c"/>
+  <path d="M155 153q-7 10-14 4m14-4q7 10 14 4" fill="none" stroke="#765c51" stroke-width="2.5" stroke-linecap="round"/>
+  <g fill="#ffd76a"><circle cx="95" cy="89" r="8"/><circle cx="213" cy="90" r="7"/></g>
+  <g fill="#e9a8cf"><circle cx="85" cy="89" r="4"/><circle cx="223" cy="90" r="4"/></g>
+  <path d="M75 194q4-28 20-35m134 36q-4-29-20-36" fill="none" stroke="#6da276" stroke-width="5" stroke-linecap="round"/>
+  </g>
+</svg>

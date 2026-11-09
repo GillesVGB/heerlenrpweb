@@ -1,0 +1,174 @@
+const fs = require("fs");
+const path = require("path");
+const root = path.join(__dirname, "..");
+const outDir = path.join(root, "winkel");
+fs.mkdirSync(outDir, { recursive: true });
+
+const all = [
+  ["coins-100", "100 Coins"],
+  ["coins-200", "200 Coins"],
+  ["coins-300", "300 Coins"],
+  ["coins-400", "400 Coins"],
+  ["coins-500", "500 Coins"],
+  ["coins-600", "600 Coins"],
+  ["coins-700", "700 Coins"],
+  ["coins-800", "800 Coins"],
+  ["coins-900", "900 Coins"],
+  ["coins-1000", "1.000 Coins"],
+  ["coins-1100", "1.100 Coins"],
+  ["coins-1200", "1.200 Coins"],
+];
+
+function tpl(slug, name) {
+  return `<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${name} | Heerlen Roleplay Store</title>
+<meta name="description" content="Koop ${name} bij Heerlen Roleplay. Veilig afrekenen via Tebex.">
+<meta name="theme-color" content="#141614">
+<link rel="icon" href="../images/heerlen-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../styles/heerlen.css?v=20261109-14">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem("heerlenrp_theme");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-page="product" data-product="${slug}" data-base="../">
+
+<script src="../scripts/promo.js?v=20261106-6"></script>
+
+<header class="nav is-scrolled" id="nav">
+  <div class="nav-shell">
+    <a class="brand" href="../index.html" aria-label="Heerlen Roleplay">
+      <img src="../images/heerlen-logo.png" alt="Heerlen Roleplay">
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="../index.html">Home</a>
+      <a href="./" class="is-active">Store</a>
+      <a href="../regels.html">Regels</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="nav-login" data-join href="https://cfx.re/join/5oayqbr">Connect</a>
+      <button type="button" class="cart-btn" id="cartOpen" aria-label="Winkelmand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+        <span id="cartBadge" hidden>0</span>
+      </button>
+      <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="page-store" id="top">
+  <div class="wrap product-wrap" id="productRoot"></div>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a href="../index.html">
+          <img src="../images/heerlen-logo.png" alt="">
+          <span>Heerlen Roleplay</span>
+        </a>
+        <p>Een Nederlandse FiveM roleplay server met een toegankelijke economie, waar jij zelf het verhaal van de stad schrijft.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Navigatie</h4>
+        <nav aria-label="Navigatie">
+          <a href="../index.html">Home</a>
+          <a href="./index.html">Store</a>
+          <a href="../regels.html">Regels</a>
+          <a data-join href="https://cfx.re/join/5oayqbr">Connect</a>
+        </nav>
+      </div>
+      <div class="foot-col">
+        <h4>Regelgeving</h4>
+        <nav aria-label="Regelgeving">
+          <a href="../regels.html">Serverregels</a>
+          <a href="../regels.html#apv">APV</a>
+          <a href="../regels.html#strafrecht">Wetboek van Strafrecht</a>
+          <a href="../regels.html#strafvordering">Wetboek van Strafvordering</a>
+        </nav>
+      </div>
+      <div class="foot-col">
+        <h4>Discord</h4>
+        <nav aria-label="Discord">
+          <a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener">Heerlen Roleplay</a>
+          <a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener">Support</a>
+          <a href="../regels.html">Regels lezen</a>
+          <a data-join href="https://cfx.re/join/5oayqbr">Server joinen</a>
+        </nav>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <p>© <span id="year">2026</span> Heerlen Roleplay. Alle rechten voorbehouden.</p>
+      <p>Betalingen verlopen veilig via Tebex.</p>
+    </div>
+  </div>
+</footer>
+
+<div class="shade" id="shade" hidden></div>
+<aside class="drawer" id="drawer" aria-label="Winkelmand" aria-hidden="true">
+  <header>
+    <div>
+      <h2>Winkelmand</h2>
+      <p id="cartSub">Leeg</p>
+    </div>
+    <button type="button" id="cartClose" aria-label="Sluiten">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </header>
+  <div class="drawer-body" id="cartBody"></div>
+  <footer id="cartFoot" hidden>
+    <div class="total"><span>Totaal</span><strong id="cartTotal">€0.00</strong></div>
+    <p class="cart-who" id="cartWho"></p>
+    <label class="payer">
+      <span>Je spelersnaam</span>
+      <input id="payerName" maxlength="24" autocomplete="nickname" placeholder="Bijv. speler123">
+    </label>
+    <label class="payer">
+      <span>Discord ID <em style="font-style:normal;opacity:.7">(optioneel)</em></span>
+      <input id="payerDiscord" maxlength="20" inputmode="numeric" autocomplete="off" placeholder="Alleen cijfers">
+    </label>
+    <p class="pay-note">Log in met <strong>Cfx.re</strong> en betaal via Tebex. Coins komen via <strong>hl-tebexwrapper</strong> op je account (ook offline in de wachtrij).</p>
+    <button type="button" class="btn btn-blue btn-block" id="payBtn">Betalen via Tebex</button>
+  </footer>
+</aside>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<aside class="buy-toast" id="buyToast" role="status" aria-live="polite" hidden>
+  <span class="buy-avatar" id="buyToastAvatar"></span>
+  <span class="buy-body"><strong id="buyToastName"></strong><span>kocht <strong id="buyToastItem"></strong></span></span>
+  <button type="button" class="buy-close" id="buyToastClose" aria-label="Sluit melding">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+</aside>
+
+<script src="../scripts/settings.js"></script>
+<script src="../scripts/catalog.js?v=20261109-2"></script>
+<script src="../scripts/tebex.js?v=20261109-6"></script>
+<script src="../scripts/auth.js?v=20261109-4"></script>
+<script src="../scripts/cart.js?v=20261109-6"></script>
+<script src="../scripts/nav.js?v=20261106-11"></script>
+<script src="../scripts/store.js?v=20261109-2"></script>
+<script src="../scripts/live.js?v=20261109-6"></script>
+</body>
+</html>
+`;
+}
+
+for (const [slug, name] of all) {
+  fs.writeFileSync(path.join(outDir, slug + ".html"), tpl(slug, name));
+}
+console.log("wrote", all.length, "product pages");

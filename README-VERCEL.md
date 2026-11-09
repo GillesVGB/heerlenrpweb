@@ -1,0 +1,64 @@
+# Heerlen Roleplay — Vercel deploy
+
+This deploy folder keeps the public website separate from the server-only API and CMS data. The build creates dist/ from the existing pages and generates data/initial-content.json from regels.html.
+
+## Vercel project settings
+
+- Root Directory: this project folder (the folder containing package.json).
+- Framework Preset: Other.
+- Build Command: npm run build (already in vercel.json).
+- Output Directory: dist (already in vercel.json).
+- Unknown routes show the branded `404.html` from the build output with HTTP 404. No catch-all rewrite is used, so existing pages and API routes keep their normal routing.
+- Install Command: leave Vercel's default.
+
+## Required environment variables
+
+Copy the keys and public values from .env.example into Vercel → Project → Settings → Environment Variables. Set them for Production; also set Preview if Discord login should work on preview URLs. Do not upload .env.local or commit secret values.
+
+Required for persistent CMS/admin changes:
+- Supabase: set `SUPABASE_URL` to the project URL and `SUPABASE_SERVICE_ROLE_KEY` to the server-side service role key. Never use the anon key for this private CMS store. Run `docs/supabase-content-store.sql` once in the Supabase SQL Editor to create the table.
+- Or, for Neon only, set `DATABASE_URL` to the Neon pooled PostgreSQL connection string. The app creates its single content table when first used.
+- SESSION_SECRET: a fresh random string, at least 32 characters.
+- PUBLIC_ORIGIN=https://www.heerlenrp.nl
+- DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, DISCORD_GUILD_ID, DISCORD_BOT_TOKEN.
+- ADMIN_PASSWORD: optional password fallback; use at least 12 characters. Discord admin role login is preferred.
+
+BLOB_READ_WRITE_TOKEN is an alternative persistent store if PostgreSQL is not used. Do not set both unless you intend PostgreSQL to take priority.
+
+If `/api/content` or admin saves return HTTP 503, check the selected provider's environment variables in Vercel Production and verify the database is reachable. For Supabase, confirm the table setup SQL was run. Redeploy after changing variables. The API intentionally keeps returning 503 while shared storage is unavailable; it does not switch to temporary serverless disk storage, so admin changes cannot be saved until the database connection works.
+
+## Shop and Tebex sales
+
+Site administrators can edit product names, descriptions, coin amounts, and the shop promo from the admin panel's **Shop** tab. Product package IDs and the public Headless API token are managed there as well. The storefront synchronizes mapped package base prices and reads active sales and package/category data from Tebex's public Headless API; only unconditional percentage or fixed-amount sales are shown as fixed discounted prices. Sales with customer or basket requirements remain controlled by Tebex at checkout. Use the public Headless API token from Tebex Integrations; never put a Tebex secret key in the site settings.
+
+## FiveM server status
+
+The homepage reads status from `/api/players`. The route uses the existing CFX join code `5oayqbr` by default and never accepts a server host from a browser request. For direct `dynamic.json` status, set `FIVEM_SERVER_HOST` to the current public FiveM server host in Vercel Environment Variables. `FIVEM_SERVER_PORT` is optional and defaults to `30120`; set `CFX_JOIN_CODE` if the join code changes. These are configuration values, not credentials. The optional direct host should be verified by the server owner before deployment. If it is unset or unreachable, the route falls back to the CFX listing/join-code lookup. If all status sources fail, the homepage displays an unavailable status rather than a fabricated online state or player count. Redeploy after changing these values.
+
+The searchable player FAQ is available at `/faq/`. Whitelist details are kept linked to the current Discord instructions because the repository does not contain authoritative application requirements.
+
+## Generate a SESSION_SECRET in Windows PowerShell
+
+$bytes = [byte[]]::new(48)
+[Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+[Convert]::ToBase64String($bytes)
+
+Paste the generated value directly into Vercel Environment Variables. Do not save production secrets in this folder.
+
+## Discord settings
+
+Add this exact OAuth2 Redirect URL in the Discord Developer Portal:
+
+https://www.heerlenrp.nl/api/auth/callback
+
+Register the redirect URL above both in the Discord Developer Portal and as `DISCORD_REDIRECT_URI` in Vercel. The canonical site domain is `www.heerlenrp.nl`; the apex domain redirects there. The configured admin role 1568033014384951366 grants site management. The configured staff role 1567581357004038184 grants staff-page access only. Ensure the bot is in the configured Discord server and can read member roles. Verify the guild and role IDs belong to the Heerlen server.
+
+## Domain and deploy
+
+Connect heerlenrp.nl to this Vercel project under Project → Settings → Domains. After all Production environment variables are saved, redeploy so the functions receive them.
+
+Static image and video assets are cached for one day; HTML and API responses keep their own cache behavior.
+
+## Kept outside this Vercel website deploy
+
+hl-tebexwrapper is a FiveM server resource, not a Vercel website asset. Keep and install it separately on the FiveM server; it is intentionally not exposed as public website files. Local .env.local, .vercel authentication/link files, and data/local-content.json are also excluded. Use the database or private Blob storage for shared persistent CMS content.

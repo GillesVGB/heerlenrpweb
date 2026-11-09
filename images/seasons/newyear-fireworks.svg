@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" class="season-firework-sprite">
+  <g>
+  <g fill="none" stroke="var(--spark,#ffd36e)" stroke-linecap="round" stroke-width="5">
+    <path d="M100 15v26M100 159v26M15 100h26M159 100h26M40 40l19 19m82 82 19 19M160 40l-19 19M59 141l-19 19"/>
+    <path stroke-width="3" d="M100 4v8m0 176v8M4 100h8m176 0h8M28 28l7 7m130 130 7 7m0-144-7 7M35 165l-7 7M69 15l7 13m45 144 7 13M15 69l13 7m144 45 13 7m-170 0 13-7m144-45 13-7"/>
+  </g>
+  <g fill="var(--spark,#ffd36e)"><circle cx="100" cy="100" r="7"/><circle cx="66" cy="66" r="3"/><circle cx="134" cy="70" r="3"/><circle cx="62" cy="128" r="3"/><circle cx="137" cy="133" r="3"/></g>
+  </g>
+</svg>

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/images/:path*",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=86400, stale-while-revalidate=604800"
+        }
+      ]
+    }
+  ],
+  "functions": {
+    "api/*.mjs": {
+      "includeFiles": "data/initial-content.json"
+    },
+    "api/auth/*.mjs": {
+      "includeFiles": "data/initial-content.json"
+    }
+  }
+}

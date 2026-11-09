@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 280" preserveAspectRatio="none">
+  <defs><linearGradient id="mist" x1="0" x2="1"><stop stop-color="#b998cf" stop-opacity="0"/><stop offset=".2" stop-color="#c7b5d2" stop-opacity=".48"/><stop offset=".55" stop-color="#9387b2" stop-opacity=".32"/><stop offset=".82" stop-color="#d3bdc8" stop-opacity=".38"/><stop offset="1" stop-color="#a48cb8" stop-opacity="0"/></linearGradient></defs>
+  <style>.mist-one{animation:mist-drift 8s ease-in-out infinite alternate}.mist-two{animation:mist-drift 12s ease-in-out -4s infinite alternate}@keyframes mist-drift{from{transform:translateX(-4%)}to{transform:translateX(5%)}}</style>
+  <path class="mist-one" fill="url(#mist)" d="M0 182q95-70 185-10t195-7 198 12 200-25 210 20 194-10 205 18 213-10v110H0z"/>
+  <path class="mist-two" fill="url(#mist)" opacity=".54" d="M0 227q122-35 224-8t208-22 184 17 218-7 208 12 198-21 205 20 155-8v70H0z"/>
+</svg>
