@@ -127,7 +127,7 @@ async function handler(request) {
         siteSettings: hasPermission(session, 'admin:site') ? (content.siteSettings || {}) : undefined,
         storeSettings: hasPermission(session, 'admin:site') ? (content.storeSettings || {}) : undefined
       };
-      return json({ ok: true, user: safeUser(session), content: view, integration: { discord: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET && process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN), database: !!process.env.DATABASE_URL, privateBlob: !!process.env.BLOB_READ_WRITE_TOKEN || !!(process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN) } });
+      return json({ ok: true, user: safeUser(session), content: view, integration: { discord: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET && process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN), database: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) || !!process.env.DATABASE_URL, privateBlob: !!process.env.BLOB_READ_WRITE_TOKEN || !!(process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN) } });
     } catch (error) { return json({ error: error.message }, 503); }
   }
 

@@ -15,7 +15,8 @@ This deploy folder keeps the public website separate from the server-only API an
 Copy the keys and public values from .env.example into Vercel → Project → Settings → Environment Variables. Set them for Production; also set Preview if Discord login should work on preview URLs. Do not upload .env.local or commit secret values.
 
 Required for persistent CMS/admin changes:
-- DATABASE_URL: Neon pooled PostgreSQL connection string. The app creates its single content table when first used.
+- Supabase: set `SUPABASE_URL` to the project URL and `SUPABASE_SERVICE_ROLE_KEY` to the server-side service role key. Never use the anon key for this private CMS store. Run `docs/supabase-content-store.sql` once in the Supabase SQL Editor to create the table.
+- Or, for Neon only, set `DATABASE_URL` to the Neon pooled PostgreSQL connection string. The app creates its single content table when first used.
 - SESSION_SECRET: a fresh random string, at least 32 characters.
 - PUBLIC_ORIGIN=https://www.heerlenrp.nl
 - DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, DISCORD_GUILD_ID, DISCORD_BOT_TOKEN.
@@ -23,7 +24,7 @@ Required for persistent CMS/admin changes:
 
 BLOB_READ_WRITE_TOKEN is an alternative persistent store if PostgreSQL is not used. Do not set both unless you intend PostgreSQL to take priority.
 
-If `/api/content` or admin saves return HTTP 503 with a database-connection message, check that `DATABASE_URL` is the current Neon pooled connection string and is enabled for the Production environment. Verify the Neon project is active and reachable, then redeploy the Vercel project. The API intentionally keeps returning 503 while shared storage is unavailable; it does not switch to temporary serverless disk storage, so admin changes cannot be saved until the database connection works.
+If `/api/content` or admin saves return HTTP 503, check the selected provider's environment variables in Vercel Production and verify the database is reachable. For Supabase, confirm the table setup SQL was run. Redeploy after changing variables. The API intentionally keeps returning 503 while shared storage is unavailable; it does not switch to temporary serverless disk storage, so admin changes cannot be saved until the database connection works.
 
 ## Generate a SESSION_SECRET in Windows PowerShell
 
