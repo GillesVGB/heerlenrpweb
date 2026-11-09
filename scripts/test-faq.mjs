@@ -22,6 +22,7 @@ assert.ok(page.includes('id="faqSearch"') && page.includes('type="search"'), 'FA
 assert.ok(page.includes('aria-live="polite"') && page.includes('role="status"'), 'Search results should be announced accessibly');
 assert.ok(styles.includes('.faq-item summary:focus-visible'), 'FAQ disclosures should have a visible keyboard focus style');
 assert.ok(page.indexOf('scripts/promo.js') < page.indexOf('<header class="nav'), 'The announcement strip should be placed before the FAQ navigation');
+assert.ok(page.includes('<body data-page="faq" data-base="/">'), 'FAQ auth controls should resolve shared assets from the site root');
 const navMarkup = page.match(/<nav class="nav-links"[\s\S]*?<\/nav>/)?.[0] || '';
 assert.deepEqual(
   Array.from(navMarkup.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g))
@@ -32,6 +33,19 @@ assert.deepEqual(
 );
 assert.doesNotMatch(navMarkup, /href="\/staff\/"/, 'Staff should not appear in the FAQ top navigation');
 assert.doesNotMatch(navMarkup, /href="\/server-statistieken\/"/, 'The FAQ navigation should not expose server statistics');
+const cartButton = page.match(/<button[^>]*class="cart-btn"[^>]*>[\s\S]*?<\/button>/)?.[0] || '';
+assert.match(cartButton, /<svg[\s\S]*<\/svg>/, 'FAQ should use the shared SVG cart icon');
+assert.match(cartButton, /id="cartBadge"/, 'FAQ should show the shared cart item badge');
+assert.doesNotMatch(cartButton, /⌑/, 'FAQ should not use the legacy cart glyph');
+for (const asset of ['catalog.js?v=20261109-2', 'tebex.js?v=20261109-6', 'auth.js?v=20261109-4', 'cart.js?v=20261109-6']) {
+  assert.ok(page.includes(`/scripts/${asset}`), `FAQ should load ${asset}`);
+}
+assert.ok(page.indexOf('scripts/tebex.js') < page.indexOf('scripts/auth.js'), 'Tebex should load before shared authentication');
+assert.ok(page.indexOf('scripts/auth.js') < page.indexOf('scripts/cart.js'), 'Authentication should load before the cart');
+assert.ok(page.indexOf('scripts/cart.js') < page.indexOf('scripts/nav.js'), 'Cart behavior should load before shared navigation');
+for (const cartElement of ['id="drawer"', 'id="cartClose"', 'id="cartBody"', 'id="payerName"', 'id="payBtn"']) {
+  assert.ok(page.includes(cartElement), `FAQ should include working cart element ${cartElement}`);
+}
 assert.doesNotMatch(navigation, /\["Serverstatistieken",\s*"\/server-statistieken\/"\]/, 'Shared navigation must not add server statistics');
 assert.doesNotMatch(navigation, /\["Staff",\s*"\/staff\/"\]/, 'Shared navigation must not add Staff to the top navigation');
 assert.match(navigation, /link\.href = "https:\/\/cfx\.re\/join\/j48ry5k";/, 'The generated shared-nav Connect link should use the current server code');
@@ -39,23 +53,26 @@ assert.match(navigation, /<a href="\/staff\/">Staff<\/a>/, 'Staff should remain 
 assert.match(siteFooter, /<a href="\/staff\/">Staff<\/a>/, 'Staff should remain available in the compact site footer');
 assert.doesNotMatch(navigation, /link\.href = "https:\/\/cfx\.re\/join\/5oayqbr";/, 'The generated shared-nav Connect link must not use the stale server code');
 
-async function assertNoStaffInNav(directory) {
+async function assertConsistentNavigation(directory) {
   for (const entry of await readdir(directory, { withFileTypes: true })) {
     if (entry.name === '.git' || entry.name === '.vercel' || entry.name === 'node_modules' || entry.name === 'dist') continue;
     const path = join(directory, entry.name);
     if (entry.isDirectory()) {
-      await assertNoStaffInNav(path);
+      await assertConsistentNavigation(path);
     } else if (entry.isFile() && entry.name.endsWith('.html')) {
       const html = await readFile(path, 'utf8');
       const navs = Array.from(html.matchAll(/<nav class="nav-links"[\s\S]*?<\/nav>/g), ([markup]) => markup);
       for (const markup of navs) {
         assert.doesNotMatch(markup, /href=["'][^"']*\/staff\/["']/i, `Staff should not appear in the top navigation: ${relative(root, path)}`);
       }
+      if (html.includes('<header class="nav')) {
+        assert.match(html, /(?:\.\/|\.\.\/|\/)styles\/heerlen\.css\?v=20261109-15/, `Shared navigation stylesheet should be current: ${relative(root, path)}`);
+      }
     }
   }
 }
 
-await assertNoStaffInNav(root);
+await assertConsistentNavigation(root);
 
 const input = { value: '', handlers: {}, addEventListener(type, handler) { this.handlers[type] = handler; } };
 const items = [
@@ -89,4 +106,4 @@ input.value = '';
 input.handlers.input();
 assert.ok(items.every((item) => !item.hidden), 'Clearing the search should restore every answer');
 assert.equal(empty.hidden, true);
-console.log('FAQ checks passed: content coverage, accessible controls, live filtering, empty state, and reset.');
+console.log('FAQ checks passed: content coverage, shared header controls, navigation consistency, live filtering, empty state, and reset.');
