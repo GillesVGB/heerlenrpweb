@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Bekijk de actuele serverstatus en spelersbezetting van Heerlen Roleplay.">
+  <meta name="theme-color" content="#141614">
+  <title>Serverstatistieken | Heerlen Roleplay</title>
+  <link rel="icon" href="/images/heerlen-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/heerlen.css?v=20261109-15">
+  <link rel="stylesheet" href="/styles/server-statistics.css?v=20261109-2">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("heerlenrp_theme");
+        if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+      } catch (error) {}
+    })();
+  </script>
+</head>
+<body data-page="server-statistics">
+  <header class="nav" id="nav">
+    <div class="nav-shell">
+      <a class="brand" href="/" aria-label="Heerlen Roleplay home">
+        <img src="/images/heerlen-logo.png" alt="Heerlen - GG/HEERLENRP">
+      </a>
+      <nav class="nav-links" id="navLinks" aria-label="Hoofdnavigatie">
+        <a href="/">Home</a>
+        <a href="/winkel/">Store</a>
+        <a href="/regels/">Regels</a>
+        <a href="/faq/">FAQ</a>
+        <a href="/nieuws/">Nieuws</a>
+        <a href="/updates/">Updates</a>
+        <a href="/staff/">Staff</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="nav-login" data-join href="https://cfx.re/join/j48ry5k" title="Connect naar de server">Connect</a>
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="server-stats-page">
+    <section class="server-stats-hero" aria-labelledby="statsTitle">
+      <div class="server-stats-wrap">
+        <nav class="stats-breadcrumb" aria-label="Broodkruimelpad">
+          <a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">Serverstatistieken</span>
+        </nav>
+        <p class="kicker">HEERLEN ROLEPLAY · FIVE M</p>
+        <h1 id="statsTitle">De stad, live in beeld.</h1>
+        <p class="stats-intro">Bekijk of Heerlen Roleplay bereikbaar is en hoeveel spelers er op dit moment in de stad zijn.</p>
+
+        <section class="stats-status-card is-unknown" id="statsStatusCard" data-state="unknown" role="status" aria-live="polite" aria-atomic="true" aria-busy="true">
+          <span class="stats-status-indicator" aria-hidden="true"></span>
+          <div class="stats-status-copy">
+            <p class="stats-eyebrow">Serverstatus</p>
+            <h2 id="statsStatusLabel">Status controleren…</h2>
+            <p id="statsStatusDetail">De actuele serverstatus wordt opgehaald.</p>
+          </div>
+          <a class="stats-connect-link" data-join href="https://cfx.re/join/j48ry5k">Server joinen <span aria-hidden="true">↗</span></a>
+        </section>
+
+        <section class="stats-overview" aria-label="Actuele spelersgegevens">
+          <article class="stats-metric">
+            <p class="stats-eyebrow">Spelers online</p>
+            <p class="stats-value" id="statsPlayers" aria-live="polite">—</p>
+            <p class="stats-caption">Actuele spelers in de stad</p>
+          </article>
+          <article class="stats-metric">
+            <p class="stats-eyebrow">Servercapaciteit</p>
+            <p class="stats-value" id="statsCapacity" aria-live="polite">—</p>
+            <p class="stats-caption">Maximale slots volgens de statusbron</p>
+          </article>
+          <article class="stats-metric stats-occupancy">
+            <div class="stats-metric-heading">
+              <div>
+                <p class="stats-eyebrow">Bezetting</p>
+                <p class="stats-value" id="statsOccupancy" aria-live="polite">—</p>
+              </div>
+              <span class="stats-caption">van de gemelde capaciteit</span>
+            </div>
+            <div class="stats-progress" id="statsProgress" role="progressbar" aria-label="Spelerbezetting" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden>
+              <span id="statsProgressFill"></span>
+            </div>
+          </article>
+        </section>
+
+        <section class="stats-chart-card" aria-labelledby="statsChartTitle">
+          <div class="stats-chart-header">
+            <div>
+              <p class="stats-eyebrow">Spelersverloop</p>
+              <h2 id="statsChartTitle">Laatste 24 uur</h2>
+            </div>
+            <span class="stats-chart-badge">Metingen op dit apparaat</span>
+          </div>
+          <p class="stats-chart-description">De lijn wordt opgebouwd uit echte statusmetingen, ongeveer elke minuut zolang deze pagina openstaat.</p>
+          <div class="stats-chart-wrap">
+            <svg id="statsChart" viewBox="0 0 800 260" role="img" aria-labelledby="statsChartTitle statsChartDescription" hidden>
+              <desc id="statsChartDescription">Grafiek van het aantal gemeten spelers in de afgelopen 24 uur.</desc>
+              <defs>
+                <linearGradient id="statsChartGradient" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#5aaefd" stop-opacity=".3"></stop>
+                  <stop offset="100%" stop-color="#5aaefd" stop-opacity=".01"></stop>
+                </linearGradient>
+              </defs>
+              <g id="statsChartGrid" aria-hidden="true"></g>
+              <path id="statsChartArea" class="stats-chart-area" aria-hidden="true"></path>
+              <path id="statsChartLine" class="stats-chart-line" aria-hidden="true"></path>
+              <g id="statsChartPoints" aria-hidden="true"></g>
+              <g id="statsChartLabels" aria-hidden="true"></g>
+            </svg>
+            <p class="stats-chart-empty" id="statsChartEmpty" role="status" aria-live="polite">De eerste meting wordt opgeslagen. Na een volgende meting verschijnt hier het verloop.</p>
+          </div>
+          <p class="stats-chart-footnote" id="statsChartNote">Metingen worden alleen in deze browser bewaard, maximaal 24 uur. Dit is geen gedeelde servergeschiedenis.</p>
+        </section>
+
+        <section class="stats-details" aria-label="Meetgegevens">
+          <div>
+            <span class="stats-detail-label">Statusbron</span>
+            <strong id="statsSource">CFX-serverstatus</strong>
+          </div>
+          <div>
+            <span class="stats-detail-label">Laatst gecontroleerd</span>
+            <strong id="statsCheckedAt">Nog niet gecontroleerd</strong>
+          </div>
+          <button type="button" class="stats-refresh" id="statsRefresh">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"></path><path d="M5.6 9a7 7 0 0 1 11.6-2L20 12M4 12l2.8 5a7 7 0 0 0 11.6-2"></path></svg>
+            Opnieuw controleren
+          </button>
+        </section>
+        <p class="stats-note">De status en het huidige spelersaantal komen live uit de serverstatus. De grafiek toont alleen metingen die deze browser zelf heeft verzameld; er is geen centrale historie of uptime-registratie.</p>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer"></footer>
+  <script src="/scripts/nav.js?v=20261109-3"></script>
+  <script src="/scripts/server-statistics.js?v=20261109-2" defer></script>
+  <script src="/scripts/site-footer.js?v=20261109-2" defer></script>
+</body>
+</html>

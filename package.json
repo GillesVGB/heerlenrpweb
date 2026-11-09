@@ -10,6 +10,7 @@
     "test:themes": "node scripts/test-season-effects.mjs",
     "test:faq": "node scripts/test-faq.mjs",
     "test:server-status": "node scripts/test-server-status.mjs",
+    "test:server-statistics": "npm run build && node scripts/test-server-statistics.mjs",
     "test:404": "npm run build && node scripts/test-404-page.mjs"
   },
   "dependencies": {

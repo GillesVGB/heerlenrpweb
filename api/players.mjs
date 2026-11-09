@@ -1,7 +1,8 @@
 import { json, badMethod } from '../server/http.mjs';
 import { vercelHandler } from '../server/vercel-adapter.mjs';
 
-const DEFAULT_CODE = '5oayqbr';
+const DEFAULT_CODE = 'j48ry5k';
+const LEGACY_CODE = '5oayqbr';
 const DEFAULT_PORT = 30120;
 const REQUEST_TIMEOUT_MS = 7000;
 
@@ -16,8 +17,8 @@ function configuredPort() {
 }
 
 function configuredCode() {
-  const value = String(process.env.CFX_JOIN_CODE || DEFAULT_CODE).replace(/[^a-z0-9]/gi, '').slice(0, 32);
-  return value || DEFAULT_CODE;
+  const configured = String(process.env.CFX_JOIN_CODE || '').replace(/[^a-z0-9]/gi, '').slice(0, 32).toLowerCase();
+  return !configured || configured === LEGACY_CODE ? DEFAULT_CODE : configured;
 }
 
 function timeout() {

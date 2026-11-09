@@ -34,7 +34,7 @@ Open `/admin.html`. Beheer kan via Discord met rol `1568033014384951366` of via 
 
 De overige shop- en FiveM-velden blijven lokale browserinstellingen. De publieke Tebex-token en pakket-ID's worden gedeeld opgeslagen zodat de winkel op de apparaten van bezoekers dezelfde instellingen gebruikt.
 
-Voor live serverstatus gebruikt de homepage standaard de bestaande CFX-joincode `5oayqbr`. Voor directe status via FiveM `dynamic.json`, vul in Vercel `FIVEM_SERVER_HOST` in met de actuele publieke serverhost en optioneel `FIVEM_SERVER_PORT` (standaard `30120`). Stel `CFX_JOIN_CODE` in als de joincode wijzigt. De statusroute accepteert geen host uit een browserverzoek; zonder directe host probeert hij alleen de ingestelde CFX-joincode. Als geen statusbron bereikbaar is, toont de site een onbekende status in plaats van een verzonnen spelersaantal.
+Voor live serverstatus gebruiken de homepage en `/server-statistieken/` dezelfde statusroute. Standaard gebruikt die de CFX-joincode `j48ry5k`. Een eerder ingestelde legacy-waarde `CFX_JOIN_CODE=5oayqbr` wordt genegeerd; andere expliciete `CFX_JOIN_CODE`-waarden blijven ondersteund. Voor directe status via FiveM `dynamic.json`, vul in Vercel `FIVEM_SERVER_HOST` in met de actuele publieke serverhost en optioneel `FIVEM_SERVER_PORT` (standaard `30120`). De statusroute accepteert geen host uit een browserverzoek; zonder directe host probeert hij alleen de ingestelde CFX-joincode. Als geen statusbron bereikbaar is, toont de site een onbekende status in plaats van een verzonnen spelersaantal. De grafiek op de statistiekenpagina tekent echte metingen die lokaal in de browser zijn verzameld terwijl de pagina openstaat; die gegevens worden maximaal 24 uur lokaal bewaard en zijn geen gedeelde serverhistorie.
 
 De FAQ staat op `/faq/`. Whitelist-aanmeldvoorwaarden kunnen wijzigen en zijn daarom bewust niet als vaste voorwaarden op de website vastgelegd; de FAQ verwijst hiervoor naar de actuele Discord-instructies.
 
@@ -45,5 +45,6 @@ Log eerst in op `/admin.html`, vul bij **Tebex + hl-tebexwrapper** de publieke H
 ## Controles
 
 - `npm run test:cms` controleert lokale login, oorsprongsbeveiliging, serverrechten, nieuws publiceren, staffrechten en onveranderbare APV-versies.
+- `npm run test:server-status` en `npm run test:server-statistics` controleren de live statusroute en de pagina met serverstatistieken.
 - FiveM-status, live Discord OAuth en gedeelde Vercel-opslag vragen externe hostingtoegang en secrets; die zijn niet met de lokale workflowtest geverifieerd.
 "# heerlenrpweb" 
