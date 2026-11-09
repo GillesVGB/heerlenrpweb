@@ -18,7 +18,7 @@ assert.ok(page.includes('aria-live="polite"') && page.includes('role="status"'),
 assert.ok(styles.includes('.faq-item summary:focus-visible'), 'FAQ disclosures should have a visible keyboard focus style');
 assert.ok(page.includes('<script src="/scripts/promo.js?'), 'FAQ should load the shared promo/announcement strip');
 assert.ok(page.indexOf('scripts/promo.js') < page.indexOf('<header class="nav'), 'Promo strip should be inserted before the shared navigation');
-assert.ok(page.includes('scripts/nav.js?v=20261109-3'), 'FAQ should load the current shared navigation behavior');
+assert.ok(page.includes('scripts/nav.js?v=20261109-4'), 'FAQ should load the current shared navigation behavior');
 assert.ok(page.includes('cart-btn" id="cartOpen"') && page.includes('<svg viewBox="0 0 24 24"'), 'FAQ navigation should use the shared cart icon instead of a text glyph');
 assert.ok(page.includes('href="/faq/" class="is-active"'), 'FAQ should mark its own navigation item as active');
 

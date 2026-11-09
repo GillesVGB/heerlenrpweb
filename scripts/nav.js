@@ -108,34 +108,55 @@
   function ensureContentLinks() {
     var links = document.querySelector(".nav-links");
     if (!links) return;
-    Array.from(links.querySelectorAll("a")).forEach(function (anchor) {
-      if (anchor.closest(".nav-rules-menu")) return;
-      try {
-        var path = new URL(anchor.href, location.href).pathname.replace(/\/$/, "");
-        if (path === "/regels.html" || path === "/regels") { anchor.href = "/regels/"; path = "/regels"; }
-        var current = location.pathname.replace(/\/$/, "") || "/";
-        var isHome = current === "/" && (path === "/" || anchor.getAttribute("href") === "#top");
-        anchor.classList.toggle("is-active", isHome || (current !== "/" && path === current));
-      } catch (e) {}
-    });
-    [
+    var navItems = [
+      ["Home", "/"],
+      ["Store", "/winkel/"],
       ["Regels", "/regels/"],
       ["FAQ", "/faq/"],
       ["Nieuws", "/nieuws/"],
-      ["Updates", "/updates/"],
-      ["Staff", "/staff/"]
-    ].forEach(function (item) {
-      var existing = Array.from(links.querySelectorAll("a")).some(function (anchor) {
-        try { return new URL(anchor.href, location.href).pathname.replace(/\/$/, "") === item[1].replace(/\/$/, ""); }
-        catch (e) { return false; }
-      });
-      if (existing) return;
-      var anchor = document.createElement("a");
+      ["Updates", "/updates/"]
+    ];
+    var extras = [];
+    var anchors = Array.from(links.children).filter(function (child) {
+      return child.tagName === "A";
+    });
+    var pathFor = function (anchor) {
+      try {
+        var path = new URL(anchor.href, location.href).pathname.replace(/\/$/, "");
+        if (path === "/index.html") return "/";
+        if (path === "/winkel/index.html") return "/winkel";
+        if (path === "/regels/index.html") return "/regels";
+        if (path === "/regels.html") return "/regels";
+        if (path.indexOf("/winkel/") === 0) return "/winkel";
+        return path || "/";
+      } catch (e) {
+        return "";
+      }
+    };
+    var ordered = navItems.map(function (item) {
+      var path = item[1].replace(/\/$/, "") || "/";
+      var anchor = anchors.find(function (candidate) { return pathFor(candidate) === path; });
+      if (!anchor) {
+        anchor = document.createElement("a");
+        anchor.href = item[1];
+      }
       anchor.href = item[1];
       anchor.textContent = item[0];
-      if (location.pathname.startsWith(item[1])) anchor.classList.add("is-active");
-      links.appendChild(anchor);
+      var current = location.pathname.replace(/\/$/, "") || "/";
+      var active = path === "/winkel" ? current === "/winkel" || current.indexOf("/winkel/") === 0 :
+        path === "/regels" ? current === "/regels" || current === "/regels.html" :
+          path === "/" ? current === "/" : current === path;
+      anchor.classList.toggle("is-active", active);
+      if (active) anchor.setAttribute("aria-current", "page");
+      else anchor.removeAttribute("aria-current");
+      anchors = anchors.filter(function (candidate) { return candidate !== anchor; });
+      return anchor;
     });
+    Array.from(links.children).forEach(function (child) {
+      if (child.tagName === "A" && pathFor(child) === "/staff") child.remove();
+    });
+    extras = Array.from(links.children).filter(function (child) { return ordered.indexOf(child) < 0; });
+    ordered.concat(extras).forEach(function (child) { links.appendChild(child); });
     if (!links.querySelector(".nav-mobile-discord")) {
       var discord = document.createElement("a");
       discord.className = "nav-mobile-discord";

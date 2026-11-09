@@ -1708,6 +1708,8 @@ body:has(.promo:not([hidden])) .nav { padding-top:52px; }
 .hr-footer-nav { display:flex; flex-wrap:wrap; gap:8px 20px; }
 .hr-footer-nav a { color:var(--muted); font-size:.82rem; text-decoration:none; }
 .hr-footer-nav a:hover { color:var(--blue); }
+.hr-footer-staff { color:var(--muted); font-size:.72rem; text-decoration:none; }
+.hr-footer-staff:hover { color:var(--blue); }
 .hr-footer-bottom { padding-top:15px; border-top:1px solid var(--line); font-size:.76rem; }
 .hr-byline { display:flex; align-items:center; gap:9px; color:var(--ink); text-decoration:none; }
 .hr-byline img { width:32px; height:32px; border-radius:50%; object-fit:cover; }
