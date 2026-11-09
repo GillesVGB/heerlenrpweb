@@ -20,9 +20,22 @@
     return (cartApi && cartApi.cart()[id]) || 0;
   }
 
+  function currentBasketSubtotal() {
+    if (!cartApi || !cartApi.cart) return 0;
+    var basket = cartApi.cart();
+    return Object.keys(basket).reduce(function (sum, id) {
+      var product = cat.pack(id);
+      return product ? sum + Math.max(0, Number(basket[id]) || 0) * cat.basePrice(product) : sum;
+    }, 0);
+  }
+
   function priceMarkup(product) {
-    var info = cat.priceInfo(product);
+    var info = cat.priceInfo(product, currentBasketSubtotal());
     if (!info.sale) return '<span class="price">' + cat.money(info.price) + "</span>";
+    var label = info.sale.label + (info.sale.minimumBasketValue ? " vanaf " + cat.money(info.sale.minimumBasketValue) : "");
+    if (!info.sale.eligible) {
+      return '<span class="price-sale"><span class="price">' + cat.money(info.original) + '</span><small class="price-sale-label">' + cat.esc(label) + " in winkelmand</small></span>";
+    }
     return '<span class="price-sale"><del class="price-old">' + cat.money(info.original) + '</del><span class="price">' + cat.money(info.price) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label) + "</small></span>";
   }
 

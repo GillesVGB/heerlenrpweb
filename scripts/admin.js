@@ -296,7 +296,12 @@
     }).then(function (sales) {
       if (!sales) return;
       status.textContent = sales.length
-        ? sales.map(function (sale) { return sale.name; }).join(" · ") + " — actieve sales uit Tebex."
+        ? sales.map(function (sale) {
+          var discount = sale.discount || {};
+          var label = discount.type === "percentage" ? Math.round(Number(discount.percentage)) + "% korting" : sale.name;
+          var minimum = (sale.requirements || []).find(function (requirement) { return requirement.type === "minimum_basket_value" && requirement.currency === "EUR"; });
+          return sale.name + " — " + label + (minimum ? " vanaf " + window.HeerlenCatalog.money(minimum.amount) + " winkelmand" : "");
+        }).join(" · ") + " — actieve sales uit Tebex."
         : "Geen actieve sales gevonden in Tebex.";
     }).catch(function (error) {
       status.textContent = error.message || "Tebex-sales konden niet worden opgehaald.";

@@ -147,7 +147,7 @@ try {
     fetch: async url => {
       if (url === '/api/content') return { ok: true, json: async () => ({ storeSettings: themeBody.storeSettings }) };
       if (url.endsWith('/sales')) return { ok: true, json: async () => ({ data: [{
-        name: 'Test Sale', requirements: [], discount: { type: 'percentage', percentage: 10 },
+        name: 'Test Sale', requirements: [{ type: 'minimum_basket_value', amount: 10, currency: 'EUR' }], discount: { type: 'percentage', percentage: 10 },
         applies_to: { type: 'package', packages: [{ id: 12345 }], categories: [], excluded_packages: [], variable_options: [] }
       }] }) };
       if (url.endsWith('/packages')) return { ok: true, json: async () => ({ data: [{ id: 12345, category: { id: 7 }, base_price: 8, currency: 'EUR' }] }) };
@@ -163,7 +163,9 @@ try {
   const editedPack = browser.HeerlenCatalog.pack('coins-100');
   assert.equal(editedPack.name, 'Test Coins', 'product overrides are used by the store catalog');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).original, 8, 'the current base price is synchronized from Tebex');
-  assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).price, 7.2, 'active package sales produce a verified discounted price');
+  assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).price, 8, 'conditional sales do not lower prices before the basket qualifies');
+  assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.minimumBasketValue, 10, 'the minimum basket threshold is published with the active sale');
+  assert.equal(browser.HeerlenCatalog.priceInfo(editedPack, 10).price, 7.2, 'active package sales lower prices once the minimum basket is reached');
 
   console.log('CMS and shop checks passed: origin guard, login, current Discord roles, authorization, news publish, staff permissions, shared shop product settings, Tebex package mapping and active sales, schedule validation, immutable APV versions.');
 } finally {

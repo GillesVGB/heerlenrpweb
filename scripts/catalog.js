@@ -60,40 +60,60 @@
     tebexPackages = Array.isArray(packages) ? packages : [];
   }
 
-  function priceInfo(product) {
+  function basePrice(product) {
     var original = Number(product && product.price);
     if (!Number.isFinite(original) || original < 0) return { price: 0, original: 0, sale: null };
     var settings = root.HeerlenSettings ? root.HeerlenSettings.load() : {};
     var packageId = String((settings.tebexPackages || {})[product.id] || "");
     if (!packageId) return { price: original, original: original, sale: null };
     var packageInfo = tebexPackages.find(function (item) { return String(item.id) === packageId; });
-    if (packageInfo && packageInfo.currency && String(packageInfo.currency).toUpperCase() !== "EUR") return { price: original, original: original, sale: null };
+    if (packageInfo && packageInfo.currency && String(packageInfo.currency).toUpperCase() !== "EUR") return original;
     if (packageInfo && String(packageInfo.currency || "").toUpperCase() === "EUR" && Number.isFinite(Number(packageInfo.base_price)) && Number(packageInfo.base_price) >= 0) {
       original = Number(packageInfo.base_price);
     }
+    return original;
+  }
+
+  function priceInfo(product, basketSubtotal) {
+    var original = basePrice(product);
     for (var i = 0; i < activeSales.length; i++) {
       var sale = activeSales[i];
       var applies = sale.applies_to || {};
-      if (!Array.isArray(sale.requirements) || sale.requirements.length || !packageInfo) continue;
+      var settings = root.HeerlenSettings ? root.HeerlenSettings.load() : {};
+      var packageId = String((settings.tebexPackages || {})[product.id] || "");
+      var packageInfo = tebexPackages.find(function (item) { return String(item.id) === packageId; });
+      if (!packageId || !packageInfo || !Array.isArray(sale.requirements)) continue;
       var appliesToPackage = applies.type === "package" && (applies.packages || []).some(function (item) { return String(item.id) === packageId; });
       var appliesToCategory = applies.type === "category" && packageInfo.category && (applies.categories || []).some(function (item) { return String(item.id) === String(packageInfo.category.id); });
       var excluded = (applies.excluded_packages || []).some(function (item) { return String(item.id) === packageId; });
       var appliesToAll = applies.type === "all" && !excluded;
       if (!appliesToPackage && !appliesToCategory && !appliesToAll) continue;
       var discount = sale.discount || {};
-      var amount = discount.type === "percentage" && Number.isFinite(Number(discount.percentage))
-        ? original * Math.max(0, 1 - Number(discount.percentage) / 100)
+      var requirements = sale.requirements;
+      var minimumBasketRequirement = requirements.find(function (requirement) { return requirement.type === "minimum_basket_value"; });
+      var hasUnsupportedRequirement = requirements.some(function (requirement) { return requirement.type !== "minimum_basket_value"; });
+      if (hasUnsupportedRequirement || (minimumBasketRequirement && String(minimumBasketRequirement.currency || "").toUpperCase() !== "EUR")) continue;
+      var threshold = minimumBasketRequirement ? Number(minimumBasketRequirement.amount) : 0;
+      var eligible = !minimumBasketRequirement || (Number.isFinite(Number(basketSubtotal)) && Number(basketSubtotal) >= threshold);
+      var discountAmount = discount.type === "percentage" && Number.isFinite(Number(discount.percentage))
+        ? Number(discount.percentage)
         : discount.type === "amount" && String(discount.currency || "").toUpperCase() === "EUR" && Number.isFinite(Number(discount.amount))
-          ? original - Number(discount.amount)
-          : original;
+          ? Number(discount.amount)
+          : null;
+      if (discountAmount === null) continue;
+      var amount = discount.type === "percentage"
+        ? original * Math.max(0, 1 - discountAmount / 100)
+        : original - discountAmount;
       amount = Math.max(0, Math.round(amount * 100) / 100);
       if (amount >= original) continue;
       return {
-        price: amount,
+        price: eligible ? amount : original,
         original: original,
         sale: {
           name: String(sale.name || "Tebex-aanbieding"),
-          label: discount.type === "percentage" ? Math.round(Number(discount.percentage)) + "% korting" : "Aanbieding"
+          label: discount.type === "percentage" ? Math.round(discountAmount) + "% korting" : "Aanbieding",
+          eligible: eligible,
+          minimumBasketValue: minimumBasketRequirement ? threshold : 0
         }
       };
     }
@@ -122,6 +142,7 @@
     pack: pack,
     byCat: byCat,
     popular: popular,
+    basePrice: basePrice,
     setActiveSales: setActiveSales,
     priceInfo: priceInfo,
     asset: asset,

@@ -140,7 +140,8 @@
     var bag = cart();
     var ids = Object.keys(bag).filter(function (id) { return bag[id] > 0 && cat.pack(id); });
     var totalQty = ids.reduce(function (sum, id) { return sum + bag[id]; }, 0);
-    var total = ids.reduce(function (sum, id) { return sum + bag[id] * cat.priceInfo(cat.pack(id)).price; }, 0);
+    var subtotal = ids.reduce(function (sum, id) { return sum + bag[id] * cat.basePrice(cat.pack(id)); }, 0);
+    var total = ids.reduce(function (sum, id) { return sum + bag[id] * cat.priceInfo(cat.pack(id), subtotal).price; }, 0);
     if (e.cartBadge) {
       e.cartBadge.hidden = totalQty === 0;
       e.cartBadge.textContent = String(totalQty);
@@ -155,7 +156,7 @@
       e.cartBody.innerHTML = '<ul class="cart-items">' + ids.map(function (id) {
         var p = cat.pack(id);
         var qty = bag[id];
-        var price = cat.priceInfo(p).price;
+        var price = cat.priceInfo(p, subtotal).price;
         return '<li class="cart-item">' +
           '<a class="cart-thumb" href="' + cat.productUrl(p) + '"><img src="' + cat.esc(thumbFor(p)) + '" alt="" width="96" height="54" loading="lazy"></a>' +
           '<div class="cart-info"><strong>' + cat.esc(p.name) + '</strong><span class="cart-unit">' + cat.money(price) + ' · eenmalig</span></div>' +
