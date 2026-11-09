@@ -8,7 +8,8 @@ async function handler(request) {
     const state = await readContent();
     return json(publicContent(state), 200, { 'Cache-Control': 'public, s-maxage=15, stale-while-revalidate=60' });
   } catch (error) {
-    return json({ error: 'Gedeelde inhoud is tijdelijk niet beschikbaar.' }, 503);
+    console.error('[api/content] Failed to load public content', error instanceof Error ? { name: error.name, message: error.message } : String(error));
+    return json({ error: error.message || 'Gedeelde inhoud is tijdelijk niet beschikbaar.' }, 503, { 'Cache-Control': 'no-store' });
   }
 }
 

@@ -15,6 +15,7 @@
 <link rel="icon" href="./images/heerlen-logo.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="image" href="./images/hero-poster.webp" fetchpriority="high">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./styles/heerlen.css?v=20261109-10">
 <link rel="stylesheet" href="./styles/content.css?v=20261106-6">
@@ -59,8 +60,8 @@
 
 <main id="top">
   <section class="home-hero" aria-label="Heerlen Roleplay" style="background-color:#080808">
-    <video class="hero-video" id="heroVideo" muted autoplay loop playsinline preload="auto" fetchpriority="high" poster="./images/heerlen-banner.jpg">
-      <source src="./images/hero.mp4" type="video/mp4">
+    <video class="hero-video" id="heroVideo" muted autoplay loop playsinline preload="none" poster="./images/hero-poster.webp">
+      <source type="video/mp4">
     </video>
     <div class="hero-shade" aria-hidden="true"></div>
     <div class="home-hero-inner wrap">

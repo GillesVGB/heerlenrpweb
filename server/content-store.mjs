@@ -13,6 +13,22 @@ let sql;
 let dbReady;
 let localQueue = Promise.resolve();
 
+function databaseUnavailable(error) {
+  const detail = error instanceof Error ? { name: error.name, message: error.message } : { message: String(error) };
+  console.error('[content-store] Shared database request failed', detail);
+  const wrapped = new Error('De gedeelde database is onbereikbaar. Controleer DATABASE_URL en de databaseverbinding in Vercel.');
+  wrapped.cause = error;
+  return wrapped;
+}
+
+async function databaseRequest(request) {
+  try {
+    return await request();
+  } catch (error) {
+    throw databaseUnavailable(error);
+  }
+}
+
 async function initialState() {
   return structuredClone(initialContent);
 }
@@ -41,8 +57,8 @@ async function readBlob() {
 
 export async function readContent() {
   if (useDatabase) {
-    await initDatabase();
-    const rows = await sql`SELECT body FROM fantasy_roleplay_content WHERE singleton = 1`;
+    await databaseRequest(initDatabase);
+    const rows = await databaseRequest(() => sql`SELECT body FROM fantasy_roleplay_content WHERE singleton = 1`);
     return parseStored(rows[0]?.body) || initialState();
   }
   if (useBlob) return await readBlob() || await initialState();
@@ -58,7 +74,7 @@ async function writeContent(next) {
   const serialized = JSON.stringify(next);
   if (Buffer.byteLength(serialized, 'utf8') > 4_000_000) throw new Error('Beheerinhoud is groter dan 4 MB. Verklein afbeeldingen of teksten.');
   if (useDatabase) {
-    await initDatabase();
+    await databaseRequest(initDatabase);
     throw new Error('Gebruik updateContent() voor databasewrites.');
   }
   if (useBlob) {
@@ -73,9 +89,9 @@ async function writeContent(next) {
 
 export async function updateContent(mutator) {
   if (useDatabase) {
-    await initDatabase();
+    await databaseRequest(initDatabase);
     for (let attempt = 0; attempt < 5; attempt++) {
-      const rows = await sql`SELECT revision, body FROM fantasy_roleplay_content WHERE singleton = 1`;
+      const rows = await databaseRequest(() => sql`SELECT revision, body FROM fantasy_roleplay_content WHERE singleton = 1`);
       const row = rows[0];
       const current = parseStored(row.body);
       const next = structuredClone(current);
@@ -83,7 +99,7 @@ export async function updateContent(mutator) {
       next.updatedAt = new Date().toISOString();
       if (Buffer.byteLength(JSON.stringify(next), 'utf8') > 4_000_000) throw new Error('Beheerinhoud is groter dan 4 MB. Verklein afbeeldingen of teksten.');
       const data = JSON.stringify(next);
-      const written = await sql`UPDATE fantasy_roleplay_content SET body = ${data}::jsonb, revision = revision + 1 WHERE singleton = 1 AND revision = ${row.revision} RETURNING revision`;
+      const written = await databaseRequest(() => sql`UPDATE fantasy_roleplay_content SET body = ${data}::jsonb, revision = revision + 1 WHERE singleton = 1 AND revision = ${row.revision} RETURNING revision`);
       if (written.length) return result;
     }
     throw new Error('De gegevens zijn tegelijk aangepast. Vernieuw de lijst en probeer opnieuw.');

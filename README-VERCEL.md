@@ -23,6 +23,8 @@ Required for persistent CMS/admin changes:
 
 BLOB_READ_WRITE_TOKEN is an alternative persistent store if PostgreSQL is not used. Do not set both unless you intend PostgreSQL to take priority.
 
+If `/api/content` or admin saves return HTTP 503 with a database-connection message, check that `DATABASE_URL` is the current Neon pooled connection string and is enabled for the Production environment. Verify the Neon project is active and reachable, then redeploy the Vercel project. The API intentionally keeps returning 503 while shared storage is unavailable; it does not switch to temporary serverless disk storage, so admin changes cannot be saved until the database connection works.
+
 ## Generate a SESSION_SECRET in Windows PowerShell
 
 $bytes = [byte[]]::new(48)
@@ -42,6 +44,8 @@ Register the redirect URL above both in the Discord Developer Portal and as `DIS
 ## Domain and deploy
 
 Connect heerlenrp.nl to this Vercel project under Project → Settings → Domains. After all Production environment variables are saved, redeploy so the functions receive them.
+
+Static image and video assets are cached for one day; HTML and API responses keep their own cache behavior.
 
 ## Kept outside this Vercel website deploy
 

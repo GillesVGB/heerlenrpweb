@@ -29,6 +29,8 @@ function tpl(slug, name) {
 <meta name="description" content="Koop ${name} bij Heerlen Roleplay. Veilig afrekenen via Tebex.">
 <meta name="theme-color" content="#141614">
 <link rel="icon" href="../images/heerlen-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../styles/heerlen.css?v=20261106-9">
 <script>
@@ -155,9 +157,9 @@ function tpl(slug, name) {
 
 <script src="../scripts/settings.js"></script>
 <script src="../scripts/catalog.js"></script>
-<script src="../scripts/tebex.js"></script>
-<script src="../scripts/auth.js?v=20261106-10"></script>
-<script src="../scripts/cart.js"></script>
+<script src="../scripts/tebex.js?v=20261109-2"></script>
+<script src="../scripts/auth.js?v=20261109-2"></script>
+<script src="../scripts/cart.js?v=20261109-2"></script>
 <script src="../scripts/nav.js?v=20261106-11"></script>
 <script src="../scripts/store.js"></script>
 <script src="../scripts/live.js?v=20261106-7"></script>

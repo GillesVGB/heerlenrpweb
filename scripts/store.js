@@ -27,7 +27,7 @@
         ? cat.asset("images/" + p.amount + ".jpg")
         : cat.asset("images/heerlen-mark.png");
     var faceClass = "art-face has-photo";
-    var faceInner = '<img src="' + img + '" alt="' + cat.esc(p.name) + '">';
+    var faceInner = '<img src="' + img + '" alt="' + cat.esc(p.name) + '" loading="lazy" decoding="async">';
     var inner =
       (p.badge ? '<span class="badge-pop">' + cat.esc(p.badge) + "</span>" : "") +
       (p.bonus ? '<span class="bonus">+' + p.bonus + "% bonus</span>" : "") +

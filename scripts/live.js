@@ -76,19 +76,40 @@
       var next = s.heroVideo || "./images/hero.mp4";
       var src = video.querySelector("source");
       var hero = document.querySelector(".home-hero");
-      if (src && src.getAttribute("src") !== next) {
+      if (src && (src.getAttribute("src") || video.dataset.videoSrc) !== next) {
         if (hero) hero.classList.remove("is-playing");
-        src.setAttribute("src", next);
-        video.load();
+        src.removeAttribute("src");
+        video.dataset.videoSrc = next;
+        video.dataset.heroScheduled = "";
       }
       video.style.display = "";
-      bootHeroVideo(video, hero);
+      scheduleHeroVideo(video, hero);
     }
+  }
+
+  function scheduleHeroVideo(video, hero) {
+    if (!video || video.dataset.heroBooted === "1" || video.dataset.heroScheduled === "1") return;
+    var connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+    if (window.matchMedia("(max-width: 720px), (prefers-reduced-motion: reduce)").matches ||
+        (connection && (connection.saveData || /^(slow-2g|2g|3g)$/.test(connection.effectiveType || "")))) return;
+    video.dataset.heroScheduled = "1";
+    var start = function () {
+      if (!document.documentElement.contains(video) || video.dataset.heroBooted === "1") return;
+      scheduleHeroVideo(video, hero);
+    };
+    if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 2500 });
+    else window.setTimeout(start, 1200);
   }
 
   function bootHeroVideo(video, hero) {
     if (!video || video.dataset.heroBooted === "1") return;
     video.dataset.heroBooted = "1";
+    video.dataset.heroScheduled = "";
+    var source = video.querySelector("source");
+    if (source && !source.getAttribute("src")) {
+      source.setAttribute("src", video.dataset.videoSrc || "./images/hero.mp4");
+      video.load();
+    }
 
     function revealVideo() {
       if (!hero || hero.classList.contains("is-playing")) return;
@@ -277,6 +298,7 @@
     if (!hero) return;
     hero.classList.remove("is-playing");
     video.dataset.heroBooted = "";
+    video.dataset.heroScheduled = "";
     bootHeroVideo(video, hero);
   });
 })();
