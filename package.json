@@ -8,6 +8,7 @@
     "products": "node scripts/_gen-products.js",
     "test:cms": "node scripts/test-cms-workflows.mjs",
     "test:themes": "node scripts/test-season-effects.mjs",
+    "test:nav": "node scripts/test-nav.mjs",
     "test:faq": "node scripts/test-faq.mjs",
     "test:server-status": "node scripts/test-server-status.mjs",
     "test:server-statistics": "npm run build && node scripts/test-server-statistics.mjs",

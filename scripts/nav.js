@@ -123,23 +123,7 @@
         anchor.classList.toggle("is-active", isHome || (current !== "/" && path === current));
       } catch (e) {}
     });
-    [
-      ["Regels", "/regels/"],
-      ["FAQ", "/faq/"],
-      ["Nieuws", "/nieuws/"],
-      ["Updates", "/updates/"]
-    ].forEach(function (item) {
-      var existing = Array.from(links.querySelectorAll("a")).some(function (anchor) {
-        try { return new URL(anchor.href, location.href).pathname.replace(/\/$/, "") === item[1].replace(/\/$/, ""); }
-        catch (e) { return false; }
-      });
-      if (existing) return;
-      var anchor = document.createElement("a");
-      anchor.href = item[1];
-      anchor.textContent = item[0];
-      if (location.pathname.startsWith(item[1])) anchor.classList.add("is-active");
-      links.appendChild(anchor);
-    });
+    ensurePrimaryNavOrder(links);
     if (!links.querySelector(".nav-mobile-discord")) {
       var discord = document.createElement("a");
       discord.className = "nav-mobile-discord";
@@ -161,6 +145,47 @@
       if (action.hasAttribute("data-join")) mobileAction.setAttribute("data-join", "");
       links.appendChild(mobileAction);
     }
+  }
+
+  function ensurePrimaryNavOrder(links) {
+    var items = [
+      ["Home", "/"],
+      ["Store", "/winkel/"],
+      ["Regels", "/regels/"],
+      ["FAQ", "/faq/"],
+      ["Nieuws", "/nieuws/"],
+      ["Updates", "/updates/"]
+    ];
+    function pathFor(anchor) {
+      try {
+        var path = new URL(anchor.href, location.href).pathname.replace(/\/index\.html$/i, "").replace(/\/$/, "");
+        if (path === "/regels.html") return "/regels";
+        return path || "/";
+      } catch (e) {
+        return "";
+      }
+    }
+
+    var anchors = Array.from(links.querySelectorAll("a"));
+    var ordered = items.map(function (item) {
+      var path = item[1].replace(/\/$/, "") || "/";
+      var anchor = anchors.find(function (candidate) { return pathFor(candidate) === path; });
+      if (!anchor) {
+        anchor = document.createElement("a");
+        anchor.href = item[1];
+        anchor.textContent = item[0];
+        links.appendChild(anchor);
+        anchors.push(anchor);
+      }
+      var current = pathFor({ href: location.href });
+      anchor.classList.toggle("is-active", current === path);
+      return anchor;
+    });
+
+    ordered.forEach(function (anchor, index) {
+      var current = links.children[index] || null;
+      if (current !== anchor) links.insertBefore(anchor, current);
+    });
   }
 
   function ensureRulesSubmenu() {

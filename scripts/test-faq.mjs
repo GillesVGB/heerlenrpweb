@@ -67,6 +67,7 @@ async function assertConsistentNavigation(directory) {
       }
       if (html.includes('<header class="nav')) {
         assert.match(html, /(?:\.\/|\.\.\/|\/)styles\/heerlen\.css\?v=20261109-15/, `Shared navigation stylesheet should be current: ${relative(root, path)}`);
+        assert.match(html, /(?:\.\/|\.\.\/|\/)scripts\/nav\.js\?v=20261109-5/, `Shared navigation script should be current: ${relative(root, path)}`);
       }
     }
   }
