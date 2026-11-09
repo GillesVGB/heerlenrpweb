@@ -93,7 +93,14 @@ export function verifyOrigin(request) {
   if (!origin) return false;
   let expected = process.env.PUBLIC_ORIGIN;
   if (!expected) expected = new URL(request.url).origin;
-  try { return new URL(origin).origin === new URL(expected).origin; } catch { return false; }
+  try {
+    const normalize = value => {
+      const url = new URL(value);
+      url.hostname = url.hostname.replace(/^www\./i, '');
+      return url.origin;
+    };
+    return normalize(origin) === normalize(expected);
+  } catch { return false; }
 }
 
 export function safeUser(user) {

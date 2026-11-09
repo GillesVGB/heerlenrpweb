@@ -8,8 +8,9 @@ import { runInNewContext } from 'node:vm';
 process.env.SESSION_SECRET = 'cms-workflow-test-session-secret-not-for-production';
 process.env.ADMIN_PASSWORD = 'cms-workflow-test-password-not-for-production';
 process.env.CONTENT_STORE_PATH = path.join(tmpdir(), `heerlen-cms-test-${process.pid}.json`);
+const originalPublicOrigin = process.env.PUBLIC_ORIGIN;
 
-const [{ default: admin }, { default: content }, { makeSession, permissionsForRoleIds, sessionCookie }] = await Promise.all([
+const [{ default: admin }, { default: content }, { makeSession, permissionsForRoleIds, sessionCookie, verifyOrigin }] = await Promise.all([
   import('../api/admin.mjs'), import('../api/content.mjs'), import('../server/security.mjs')
 ]);
 const base = 'http://127.0.0.1:8765';
@@ -21,6 +22,13 @@ const run = (handler, method, payload, cookie) => handler(new Request(base + '/a
 }));
 
 try {
+  process.env.PUBLIC_ORIGIN = 'https://heerlenrp.nl';
+  assert.equal(verifyOrigin(new Request('https://www.heerlenrp.nl/api/admin', { headers: { origin: 'https://www.heerlenrp.nl' } })), true, 'canonical www domain is accepted when configured origin is apex');
+  assert.equal(verifyOrigin(new Request('https://heerlenrp.nl/api/admin', { headers: { origin: 'https://heerlenrp.nl' } })), true, 'apex domain remains accepted');
+  assert.equal(verifyOrigin(new Request('https://attacker.example/api/admin', { headers: { origin: 'https://attacker.example' } })), false, 'unrelated origins remain rejected');
+  if (originalPublicOrigin === undefined) delete process.env.PUBLIC_ORIGIN;
+  else process.env.PUBLIC_ORIGIN = originalPublicOrigin;
+
   const wrongOrigin = await admin(new Request(base + '/api/admin', { method: 'POST', headers: { origin: 'https://untrusted.example', 'content-type': 'application/json' }, body: JSON.stringify({ action: 'password-login', password: process.env.ADMIN_PASSWORD }) }));
   assert.equal(wrongOrigin.status, 403, 'cross-origin state changes are rejected');
 

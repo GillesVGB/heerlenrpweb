@@ -17,7 +17,7 @@ Copy the keys and public values from .env.example into Vercel → Project → Se
 Required for persistent CMS/admin changes:
 - DATABASE_URL: Neon pooled PostgreSQL connection string. The app creates its single content table when first used.
 - SESSION_SECRET: a fresh random string, at least 32 characters.
-- PUBLIC_ORIGIN=https://heerlenrp.nl
+- PUBLIC_ORIGIN=https://www.heerlenrp.nl
 - DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, DISCORD_GUILD_ID, DISCORD_BOT_TOKEN.
 - ADMIN_PASSWORD: optional password fallback; use at least 12 characters. Discord admin role login is preferred.
 
@@ -35,9 +35,9 @@ Paste the generated value directly into Vercel Environment Variables. Do not sav
 
 Add this exact OAuth2 Redirect URL in the Discord Developer Portal:
 
-https://heerlenrp.nl/api/auth/callback
+https://www.heerlenrp.nl/api/auth/callback
 
-The configured admin role 1568033014384951366 grants site management. The configured staff role 1567581357004038184 grants staff-page access only. Ensure the bot is in the configured Discord server and can read member roles. Verify the guild and role IDs belong to the Heerlen server.
+Register the redirect URL above both in the Discord Developer Portal and as `DISCORD_REDIRECT_URI` in Vercel. The canonical site domain is `www.heerlenrp.nl`; the apex domain redirects there. The configured admin role 1568033014384951366 grants site management. The configured staff role 1567581357004038184 grants staff-page access only. Ensure the bot is in the configured Discord server and can read member roles. Verify the guild and role IDs belong to the Heerlen server.
 
 ## Domain and deploy
 
