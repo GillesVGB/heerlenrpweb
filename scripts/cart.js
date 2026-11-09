@@ -317,7 +317,7 @@
   // Pop-up van Tebex moet direct vanuit een klik komen, anders blokkeert de browser hem.
   function offerPopup(result) {
     setPayBusy(false);
-    showPayStatus("Je bestelling staat klaar bij Tebex.", false, {
+    showPayStatus("Opent het betaalvenster niet vanzelf? Klik hieronder.", false, {
       label: "Open betaalvenster",
       onClick: function () {
         try {
@@ -420,6 +420,12 @@
     var params = new URLSearchParams(location.search);
     var mode = params.get("tebex");
     if (!mode) return;
+    if (root.self !== root.top && (mode === "done" || mode === "cancel")) {
+      // We zitten in de betaalpopup: laat de hoofdpagina de afronding doen.
+      document.documentElement.style.display = "none";
+      try { root.parent.postMessage({ heerlenTebex: mode }, location.origin); } catch (e) {}
+      return;
+    }
     var tebex = root.HeerlenTebex;
     if (!tebex) return;
 
@@ -521,6 +527,12 @@
       setPayBusy(false);
       showPayStatus("Betaling mislukt. Probeer opnieuw.");
       showToast("Betaling mislukt. Probeer opnieuw.");
+    });
+    root.addEventListener("heerlen:tebex-cancel", function () {
+      var tb = root.HeerlenTebex;
+      if (tb && tb.clearPending) tb.clearPending();
+      setPayBusy(false);
+      showToast("Betaling geannuleerd");
     });
     root.addEventListener("heerlen:tebex-close", function () {
       setPayBusy(false);

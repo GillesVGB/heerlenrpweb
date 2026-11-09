@@ -327,8 +327,117 @@
     }
   }
 
+  // ---- Eigen zwarte popup in de site (iframe met de gehoste Tebex-betaalpagina) ----
+  var modalEl = null;
+  var modalKeyHandler = null;
+  var messagesBound = false;
+
+  function safeUrl(url) {
+    try {
+      var u = new URL(String(url || ""), location.href);
+      if (u.protocol === "https:" || u.origin === location.origin) return u.toString();
+    } catch (e) {}
+    return "";
+  }
+
+  function closeModal(silent) {
+    if (modalKeyHandler) {
+      document.removeEventListener("keydown", modalKeyHandler);
+      modalKeyHandler = null;
+    }
+    if (modalEl) {
+      modalEl.remove();
+      modalEl = null;
+    }
+    document.body.classList.remove("tebex-modal-open");
+    if (!silent) root.dispatchEvent(new Event("heerlen:tebex-close"));
+  }
+
+  function bindModalMessages() {
+    if (messagesBound) return;
+    messagesBound = true;
+    root.addEventListener("message", function (ev) {
+      if (ev.origin !== location.origin) return;
+      var data = ev.data;
+      if (!data || typeof data !== "object" || !data.heerlenTebex) return;
+      if (data.heerlenTebex === "done") {
+        closeModal(true);
+        root.dispatchEvent(new CustomEvent("heerlen:tebex-complete", { detail: {} }));
+      } else if (data.heerlenTebex === "cancel") {
+        closeModal(true);
+        root.dispatchEvent(new Event("heerlen:tebex-cancel"));
+      }
+    });
+  }
+
+  function openModal(payUrl) {
+    var url = safeUrl(payUrl);
+    if (!url) return false;
+    closeModal(true);
+    bindModalMessages();
+
+    var wrap = document.createElement("div");
+    wrap.className = "tebex-modal";
+    wrap.setAttribute("role", "dialog");
+    wrap.setAttribute("aria-modal", "true");
+    wrap.setAttribute("aria-label", "Afrekenen via Tebex");
+
+    var box = document.createElement("div");
+    box.className = "tebex-modal-box";
+
+    var bar = document.createElement("div");
+    bar.className = "tebex-modal-bar";
+    var title = document.createElement("strong");
+    title.textContent = "Veilig afrekenen via Tebex";
+    var actions = document.createElement("span");
+    actions.className = "tebex-modal-actions";
+    var ext = document.createElement("a");
+    ext.className = "tebex-modal-ext";
+    ext.href = url;
+    ext.target = "_blank";
+    ext.rel = "noopener";
+    ext.textContent = "Openen in nieuw tabblad";
+    var close = document.createElement("button");
+    close.type = "button";
+    close.className = "tebex-modal-close";
+    close.setAttribute("aria-label", "Sluiten");
+    close.innerHTML = "&times;";
+    actions.appendChild(ext);
+    actions.appendChild(close);
+    bar.appendChild(title);
+    bar.appendChild(actions);
+
+    var frame = document.createElement("iframe");
+    frame.className = "tebex-modal-frame";
+    frame.title = "Tebex checkout";
+    frame.setAttribute("allow", "payment *; clipboard-write");
+    frame.src = url;
+
+    box.appendChild(bar);
+    box.appendChild(frame);
+    wrap.appendChild(box);
+    wrap.addEventListener("click", function (ev) {
+      if (ev.target === wrap) closeModal();
+    });
+    close.addEventListener("click", function () { closeModal(); });
+    modalKeyHandler = function (ev) { if (ev.key === "Escape") closeModal(); };
+    document.addEventListener("keydown", modalKeyHandler);
+
+    document.body.appendChild(wrap);
+    document.body.classList.add("tebex-modal-open");
+    modalEl = wrap;
+    return true;
+  }
+
   async function launchCheckout(ident, payUrl) {
-    // 1) Popup binnen de site (Tebex.js lightbox).
+    // Nooit twee checkouts tegelijk (popup + doorsturen/los venster).
+    if (modalEl) return { launched: true, ident: ident };
+
+    // 1) Eigen popup in de site met de gehoste Tebex-betaalpagina (betrouwbaar, geen
+    //    afhankelijkheid van hoe Tebex.js besluit een popup of los venster te openen).
+    if (payUrl && openModal(payUrl)) return { launched: true, ident: ident };
+
+    // 2) Geen betaal-URL: Tebex.js-lightbox proberen.
     try {
       await loadTebexJs();
       bindCheckoutEvents();
@@ -338,13 +447,6 @@
       if (popupVisible(framesBefore)) return { launched: true, ident: ident };
     } catch (err) {
       if (typeof console !== "undefined") console.warn("[tebex] lightbox mislukt", err);
-    }
-
-    // 2) Popup verscheen niet: gehoste Tebex-betaalpagina. Na betalen stuurt Tebex terug
-    //    naar complete_url (?tebex=done), dus de site handelt de afronding af.
-    if (payUrl) {
-      location.href = payUrl;
-      return { redirected: true };
     }
 
     // 3) Laatste redmiddel: laat de speler zelf op een knop klikken (zie openPopup).
@@ -523,6 +625,8 @@
     clearPending: clearPending,
     loadTebexJs: loadTebexJs,
     openPopup: openPopup,
+    openModal: openModal,
+    closeModal: closeModal,
     PENDING_KEY: PENDING_KEY,
     LOGIN_KEY: LOGIN_KEY
   };
