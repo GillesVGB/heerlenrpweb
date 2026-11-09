@@ -301,6 +301,9 @@
   }
 
   root.HeerlenSiteEffects = { apply: apply, load: load, current: function () { return lastSettings; } };
+  document.addEventListener("visibilitychange", function () {
+    document.body.classList.toggle("is-document-hidden", document.hidden);
+  });
   if (document.body.classList.contains("admin-body") || /\/admin(?:\.html)?\/?$/.test(root.location.pathname)) return;
 
   apply(root.HeerlenSettings ? root.HeerlenSettings.load() : {});

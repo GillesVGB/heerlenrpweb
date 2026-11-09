@@ -33,6 +33,7 @@ const documentElement = { dataset: {}, style: { setProperty() {}, removeProperty
 const document = {
   body, documentElement,
   createElement: makeNode,
+  addEventListener() {},
   getElementById: () => null,
   querySelector: () => null,
   querySelectorAll(selector) { return selector === '.season-layer' ? body.children.filter((node) => node.className.includes('season-layer')) : []; }

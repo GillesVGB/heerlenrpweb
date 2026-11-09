@@ -120,6 +120,7 @@
     });
     [
       ["Regels", "/regels/"],
+      ["FAQ", "/faq/"],
       ["Nieuws", "/nieuws/"],
       ["Updates", "/updates/"],
       ["Staff", "/staff/"]
@@ -272,6 +273,7 @@
               <a href="/">Home</a>
               <a href="/winkel/">Store</a>
               <a href="/regels/">Regels</a>
+              <a href="/faq/">FAQ</a>
               <a href="/nieuws/">Nieuws</a>
               <a href="/updates/">Serverupdates</a>
               <a href="/staff/">Staff</a>

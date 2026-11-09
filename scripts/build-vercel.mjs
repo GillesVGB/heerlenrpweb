@@ -13,6 +13,7 @@ await mkdir(output, { recursive: true });
 
 const staticEntries = [
   'index.html',
+  '404.html',
   'admin.html',
   'regels.html',
   'images',
@@ -22,6 +23,7 @@ const staticEntries = [
   'regels',
   'staff',
   'updates',
+  'faq',
   'winkel'
 ];
 

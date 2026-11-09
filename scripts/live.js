@@ -8,9 +8,14 @@
   var toastAvatar = document.getElementById("buyToastAvatar");
   var toastClose = document.getElementById("buyToastClose");
   var playersEl = document.getElementById("playersOnline");
+  var statusEl = document.getElementById("serverStatus");
+  var statusLabel = document.getElementById("serverStatusLabel");
   var video = document.getElementById("heroVideo");
   var timer;
   var gapTimer;
+  var playersTimer;
+  var playersPending = false;
+  var heroVisible = !("IntersectionObserver" in window);
   var idx = 0;
   var queue = [];
   var maintenanceLayer = null;
@@ -65,10 +70,6 @@
     }
     if (title) title.textContent = s.heroTitle;
     if (lead) lead.textContent = s.heroLead;
-    if (playersEl && !playersEl.dataset.live) {
-      var n = Number(s.players) || 0;
-      playersEl.textContent = n + " / " + (Number(s.maxPlayers) || 64);
-    }
     document.querySelectorAll("[data-join]").forEach(function (el) {
       el.setAttribute("href", s.joinUrl || "https://cfx.re/join/5oayqbr");
     });
@@ -95,6 +96,10 @@
     video.dataset.heroScheduled = "1";
     var start = function () {
       if (!document.documentElement.contains(video) || video.dataset.heroBooted === "1") return;
+      if (!heroVisible || document.hidden) {
+        video.dataset.heroScheduled = "";
+        return;
+      }
       bootHeroVideo(video, hero);
     };
     if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 2500 });
@@ -223,6 +228,12 @@
     idx = 0;
     hideNote();
     schedule();
+    if (settings().playersLive === false) {
+      clearTimeout(playersTimer);
+      setStatus("unknown", "Live status uitgeschakeld");
+    } else {
+      fetchPlayers();
+    }
   });
 
   window.addEventListener("heerlen:purchase", function (e) {
@@ -232,76 +243,99 @@
   function setPlayers(n, max) {
     if (!playersEl) return;
     playersEl.dataset.live = "1";
-    var label = n + " / " + (Number(max) || 64);
-    playersEl.textContent = label;
+    playersEl.textContent = Math.max(0, Math.floor(n)) + " / " + (Number(max) > 0 ? Math.floor(Number(max)) : 64);
   }
 
-  function playersApiUrl(code) {
-    var s = settings();
-    var host = String(s.serverHost || "185.228.81.117").trim();
-    var port = String(s.serverPort || "30120").trim();
-    var custom = String(s.playersApi || "").trim();
-    var fill = function (url) {
-      return url
-        .replace(/\{code\}/g, encodeURIComponent(code))
-        .replace(/\{host\}/g, encodeURIComponent(host))
-        .replace(/\{port\}/g, encodeURIComponent(port));
-    };
-    if (custom) return fill(custom);
-    try {
-      return fill(new URL("/api/players?host={host}&port={port}&code={code}", location.origin).toString());
-    } catch (e) {
-      return fill("/api/players?host={host}&port={port}&code={code}");
+  function setStatus(state, message, clients, max) {
+    if (statusEl) {
+      statusEl.dataset.state = state;
+      statusEl.classList.remove("is-online", "is-offline", "is-unknown");
+      statusEl.classList.add("is-" + state);
+    }
+    if (statusLabel) {
+      statusLabel.textContent = message || (state === "online" ? "Online" : state === "offline" ? "Offline" : "Status onbekend");
+    }
+    if (state === "online") setPlayers(clients, max);
+    else if (playersEl) {
+      playersEl.dataset.live = "1";
+      playersEl.textContent = state === "offline" ? "0 / " + (Number(max) > 0 ? Math.floor(Number(max)) : 64) : "— / —";
     }
   }
 
-  function readPlayersPayload(data) {
-    if (!data || typeof data !== "object") return null;
-    if (data.Data) {
-      return {
-        clients: Number(data.Data.clients),
-        max: Number(data.Data.sv_maxclients || data.Data.svMaxclients)
-      };
+  function schedulePlayersRefresh() {
+    clearTimeout(playersTimer);
+    if (playersEl && !document.hidden && settings().playersLive !== false) {
+      playersTimer = setTimeout(fetchPlayers, 60000);
     }
-    return {
-      clients: Number(data.clients),
-      max: Number(data.max || data.sv_maxclients || data.svMaxclients)
-    };
   }
 
   function fetchPlayers() {
-    if (!playersEl || settings().playersLive === false) return;
-    var code = (settings().joinCode || "5oayqbr").replace(/[^a-z0-9]/gi, "");
-    var urls = [
-      playersApiUrl(code),
-      "https://frontend.cfx-services.net/api/servers/single/" + code
-    ];
-
-    function tryNext(i) {
-      if (i >= urls.length) {
-        delete playersEl.dataset.live;
-        applyChrome();
-        return;
-      }
-      fetch(urls[i], { cache: "no-store" })
-        .then(function (res) { return res.ok ? res.json() : Promise.reject(); })
-        .then(function (data) {
-          var parsed = readPlayersPayload(data);
-          if (!parsed || !isFinite(parsed.clients)) throw new Error("no clients");
-          setPlayers(parsed.clients, isFinite(parsed.max) ? parsed.max : 0);
-        })
-        .catch(function () { tryNext(i + 1); });
+    if (!playersEl) return;
+    if (settings().playersLive === false) {
+      setStatus("unknown", "Live status uitgeschakeld");
+      return;
     }
+    if (document.hidden || playersPending) return;
+    playersPending = true;
+    fetch("/api/players", { cache: "no-store", credentials: "same-origin" })
+      .then(function (response) {
+        return response.json().then(function (data) {
+          if (!response.ok) throw new Error("Status niet beschikbaar");
+          return data;
+        });
+      })
+      .then(function (data) {
+        if (data && data.online === false) {
+          setStatus("offline", "Offline", 0, data.max);
+          return;
+        }
+        var clients = Number(data && data.clients);
+        if (!data || !Number.isFinite(clients)) throw new Error("Ongeldige status");
+        setStatus("online", "Online", clients, data.max);
+      })
+      .catch(function () { setStatus("unknown", "Status niet beschikbaar"); })
+      .then(function () {
+        playersPending = false;
+        schedulePlayersRefresh();
+      });
+  }
 
-    tryNext(0);
+  if (video && "IntersectionObserver" in window) {
+    var hero = document.querySelector(".home-hero");
+    var videoObserver = new IntersectionObserver(function (entries) {
+      heroVisible = entries.some(function (entry) { return entry.isIntersecting; });
+      if (!heroVisible) {
+        video.pause();
+      } else if (video.dataset.heroBooted === "1" && !document.hidden) {
+        var playback = video.play();
+        if (playback && playback.catch) playback.catch(function () {});
+      } else {
+        scheduleHeroVideo(video, hero);
+      }
+    }, { threshold: 0.01 });
+    videoObserver.observe(video);
   }
 
   applyChrome();
   fetchPlayers();
   hideNote();
   if (activeNotes().length) setTimeout(nextNote, 2500);
-  setInterval(fetchPlayers, 30000);
-
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) {
+      clearTimeout(playersTimer);
+      if (video) video.pause();
+      return;
+    }
+    if (video && heroVisible) {
+      if (video.dataset.heroBooted === "1") {
+        var playback = video.play();
+        if (playback && playback.catch) playback.catch(function () {});
+      } else {
+        scheduleHeroVideo(video, document.querySelector(".home-hero"));
+      }
+    }
+    fetchPlayers();
+  });
   // back/forward cache: opnieuw poster tot er een echt frame is
   window.addEventListener("pageshow", function (e) {
     if (!e.persisted || !video) return;
@@ -310,6 +344,6 @@
     hero.classList.remove("is-playing");
     video.dataset.heroBooted = "";
     video.dataset.heroScheduled = "";
-    bootHeroVideo(video, hero);
+    scheduleHeroVideo(video, hero);
   });
 })();

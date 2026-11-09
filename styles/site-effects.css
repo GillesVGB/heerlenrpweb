@@ -40,6 +40,7 @@ html[data-season="newyear"] .btn-primary,html[data-season="newyear"] .btn-blue {
 html[data-season="easter"] .btn-primary,html[data-season="easter"] .btn-blue { background:#d3a8ff;color:#2d2038; }
 
 .season-layer { position:fixed;inset:0;z-index:39;overflow:hidden;pointer-events:none;contain:layout paint;isolation:isolate;--season-speed:1;--season-opacity:.5; }
+.is-document-hidden .season-layer,.is-document-hidden .season-layer * { animation-play-state:paused!important; }
 .season-layer::before { content:"";position:absolute;inset:0;opacity:.58;pointer-events:none; }
 .season-halloween::before { background:radial-gradient(ellipse at 82% 28%,rgba(255,113,50,.1),transparent 30%),linear-gradient(180deg,rgba(14,7,20,.08),rgba(12,5,17,.16)); }
 .season-christmas::before { background:linear-gradient(180deg,rgba(138,215,239,.045),transparent 40%,rgba(141,210,190,.055)); }

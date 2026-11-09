@@ -11,6 +11,7 @@ De bestaande bestanden zijn vooraf geïnventariseerd. Behalve de expliciet genoe
 - `scripts/cart.js` — bestaande winkelmand, checkout en terugkeer na betaling.
 - `scripts/catalog.js` — statische productcatalogus en coinpakketdata.
 - `scripts/live.js` — bestaande FiveM-spelertelling, fallback en aankooppopups.
+- `scripts/faq.js` — doorzoekbare FAQ-filter zonder extra library.
 - `scripts/nav.js` — bestaande thema- en mobiele navigatie; uitgebreid met de nieuwe pagina-links.
 - `scripts/regels.js` — bestaande documenttabs, inhoudsnavigatie en artikelwissels; inhoudsnavigatie ververst nu na een gepubliceerde regelversie.
 - `scripts/settings.js` — bestaande standaardinstellingen en lokale instellingenopslag.
@@ -23,7 +24,7 @@ De bestaande bestanden zijn vooraf geïnventariseerd. Behalve de expliciet genoe
 - `api/admin.mjs` — serverlogin, role checks, CMS-mutaties en auditlog.
 - `api/auth/discord.mjs`, `api/auth/callback.mjs` — Discord OAuth2 en server-side guildrolcontrole.
 - `api/content.mjs` — alleen publiek gepubliceerde nieuws- en regelversies.
-- `api/players.mjs` — Vercel-versie van de bestaande FiveM-statusproxy.
+- `api/players.mjs` — Vercel FiveM-statusproxy; directe host komt alleen uit server-side configuratie en CFX-lookup gebruikt de geconfigureerde joincode.
 - `server/security.mjs` — HMAC-sessies, HttpOnly-cookie, oorsprongscontrole en Discordrol-permissies.
 - `server/content-store.mjs` — lokale JSON-ontwikkeling, PostgreSQL met versiecontrole, of private Vercel Blob als alternatief.
 - `server/http.mjs` — gedeelde JSON-responses, inputlimieten en validatie.

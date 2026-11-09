@@ -1867,6 +1867,10 @@ html[data-theme="light"] #apv-root .hero { background:linear-gradient(115deg,#ff
 .hero-statusline { display: flex; justify-content: center; }
 .hero-statusline .players { display: inline-flex; align-items: center; gap: 9px; }
 .players-status-dot { width: 9px; height: 9px; flex: none; border-radius: 50%; background: #31c66b; box-shadow: 0 0 0 4px rgba(49,198,107,.14); }
+.server-status .players-status-dot { background:#f4b942; box-shadow:0 0 0 4px rgba(244,185,66,.14); }
+.server-status.is-online .players-status-dot { background:#31c66b; box-shadow:0 0 0 4px rgba(49,198,107,.14); }
+.server-status.is-offline .players-status-dot { background:#f05252; box-shadow:0 0 0 4px rgba(240,82,82,.14); }
+.server-players { padding-left:9px; border-left:1px solid rgba(255,255,255,.3); font-variant-numeric:tabular-nums; }
 .drawer { width: min(390px, calc(100vw - 24px)); border-radius: 16px 0 0 16px; }
 .drawer > header { padding: 18px 20px; }
 .drawer-body { padding: 16px 20px; }

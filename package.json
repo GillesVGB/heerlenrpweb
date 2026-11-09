@@ -7,7 +7,10 @@
     "preview": "node scripts/_serve.js",
     "products": "node scripts/_gen-products.js",
     "test:cms": "node scripts/test-cms-workflows.mjs",
-    "test:themes": "node scripts/test-season-effects.mjs"
+    "test:themes": "node scripts/test-season-effects.mjs",
+    "test:faq": "node scripts/test-faq.mjs",
+    "test:server-status": "node scripts/test-server-status.mjs",
+    "test:404": "npm run build && node scripts/test-404-page.mjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.0.2",
