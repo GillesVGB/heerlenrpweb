@@ -216,6 +216,13 @@
     return Object.keys(data).length ? data : null;
   }
 
+  function assertBasketHasPackages(basket, cause) {
+    if (basket && Array.isArray(basket.packages) && !basket.packages.length) {
+      var detail = cause && cause.message ? " (" + cause.message + ")" : "";
+      throw new Error("Tebex kon de producten niet aan je mand toevoegen" + detail + ". Controleer de package-ID’s in admin.");
+    }
+  }
+
   async function fillBasket(basketIdent, items, basket, meta) {
     var vars = packageVariables(basket, meta || {});
     var i;
@@ -374,11 +381,10 @@
       return redirectAuth(ident, resumeUrl, "fivem");
     }
 
-    try {
-      basket = await fillBasket(ident, items, basket, { discordId: discordId, username: username });
-    } catch (err) {
-      return redirectAuth(ident, resumeUrl, "fivem");
-    }
+    // Basket is al aan een speler gekoppeld: een fout hier is een echte fout
+    // (opnieuw naar de login sturen zou een lus veroorzaken).
+    basket = await fillBasket(ident, items, basket, { discordId: discordId, username: username });
+    assertBasketHasPackages(basket);
 
     return openCheckout(basket);
   }
@@ -393,14 +399,19 @@
       return redirectAuth(pending.ident, withQuery(pageBase(), { tebex: "resume" }), "fivem");
     }
 
+    var fillError = null;
     try {
       basket = await fillBasket(pending.ident, pending.items || [], basket, {
         username: pending.username,
         discordId: pending.discordId
       });
     } catch (e) {
+      fillError = e;
       basket = await getBasket(pending.ident);
     }
+
+    // Nooit een lege Tebex-checkout openen: laat dan de echte fout zien.
+    assertBasketHasPackages(basket, fillError);
 
     return openCheckout(basket);
   }

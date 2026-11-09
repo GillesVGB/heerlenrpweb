@@ -160,7 +160,7 @@
         var qty = bag[id];
         var price = cat.priceInfo(p, subtotal).price;
         return '<li class="cart-item">' +
-          '<a class="cart-thumb" href="' + cat.productUrl(p) + '"><img src="' + cat.esc(thumbFor(p)) + '" alt="" width="96" height="54" loading="lazy"></a>' +
+          '<a class="cart-thumb" href="' + cat.productUrl(p) + '"><img src="' + cat.esc(thumbFor(p)) + '" alt="" width="72" height="40" loading="lazy"></a>' +
           '<div class="cart-info"><strong>' + cat.esc(p.name) + '</strong><span class="cart-unit">' + cat.money(price) + ' · eenmalig</span></div>' +
           '<div class="cart-row"><span class="cart-price">' + cat.money(price * qty) + '</span>' +
           '<span class="qty"><button type="button" data-dec="' + id + '" aria-label="Minder">−</button>' +
@@ -270,37 +270,89 @@
     e.payBtn.textContent = busy ? "Even geduld…" : "Betalen via Tebex";
   }
 
+  function payStatusEl() {
+    var e = els();
+    if (!e.payBtn || !e.payBtn.parentNode) return null;
+    var el = document.getElementById("payStatus");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "payStatus";
+      el.className = "pay-status";
+      el.setAttribute("role", "alert");
+      el.hidden = true;
+      e.payBtn.parentNode.insertBefore(el, e.payBtn);
+    }
+    return el;
+  }
+
+  // Blijvende melding in de mand (een toast van 2 sec wordt makkelijk gemist)
+  function showPayStatus(text, withLogin) {
+    var el = payStatusEl();
+    if (!el) return;
+    el.textContent = "";
+    if (!text) { el.hidden = true; return; }
+    var msg = document.createElement("span");
+    msg.textContent = text;
+    el.appendChild(msg);
+    if (withLogin && root.HeerlenAuth && root.HeerlenAuth.startLogin) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "pay-status-login";
+      btn.textContent = "Inloggen met Cfx.re";
+      btn.addEventListener("click", function () { root.HeerlenAuth.startLogin("fivem"); });
+      el.appendChild(btn);
+    }
+    el.hidden = false;
+  }
+
+  function friendlyError(err) {
+    var msg = err && err.message ? String(err.message) : "Betaling mislukt";
+    if ((err && err.name === "TypeError") || /failed to fetch|networkerror|load failed/i.test(msg)) {
+      return "Kan Tebex niet bereiken. Zet je adblocker uit voor deze site en probeer het opnieuw.";
+    }
+    return msg;
+  }
+
   function pay() {
     var e = els();
     var bag = cart();
     var ids = Object.keys(bag).filter(function (id) { return bag[id] > 0 && cat.pack(id); });
-    var name = (e.payerName && e.payerName.value || "").trim().replace(/\s+/g, " ").slice(0, 24);
-    var discordRaw = (e.payerDiscord && e.payerDiscord.value || "").trim();
     var tebex = root.HeerlenTebex;
+    showPayStatus("");
+    if (!ids.length) return;
+
+    var auth = root.HeerlenAuth && root.HeerlenAuth.session && root.HeerlenAuth.session();
+    if (!auth || !auth.name) {
+      showPayStatus("Log eerst in met Cfx.re om af te rekenen.", true);
+      return;
+    }
+
+    var name = String(auth.name).trim().replace(/\s+/g, " ").slice(0, 24);
+    var discordRaw = (e.payerDiscord && e.payerDiscord.value || "").trim();
     var discordId = tebex && tebex.normalizeDiscordId
       ? tebex.normalizeDiscordId(discordRaw)
       : String(discordRaw).replace(/[^0-9]/g, "");
-    if (!ids.length) return;
     if (name.length < 2) {
       if (e.payerName) e.payerName.focus();
-      showToast("Vul je spelersnaam in");
+      showPayStatus("Vul je spelersnaam in.");
       return;
     }
     if (discordRaw && (!discordId || discordId.length < 16)) {
       if (e.payerDiscord) e.payerDiscord.focus();
-      showToast("Discord ID lijkt ongeldig (alleen cijfers, 17–19 tekens)");
+      showPayStatus("Discord ID lijkt ongeldig (alleen cijfers, 17–19 tekens).");
       return;
     }
     localStorage.setItem(NAME_KEY, name);
     if (discordId) localStorage.setItem("heerlenrp_discord", discordId);
 
     if (!tebex) {
-      showToast("Checkout is niet beschikbaar.");
+      showPayStatus("Checkout is niet beschikbaar. Ververs de pagina en probeer opnieuw.");
       return;
     }
 
     setPayBusy(true);
-    tebex.loadStoreSettings().then(function () {
+    var timer;
+    var started = tebex.loadStoreSettings().then(function () {
       var items = ids.map(function (id) {
         var p = cat.pack(id);
         return {
@@ -311,20 +363,27 @@
         };
       });
       return tebex.startCheckout(items, { username: name, discordId: discordId });
-    }).then(function (result) {
+    });
+    var timeout = new Promise(function (resolve, reject) {
+      timer = setTimeout(function () {
+        reject(new Error("Tebex reageert niet. Probeer het opnieuw of zet je adblocker uit voor deze site."));
+      }, 25000);
+    });
+
+    Promise.race([started, timeout]).then(function (result) {
+      clearTimeout(timer);
       if (result && result.launched) {
         setPayBusy(false);
         showToast("Checkout geopend");
       }
       // redirect naar Cfx of fallback volgt
     }).catch(function (err) {
+      clearTimeout(timer);
+      console.error("[cart] Betalen via Tebex mislukt", err);
       setPayBusy(false);
-      var msg = err && err.message ? err.message : "Betaling mislukt";
+      var msg = friendlyError(err);
+      showPayStatus(msg, /Log eerst in met Cfx/i.test(msg));
       showToast(msg);
-      if (/Log eerst in met Cfx/i.test(msg)) {
-        var loginBtn = document.getElementById("authLoginCfx");
-        if (loginBtn) loginBtn.focus();
-      }
     });
   }
 
@@ -350,8 +409,10 @@
           showToast("Checkout geopend");
         }
       }).catch(function (err) {
+        console.error("[cart] Checkout hervatten mislukt", err);
         setPayBusy(false);
-        showToast(err && err.message ? err.message : "Checkout mislukt");
+        showPayStatus(friendlyError(err));
+        showToast(friendlyError(err));
       });
     }
 
@@ -425,6 +486,7 @@
     root.addEventListener("heerlen:tebex-complete", finishPaidOrder);
     root.addEventListener("heerlen:tebex-error", function () {
       setPayBusy(false);
+      showPayStatus("Betaling mislukt. Probeer opnieuw.");
       showToast("Betaling mislukt. Probeer opnieuw.");
     });
     root.addEventListener("heerlen:tebex-close", function () {

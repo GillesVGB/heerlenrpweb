@@ -62,10 +62,10 @@
 
   function basePrice(product) {
     var original = Number(product && product.price);
-    if (!Number.isFinite(original) || original < 0) return { price: 0, original: 0, sale: null };
+    if (!Number.isFinite(original) || original < 0) return 0;
     var settings = root.HeerlenSettings ? root.HeerlenSettings.load() : {};
     var packageId = String((settings.tebexPackages || {})[product.id] || "");
-    if (!packageId) return { price: original, original: original, sale: null };
+    if (!packageId) return original;
     var packageInfo = tebexPackages.find(function (item) { return String(item.id) === packageId; });
     if (packageInfo && packageInfo.currency && String(packageInfo.currency).toUpperCase() !== "EUR") return original;
     if (packageInfo && String(packageInfo.currency || "").toUpperCase() === "EUR" && Number.isFinite(Number(packageInfo.base_price)) && Number(packageInfo.base_price) >= 0) {
