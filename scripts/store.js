@@ -33,9 +33,9 @@
     var info = cat.priceInfo(product, currentBasketSubtotal());
     if (!info.sale) return '<span class="price">' + cat.money(info.price) + "</span>";
     if (!info.sale.eligible) {
-      return '<span class="price-sale"><span class="price">' + cat.money(info.original) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label) + "</small></span>";
+      return '<span class="price-sale"><span class="price">' + cat.money(info.original) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label) + " KORTING</small></span>";
     }
-    return '<span class="price-sale"><del class="price-old">' + cat.money(info.original) + '</del><span class="price">' + cat.money(info.price) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label) + "</small></span>";
+    return '<span class="price-sale"><del class="price-old">' + cat.money(info.original) + '</del><span class="price">' + cat.money(info.price) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label) + " KORTING</small></span>";
   }
 
   function artHtml(p, link) {

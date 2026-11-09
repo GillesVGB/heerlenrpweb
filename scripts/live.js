@@ -163,9 +163,10 @@
     toastAvatar.replaceChildren();
     var avatar = document.createElement("img");
     avatar.alt = "";
-    avatar.src = note.avatar || (window.HeerlenAuth && window.HeerlenAuth.avatarUrl
+    var avatarUrl = window.HeerlenAuth && window.HeerlenAuth.avatarUrl
       ? window.HeerlenAuth.avatarUrl(note.name)
-      : base + "images/heerlen-mark.png");
+      : base + "images/heerlen-mark.png";
+    avatar.src = note.avatar && !/^https:\/\/forum\.cfx\.re\/user_avatar\//i.test(note.avatar) ? note.avatar : avatarUrl;
     avatar.addEventListener("error", function () {
       if (avatar.src.indexOf("heerlen-mark.png") !== -1) return;
       avatar.src = base + "images/heerlen-mark.png";

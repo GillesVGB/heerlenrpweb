@@ -10,8 +10,8 @@ process.env.ADMIN_PASSWORD = 'cms-workflow-test-password-not-for-production';
 process.env.CONTENT_STORE_PATH = path.join(tmpdir(), `heerlen-cms-test-${process.pid}.json`);
 const originalPublicOrigin = process.env.PUBLIC_ORIGIN;
 
-const [{ default: admin }, { default: content }, { makeSession, permissionsForRoleIds, sessionCookie, verifyOrigin }] = await Promise.all([
-  import('../api/admin.mjs'), import('../api/content.mjs'), import('../server/security.mjs')
+const [{ default: admin }, { default: content }, { default: avatar }, { makeSession, permissionsForRoleIds, sessionCookie, verifyOrigin }] = await Promise.all([
+  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../server/security.mjs')
 ]);
 const base = 'http://127.0.0.1:8765';
 const origin = { origin: base, 'content-type': 'application/json' };
@@ -167,6 +167,23 @@ try {
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.minimumBasketValue, 10, 'the minimum basket threshold is published with the active sale');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.label, '10%', 'percentage sale badge contains only the percentage');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack, 10).price, 7.2, 'active package sales lower prices once the minimum basket is reached');
+
+  const originalAvatarFetch = globalThis.fetch;
+  try {
+    let avatarRequest;
+    globalThis.fetch = async url => {
+      avatarRequest = String(url);
+      return new Response(new Uint8Array([137, 80, 78, 71]), { status: 200, headers: { 'Content-Type': 'image/png' } });
+    };
+    const avatarResponse = await avatar(new Request(base + '/api/avatar?name=TestPlayer'));
+    assert.equal(avatarResponse.status, 200, 'the avatar endpoint returns a CFX image');
+    assert.equal(avatarResponse.headers.get('Cache-Control'), 'public, s-maxage=86400, stale-while-revalidate=604800', 'CFX images are cached by the site');
+    assert.ok(avatarRequest.includes('/user_avatar/forum.cfx.re/testplayer/96/1.png'), 'avatar requests use the normalized CFX profile name');
+    const invalidAvatar = await avatar(new Request(base + '/api/avatar?name=bad%2Fhost'));
+    assert.equal(invalidAvatar.status, 400, 'invalid avatar names cannot select an upstream host');
+  } finally {
+    globalThis.fetch = originalAvatarFetch;
+  }
 
   console.log('CMS and shop checks passed: origin guard, login, current Discord roles, authorization, news publish, staff permissions, shared shop product settings, Tebex package mapping and active sales, schedule validation, immutable APV versions.');
 } finally {

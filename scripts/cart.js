@@ -70,14 +70,16 @@
 
   function cfxAvatar(name) {
     var auth = root.HeerlenAuth;
-    return auth && auth.avatarUrl
-      ? auth.avatarUrl(name)
-      : "https://forum.cfx.re/user_avatar/forum.cfx.re/" + encodeURIComponent(String(name || "speler").toLowerCase()) + "/96/1.png";
+    if (auth && auth.avatarUrl) return auth.avatarUrl(name);
+    var base = document.body.getAttribute("data-base") || "./";
+    var slug = String(name || "speler").trim().toLowerCase().replace(/\s+/g, "-");
+    return base + "api/avatar?name=" + encodeURIComponent(slug);
   }
 
   function avatarMarkup(name, savedAvatar) {
     var initial = cat.esc(String(name || "S").charAt(0).toUpperCase());
-    var src = cat.esc(savedAvatar || cfxAvatar(name));
+    var avatar = savedAvatar && /^https:\/\/forum\.cfx\.re\/user_avatar\//i.test(savedAvatar) ? cfxAvatar(name) : savedAvatar;
+    var src = cat.esc(avatar || cfxAvatar(name));
     return '<span class="avatar"><img src="' + src + '" alt="" loading="lazy" decoding="async"><span aria-hidden="true">' + initial + '</span></span>';
   }
 

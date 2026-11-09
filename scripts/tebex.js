@@ -195,7 +195,9 @@
   function cfxAvatarUrl(name) {
     var auth = root.HeerlenAuth;
     if (auth && typeof auth.avatarUrl === "function") return auth.avatarUrl(name);
-    return "https://forum.cfx.re/user_avatar/forum.cfx.re/" + encodeURIComponent(String(name || "speler").toLowerCase()) + "/96/1.png";
+    var base = document.body.getAttribute("data-base") || "./";
+    var slug = String(name || "speler").trim().toLowerCase().replace(/\s+/g, "-");
+    return base + "api/avatar?name=" + encodeURIComponent(slug);
   }
 
   function checkoutUrl(basket) {

@@ -26,8 +26,9 @@
   }
 
   function avatarUrl(name) {
-    var n = encodeURIComponent(String(name || "speler").toLowerCase());
-    return "https://forum.cfx.re/user_avatar/forum.cfx.re/" + n + "/96/1.png";
+    var n = String(name || "speler").trim().toLowerCase().replace(/\s+/g, "-");
+    var base = document.body.getAttribute("data-base") || "./";
+    return base + "api/avatar?name=" + encodeURIComponent(n);
   }
 
   function showToast(text) {

@@ -298,7 +298,7 @@
       status.textContent = sales.length
         ? sales.map(function (sale) {
           var discount = sale.discount || {};
-          var label = discount.type === "percentage" ? Math.round(Number(discount.percentage)) + "% korting" : sale.name;
+          var label = discount.type === "percentage" ? Math.round(Number(discount.percentage)) + "% KORTING" : sale.name;
           var minimum = (sale.requirements || []).find(function (requirement) { return requirement.type === "minimum_basket_value" && requirement.currency === "EUR"; });
           return sale.name + " — " + label + (minimum ? " vanaf " + window.HeerlenCatalog.money(minimum.amount) + " winkelmand" : "");
         }).join(" · ") + " — actieve sales uit Tebex."
