@@ -197,6 +197,27 @@ async function handler(request) {
         }
         clean.tebexPackages = packages;
       }
+      if (input.shopProducts !== undefined) {
+        const allowedProducts = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200].map(amount => `coins-${amount}`));
+        if (!input.shopProducts || typeof input.shopProducts !== 'object' || Array.isArray(input.shopProducts) || Object.keys(input.shopProducts).length > 20) return json({ error: 'Ongeldige shopproducten.' }, 400);
+        const products = {};
+        for (const [id, product] of Object.entries(input.shopProducts)) {
+          if (!allowedProducts.has(id) || !product || typeof product !== 'object' || Array.isArray(product)) return json({ error: 'Ongeldig shopproduct.' }, 400);
+          const item = {};
+          if (product.name !== undefined) item.name = cleanText(product.name, 60, 'Productnaam', false);
+          if (product.blurb !== undefined) item.blurb = cleanText(product.blurb, 240, 'Productomschrijving', false);
+          if (product.amount !== undefined) {
+            if (!Number.isInteger(Number(product.amount)) || Number(product.amount) < 1 || Number(product.amount) > 100000) return json({ error: 'Ongeldig coin-aantal.' }, 400);
+            item.amount = Number(product.amount);
+          }
+          if (product.bonus !== undefined) {
+            if (!Number.isInteger(Number(product.bonus)) || Number(product.bonus) < 0 || Number(product.bonus) > 10000) return json({ error: 'Ongeldige productbonus.' }, 400);
+            item.bonus = Number(product.bonus);
+          }
+          products[id] = item;
+        }
+        clean.shopProducts = products;
+      }
       for (const key of ['promoEnabled', 'seasonEnabled', 'seasonAccentEnabled', 'seasonEffects', 'maintenanceEnabled', 'promoMode', 'seasonTheme', 'seasonStart', 'seasonEnd', 'seasonAccent']) {
         if (input[key] !== undefined) clean[key] = input[key];
       }
@@ -205,15 +226,16 @@ async function handler(request) {
       const result = await updateContent(state => {
         const { tebexToken, tebexPackages, ...siteSettings } = clean;
         state.siteSettings = { ...(state.siteSettings || {}), ...siteSettings, updatedAt: new Date().toISOString(), updatedBy: user.username };
-        if (clean.tebexToken !== undefined || clean.tebexPackages !== undefined) {
+        if (clean.tebexToken !== undefined || clean.tebexPackages !== undefined || clean.shopProducts !== undefined) {
           state.storeSettings = {
             ...(state.storeSettings || {}),
             ...(tebexToken !== undefined ? { tebexToken } : {}),
             ...(tebexPackages !== undefined ? { tebexPackages } : {}),
+            ...(clean.shopProducts !== undefined ? { shopProducts: clean.shopProducts } : {}),
             updatedAt: new Date().toISOString(),
             updatedBy: user.username
           };
-          appendAudit(state, user, 'aangepast', 'winkelinstellingen', 'Tebex-token en pakket-ID’s');
+          appendAudit(state, user, 'aangepast', 'winkelinstellingen', 'Tebex-token, producten en pakket-ID’s');
         }
         appendAudit(state, user, 'aangepast', 'site-instellingen', 'Homepage, thema en onderhoud');
         return { ok: true };

@@ -318,10 +318,10 @@
     if (document.querySelector('script[src*="/scripts/site-effects.js"]')) return;
     var stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";
-    stylesheet.href = "/styles/site-effects.css?v=20261106-11";
+    stylesheet.href = "/styles/site-effects.css?v=20261109-2";
     document.head.appendChild(stylesheet);
     var script = document.createElement("script");
-    script.src = "/scripts/site-effects.js?v=20261106-11";
+    script.src = "/scripts/site-effects.js?v=20261109-2";
     script.async = true;
     document.body.appendChild(script);
   }

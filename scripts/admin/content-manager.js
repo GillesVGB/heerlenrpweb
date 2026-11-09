@@ -36,16 +36,17 @@
     document.querySelectorAll("[data-admin-section]").forEach(function (section) { section.hidden = section.getAttribute("data-admin-section") !== name; });
     document.querySelectorAll("#cmsTabs [data-section]").forEach(function (button) { button.classList.toggle("is-active", button.getAttribute("data-section") === name); });
     var save = document.getElementById("saveAll");
-    if (save) save.hidden = name !== "settings";
+    if (save) save.hidden = name !== "settings" && name !== "shop";
   }
   function can(permission) { return !!currentUser && Array.isArray(currentUser.permissions) && currentUser.permissions.includes(permission); }
   function accessTabs() {
     document.querySelectorAll("#cmsTabs [data-section]").forEach(function (button) {
       var section = button.getAttribute("data-section");
-      var permitted = (section === "settings" && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write"));
+      var permitted = ((section === "settings" || section === "shop") && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write"));
       button.hidden = !permitted;
     });
     if (!can("admin:site")) document.querySelector('[data-admin-section="settings"]')?.setAttribute("hidden", "");
+    if (!can("admin:site")) document.querySelector('[data-admin-section="shop"]')?.setAttribute("hidden", "");
     if (!can("audit:read")) document.querySelector('[data-admin-section="audit"]')?.setAttribute("hidden", "");
     if (!can("news:write")) document.querySelector('[data-admin-section="news"]')?.setAttribute("hidden", "");
     if (!can("changelog:write")) document.querySelector('[data-admin-section="changelog"]')?.setAttribute("hidden", "");

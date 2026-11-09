@@ -1,4 +1,6 @@
 (function (root) {
+  var activeSales = [];
+  var tebexPackages = [];
   var PACKS = [
     { id: "coins-100", slug: "coins-100", cat: "coins", name: "100 Coins", amount: 100, price: 5, bonus: 10, popular: false, blurb: "Een handig pakket coins voor voertuigen, kentekens en meer via de in-game store." },
     { id: "coins-200", slug: "coins-200", cat: "coins", name: "200 Coins", amount: 200, price: 10, bonus: 15, popular: false, blurb: "Een handig pakket coins voor voertuigen, kentekens en meer via de in-game store." },
@@ -25,17 +27,77 @@
   }
 
   function pack(id) {
-    for (var i = 0; i < PACKS.length; i++) if (PACKS[i].id === id || PACKS[i].slug === id) return PACKS[i];
+    var items = products();
+    for (var i = 0; i < items.length; i++) if (items[i].id === id || items[i].slug === id) return items[i];
     return null;
   }
 
+  function products() {
+    var saved = root.HeerlenSettings ? root.HeerlenSettings.load().shopProducts : {};
+    return PACKS.map(function (pack) {
+      var overrides = saved && saved[pack.id];
+      if (!overrides || typeof overrides !== "object") return pack;
+      var item = Object.assign({}, pack);
+      if (typeof overrides.name === "string" && overrides.name.trim()) item.name = overrides.name.slice(0, 60);
+      if (typeof overrides.blurb === "string") item.blurb = overrides.blurb.slice(0, 240);
+      if (Number.isInteger(Number(overrides.amount)) && Number(overrides.amount) > 0 && Number(overrides.amount) <= 100000) item.amount = Number(overrides.amount);
+      if (Number.isInteger(Number(overrides.bonus)) && Number(overrides.bonus) >= 0 && Number(overrides.bonus) <= 10000) item.bonus = Number(overrides.bonus);
+      return item;
+    });
+  }
+
   function byCat(cat) {
-    return PACKS.filter(function (p) { return p.cat === cat; });
+    return products().filter(function (p) { return p.cat === cat; });
   }
 
   function popular() {
     var order = ["coins-300", "coins-600", "coins-1000", "coins-1200"];
     return order.map(pack).filter(Boolean);
+  }
+
+  function setActiveSales(sales, packages) {
+    activeSales = Array.isArray(sales) ? sales : [];
+    tebexPackages = Array.isArray(packages) ? packages : [];
+  }
+
+  function priceInfo(product) {
+    var original = Number(product && product.price);
+    if (!Number.isFinite(original) || original < 0) return { price: 0, original: 0, sale: null };
+    var settings = root.HeerlenSettings ? root.HeerlenSettings.load() : {};
+    var packageId = String((settings.tebexPackages || {})[product.id] || "");
+    if (!packageId) return { price: original, original: original, sale: null };
+    var packageInfo = tebexPackages.find(function (item) { return String(item.id) === packageId; });
+    if (packageInfo && packageInfo.currency && String(packageInfo.currency).toUpperCase() !== "EUR") return { price: original, original: original, sale: null };
+    if (packageInfo && String(packageInfo.currency || "").toUpperCase() === "EUR" && Number.isFinite(Number(packageInfo.base_price)) && Number(packageInfo.base_price) >= 0) {
+      original = Number(packageInfo.base_price);
+    }
+    for (var i = 0; i < activeSales.length; i++) {
+      var sale = activeSales[i];
+      var applies = sale.applies_to || {};
+      if (!Array.isArray(sale.requirements) || sale.requirements.length || !packageInfo) continue;
+      var appliesToPackage = applies.type === "package" && (applies.packages || []).some(function (item) { return String(item.id) === packageId; });
+      var appliesToCategory = applies.type === "category" && packageInfo.category && (applies.categories || []).some(function (item) { return String(item.id) === String(packageInfo.category.id); });
+      var excluded = (applies.excluded_packages || []).some(function (item) { return String(item.id) === packageId; });
+      var appliesToAll = applies.type === "all" && !excluded;
+      if (!appliesToPackage && !appliesToCategory && !appliesToAll) continue;
+      var discount = sale.discount || {};
+      var amount = discount.type === "percentage" && Number.isFinite(Number(discount.percentage))
+        ? original * Math.max(0, 1 - Number(discount.percentage) / 100)
+        : discount.type === "amount" && String(discount.currency || "").toUpperCase() === "EUR" && Number.isFinite(Number(discount.amount))
+          ? original - Number(discount.amount)
+          : original;
+      amount = Math.max(0, Math.round(amount * 100) / 100);
+      if (amount >= original) continue;
+      return {
+        price: amount,
+        original: original,
+        sale: {
+          name: String(sale.name || "Tebex-aanbieding"),
+          label: discount.type === "percentage" ? Math.round(Number(discount.percentage)) + "% korting" : "Aanbieding"
+        }
+      };
+    }
+    return { price: original, original: original, sale: null };
   }
 
   function asset(path) {
@@ -54,11 +116,14 @@
 
   root.HeerlenCatalog = {
     PACKS: PACKS,
+    products: products,
     money: money,
     esc: esc,
     pack: pack,
     byCat: byCat,
     popular: popular,
+    setActiveSales: setActiveSales,
+    priceInfo: priceInfo,
     asset: asset,
     productUrl: productUrl,
     storeUrl: storeUrl

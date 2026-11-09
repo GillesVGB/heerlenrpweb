@@ -5,4 +5,5 @@ create table if not exists public.fantasy_roleplay_content (
 );
 
 alter table public.fantasy_roleplay_content enable row level security;
+grant usage on schema public to service_role;
 grant all on table public.fantasy_roleplay_content to service_role;

@@ -122,7 +122,6 @@
       for (var snowIndex = 0; snowIndex < (reduceMotion ? 0 : count); snowIndex++) {
         var snow = document.createElement("span");
         snow.className = "season-snowflake";
-        snow.textContent = ["❄", "❅", "✣", "·"][snowIndex % 4];
         snow.style.setProperty("--x", ranged(snowIndex, 37, 4));
         snow.style.setProperty("--drift", (18 + (snowIndex * 29) % 88) + "px");
         snow.style.setProperty("--flake-size", (8 + (snowIndex * 7) % 16) + "px");
@@ -155,7 +154,6 @@
       for (var leafIndex = 0; leafIndex < (reduceMotion ? 0 : Math.ceil(count / 5)); leafIndex++) {
         var leaf = document.createElement("span");
         leaf.className = "season-leaf";
-        leaf.textContent = ["🍂", "🍁", "✦"][leafIndex % 3];
         leaf.style.setProperty("--x", ranged(leafIndex, 41, 13));
         leaf.style.setProperty("--leaf-size", (16 + leafIndex % 3 * 5) + "px");
         leaf.style.setProperty("--drift", (42 + leafIndex * 9) + "px");
@@ -238,7 +236,7 @@
       maintenanceLayer.className = "site-maintenance";
       maintenanceLayer.setAttribute("role", "status");
       maintenanceLayer.setAttribute("aria-live", "polite");
-      maintenanceLayer.innerHTML = '<div class="maintenance-panel"><span class="maintenance-mark" aria-hidden="true">✦</span><p class="kicker">HEERLEN ROLEPLAY</p><h1>We zijn even bezig</h1><p class="maintenance-copy"></p><span class="maintenance-status"><i></i> Onderhoud</span></div>';
+      maintenanceLayer.innerHTML = '<div class="maintenance-panel"><span class="maintenance-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l2.5 2.5"/><circle cx="12" cy="12" r="9"/><path d="M3.5 9h2M18.5 9h2"/></svg></span><p class="kicker">HEERLEN ROLEPLAY</p><h1>We zijn even bezig</h1><p class="maintenance-copy"></p><span class="maintenance-status"><i></i> Onderhoud</span></div>';
       document.body.appendChild(maintenanceLayer);
     }
     maintenanceLayer.querySelector(".maintenance-copy").textContent = settings.maintenanceMessage;

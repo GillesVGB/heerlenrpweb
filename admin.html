@@ -8,8 +8,8 @@
 <meta name="theme-color" content="#141614">
 <link rel="icon" href="/images/heerlen-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/styles/heerlen.css?v=20261106-11">
-<link rel="stylesheet" href="/styles/admin.css?v=20261106-9">
+<link rel="stylesheet" href="/styles/heerlen.css?v=20261109-12">
+<link rel="stylesheet" href="/styles/admin.css?v=20261109-10">
 <link rel="stylesheet" href="/styles/cms.css">
 </head>
 <body class="admin-body">
@@ -58,7 +58,8 @@
     </div>
 
     <nav class="cms-tabs" aria-label="Beheerdelen" id="cmsTabs">
-      <button type="button" class="is-active" data-section="settings">Site & shop</button>
+      <button type="button" class="is-active" data-section="settings">Site</button>
+      <button type="button" data-section="shop">Shop</button>
       <button type="button" data-section="news">Nieuws</button>
       <button type="button" data-section="changelog">Serverupdates</button>
       <button type="button" data-section="staff">Staff</button>
@@ -70,11 +71,6 @@
     <div class="admin-grid">
       <form class="admin-card" id="siteForm">
         <h2>Homepage</h2>
-        <label class="check"><input name="promoEnabled" type="checkbox"><span>Promo / mededeling tonen</span></label>
-        <label><span>Weergave</span><select name="promoMode"><option value="promo">Promotie</option><option value="announcement">Mededeling</option></select></label>
-        <label><span>Badge of korte kop</span><input name="promoBonus" maxlength="40"></label>
-        <label><span>Tekst</span><input name="promoText" maxlength="120"></label>
-        <label><span>Knoptekst (optioneel)</span><input name="promoCta" maxlength="40"></label>
         <label><span>Hero titel</span><input name="heroTitle" maxlength="60"></label>
         <label><span>Hero tekst</span><textarea name="heroLead" rows="3" maxlength="240"></textarea></label>
         <label><span>Video URL of pad</span><input name="heroVideo" placeholder="./images/hero.mp4"></label>
@@ -130,14 +126,6 @@
         <p class="hint">Echte aankopen uit de store springen er meteen tussen.</p>
       </form>
 
-      <form class="admin-card" id="tebexForm">
-        <h2>Tebex + hl-tebexwrapper</h2>
-        <label><span>Public token / webstore ID</span><input name="tebexToken" maxlength="120" placeholder="uit Tebex Creators → Integrations → Headless API"></label>
-        <p class="hint">Webstore checkt uit via Tebex.js. Levering doet <strong>hl-tebexwrapper</strong>. De publieke token en pakket-ID's worden met Opslaan gedeeld met alle bezoekers. Plak onderstaande command 1-op-1 in elk Tebex-package onder <strong>Game server commands</strong>.</p>
-        <div class="tebex-cmd-list" id="tebexCmdList" aria-label="Tebex givecoins commands"></div>
-        <p class="hint">Speler logt in met <strong>Cfx.re</strong>. Tebex-plugin + Secret Key verplicht. Resource: <code>ensure hl-tebexwrapper</code>.</p>
-        <div class="tebex-packages" id="tebexPackages"></div>
-      </form>
     </div>
 
     <section class="admin-card notes-card">
@@ -152,6 +140,37 @@
       </div>
     </section>
     </div>
+
+    <section class="cms-section" data-admin-section="shop" hidden>
+      <div class="admin-grid">
+        <form class="admin-card" id="shopPromoForm">
+          <h2>Shop-promo</h2>
+          <label class="check"><input name="promoEnabled" type="checkbox"><span>Promo / mededeling tonen</span></label>
+          <label><span>Weergave</span><select name="promoMode"><option value="promo">Promotie</option><option value="announcement">Mededeling</option></select></label>
+          <label><span>Badge of korte kop</span><input name="promoBonus" maxlength="40"></label>
+          <label><span>Tekst</span><input name="promoText" maxlength="120"></label>
+          <label><span>Knoptekst (optioneel)</span><input name="promoCta" maxlength="40"></label>
+          <p class="hint">Deze banner wordt op de site getoond. Actuele Tebex-kortingen worden apart automatisch opgehaald.</p>
+        </form>
+        <form class="admin-card" id="tebexForm">
+          <h2>Tebex-koppeling</h2>
+          <label><span>Public token / webstore ID</span><input name="tebexToken" maxlength="120" placeholder="uit Tebex → Integrations → Headless API"></label>
+          <p class="hint">De publieke Headless API wordt gebruikt voor actieve sales en actuele pakketten. Checkout loopt via Tebex.js. De token is publiek; zet hier nooit een geheime Tebex-sleutel neer.</p>
+          <div class="tebex-cmd-list" id="tebexCmdList" aria-label="Tebex givecoins commands"></div>
+          <p class="hint">Speler logt in met <strong>Cfx.re</strong>. Tebex-plugin + Secret Key verplicht. Resource: <code>ensure hl-tebexwrapper</code>.</p>
+          <div class="tebex-packages" id="tebexPackages"></div>
+        </form>
+      </div>
+      <section class="admin-card shop-products-card">
+        <header class="cms-panel-head"><div><h2>Producten</h2><p class="hint">Pas de namen, omschrijvingen en coin-aantallen van bestaande Tebex-pakketten aan.</p></div></header>
+        <div id="shopProducts" class="shop-products"></div>
+      </section>
+      <section class="admin-card shop-sales-card">
+        <div class="cms-panel-head"><div><h2>Tebex-kortingen</h2><p class="hint">Actieve, algemene kortingen worden automatisch uit Tebex ingelezen. Kortingen met extra voorwaarden kunnen per klant verschillen en worden daarom niet als vaste prijs getoond.</p></div><button type="button" class="btn btn-ghost" id="refreshTebexSales">Sales vernieuwen</button></div>
+        <p class="hint" id="tebexSalesStatus" role="status">Kortingen worden geladen zodra de winkelpagina is geopend.</p>
+      </section>
+      <p class="hint" id="shopPublishState">Wijzigingen worden lokaal bewaard. Klik rechtsboven op Opslaan om shopinstellingen voor alle bezoekers te publiceren.</p>
+    </section>
 
     <section class="admin-card cms-panel" data-admin-section="news" hidden>
       <header class="cms-panel-head"><div><h2>Nieuwsbeheer</h2><p class="hint">Bewaar concepten of publiceer een bericht. Uitgestelde publicatiedata worden pas dan zichtbaar.</p></div><button class="btn btn-blue" type="button" data-new="news">Nieuw bericht</button></header>
@@ -192,8 +211,9 @@
 </dialog>
 <script src="/scripts/settings.js"></script>
 <script src="/scripts/catalog.js"></script>
+<script src="/scripts/tebex.js?v=20261109-3"></script>
 <script src="/scripts/nav.js?v=20261106-14"></script>
-<script src="/scripts/admin.js?v=20261109-2"></script>
+<script src="/scripts/admin.js?v=20261109-4"></script>
 <script src="/scripts/admin/content-manager.js"></script>
 </body>
 </html>

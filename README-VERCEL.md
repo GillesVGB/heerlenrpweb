@@ -26,6 +26,10 @@ BLOB_READ_WRITE_TOKEN is an alternative persistent store if PostgreSQL is not us
 
 If `/api/content` or admin saves return HTTP 503, check the selected provider's environment variables in Vercel Production and verify the database is reachable. For Supabase, confirm the table setup SQL was run. Redeploy after changing variables. The API intentionally keeps returning 503 while shared storage is unavailable; it does not switch to temporary serverless disk storage, so admin changes cannot be saved until the database connection works.
 
+## Shop and Tebex sales
+
+Site administrators can edit product names, descriptions, coin amounts, and the shop promo from the admin panel's **Shop** tab. Product package IDs and the public Headless API token are managed there as well. The storefront synchronizes mapped package base prices and reads active sales and package/category data from Tebex's public Headless API; only unconditional percentage or fixed-amount sales are shown as fixed discounted prices. Sales with customer or basket requirements remain controlled by Tebex at checkout. Use the public Headless API token from Tebex Integrations; never put a Tebex secret key in the site settings.
+
 ## Generate a SESSION_SECRET in Windows PowerShell
 
 $bytes = [byte[]]::new(48)

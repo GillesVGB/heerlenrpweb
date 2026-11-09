@@ -48,10 +48,10 @@ html[data-season="easter"] .btn-primary,html[data-season="easter"] .btn-blue { b
 .season-asset { position:absolute;display:block;height:auto;pointer-events:none;user-select:none; }
 .season-lights { inset:0 0 auto;width:100%;height:58px;object-fit:fill; }
 .season-snow-sheet { position:absolute;inset:0;background-image:url("/images/seasons/christmas-snow.svg");background-repeat:repeat;background-size:360px 540px;opacity:.34;animation:season-snow-sheet-fall 28s linear infinite; }
-.season-snowflake { position:absolute;top:-5vh;left:var(--x);color:#f4fbff;opacity:var(--flake-opacity,.72);font-size:var(--flake-size,18px);line-height:1;text-shadow:0 0 10px rgba(207,239,255,.36);animation:season-snowfall var(--duration,20s) linear var(--delay,0s) infinite; }
+.season-snowflake { position:absolute;top:-5vh;left:var(--x);width:var(--flake-size,10px);height:var(--flake-size,10px);border-radius:50%;background:#f4fbff;opacity:var(--flake-opacity,.72);box-shadow:0 0 10px rgba(207,239,255,.36);animation:season-snowfall var(--duration,20s) linear var(--delay,0s) infinite; }
 .season-bat { left:-12vw;top:var(--flight-y);width:var(--bat-size,84px);animation:season-bat-flight var(--duration,20s) ease-in-out var(--delay,0s) infinite;filter:drop-shadow(0 4px 12px rgba(13,4,23,.45)); }
 .season-mist { left:-8vw;bottom:var(--mist-bottom,4vh);width:116vw;max-width:none;opacity:var(--mist-opacity,.16);filter:blur(1px);animation:season-mist-drift var(--duration,46s) ease-in-out var(--delay,0s) infinite alternate; }
-.season-leaf { position:absolute;top:-8vh;left:var(--x);font-size:var(--leaf-size,22px);opacity:.55;animation:season-fall var(--duration,21s) linear var(--delay,0s) infinite; }
+.season-leaf { position:absolute;top:-8vh;left:var(--x);width:var(--leaf-size,22px);height:calc(var(--leaf-size,22px) * .58);border-radius:100% 0 100% 0;background:linear-gradient(135deg,#d9a65a,#8e5938);opacity:.62;animation:season-fall var(--duration,21s) linear var(--delay,0s) infinite; }
 .season-firework { position:absolute;top:var(--y);left:var(--x);width:var(--burst-size,118px);aspect-ratio:1;opacity:0;transform:translate(-50%,-50%) scale(.08);animation:season-burst var(--duration,6.5s) ease-out var(--delay,0s) infinite;filter:drop-shadow(0 0 16px rgba(255,219,135,.62));will-change:transform,opacity; }
 .season-firework img { width:100%;height:100%; }
 .season-firework.alt { filter:hue-rotate(92deg) drop-shadow(0 0 12px rgba(130,221,255,.26)); }
@@ -83,6 +83,7 @@ html[data-season="easter"] .btn-primary,html[data-season="easter"] .btn-blue { b
 .maintenance-copy { color:#c1cbd7;line-height:1.7; }
 .maintenance-status { display:inline-flex;align-items:center;gap:9px;margin-top:28px;padding:9px 14px;border:1px solid rgba(255,190,90,.24);border-radius:999px;color:#ffd08a;background:rgba(255,170,50,.08);font-size:.85rem; }
 .maintenance-status i { width:8px;height:8px;border-radius:50%;background:#f5a941;box-shadow:0 0 14px #f5a941; }
+.maintenance-mark svg { width:32px;height:32px; }
 .maintenance-panel { background:var(--card,rgba(19,30,45,.9)); }
 .season-preview { position:relative;overflow:hidden;isolation:isolate; }
 .season-preview .season-preview-decoration { position:absolute;z-index:0;right:12px;top:8px;opacity:.55;pointer-events:none;animation:season-fall 8s linear infinite; }

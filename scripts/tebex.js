@@ -5,6 +5,7 @@
   var TEBEX_JS = "https://js.tebex.io/v/1.js";
   var loadPromise = null;
   var storeSettingsPromise = null;
+  var activeSalesPromise = null;
   var eventsBound = false;
 
   function settings() {
@@ -37,6 +38,7 @@
       var current = settings();
       current.tebexToken = typeof data.storeSettings.tebexToken === "string" ? data.storeSettings.tebexToken : "";
       current.tebexPackages = Object.assign({}, current.tebexPackages || {}, data.storeSettings.tebexPackages || {});
+      current.shopProducts = Object.assign({}, current.shopProducts || {}, data.storeSettings.shopProducts || {});
       root.HeerlenSettings.save(current);
       return current;
     }).catch(function (error) {
@@ -44,6 +46,37 @@
       throw error;
     });
     return storeSettingsPromise;
+  }
+
+  function loadActiveSales(force) {
+    if (force) activeSalesPromise = null;
+    if (activeSalesPromise) return activeSalesPromise;
+    var t = token();
+    if (!t) {
+      if (root.HeerlenCatalog) root.HeerlenCatalog.setActiveSales([], []);
+      return Promise.resolve([]);
+    }
+    var base = API + "/accounts/" + encodeURIComponent(t);
+    function get(path) {
+      return fetch(base + path, { headers: { Accept: "application/json" }, cache: "no-store" }).then(function (response) {
+        return response.json().catch(function () { return {}; }).then(function (body) {
+          if (!response.ok) throw new Error("Tebex gaf HTTP " + response.status + " terug bij het laden van " + path + ".");
+          return body.data || [];
+        });
+      });
+    }
+    activeSalesPromise = Promise.all([get("/sales"), get("/packages")]).then(function (results) {
+      var sales = Array.isArray(results[0]) ? results[0] : [];
+      var packages = Array.isArray(results[1]) ? results[1] : [];
+      if (root.HeerlenCatalog) root.HeerlenCatalog.setActiveSales(sales, packages);
+      root.dispatchEvent(new CustomEvent("heerlen:tebex-sales", { detail: { sales: sales } }));
+      return sales;
+    }).catch(function (error) {
+      activeSalesPromise = null;
+      if (root.HeerlenCatalog) root.HeerlenCatalog.setActiveSales([], []);
+      throw error;
+    });
+    return activeSalesPromise;
   }
 
   function json(res) {
@@ -418,6 +451,7 @@
   root.HeerlenTebex = {
     configured: configured,
     loadStoreSettings: loadStoreSettings,
+    loadActiveSales: loadActiveSales,
     packageIdFor: packageIdFor,
     startCheckout: startCheckout,
     resumeCheckout: resumeCheckout,

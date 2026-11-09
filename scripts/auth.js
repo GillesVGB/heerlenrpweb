@@ -297,6 +297,7 @@
     session: session,
     logout: logout,
     startLogin: startLogin,
+    avatarUrl: avatarUrl,
     SESSION_KEY: SESSION_KEY,
     LOGIN_KEY: LOGIN_KEY
   };

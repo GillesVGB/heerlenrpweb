@@ -61,7 +61,7 @@
 
   function fillForms() {
     var s = state;
-    document.querySelectorAll("#siteForm [name], #playersForm [name], #toastForm [name], #tebexForm [name]").forEach(function (el) {
+    document.querySelectorAll("#siteForm [name], #playersForm [name], #toastForm [name], #tebexForm [name], #shopPromoForm [name]").forEach(function (el) {
       var key = el.name;
       if (!(key in s)) return;
       if (key === "seasonPages") return;
@@ -71,6 +71,7 @@
     var pages = Array.isArray(s.seasonPages) ? s.seasonPages : ["home", "news", "updates", "staff", "rules", "shop"];
     document.querySelectorAll('#siteForm [name="seasonPages"]').forEach(function (el) { el.checked = pages.indexOf(el.value) >= 0; });
     renderTebexPackages();
+    renderShopProducts();
     updateSeasonPreview();
   }
 
@@ -79,7 +80,9 @@
   }
 
   function renderTebexPackages() {
-    var packs = (window.HeerlenCatalog && window.HeerlenCatalog.PACKS) || [];
+    var packs = ((window.HeerlenCatalog && window.HeerlenCatalog.PACKS) || []).map(function (pack) {
+      return Object.assign({}, pack, (state.shopProducts || {})[pack.id] || {});
+    });
     var map = state.tebexPackages || {};
     var list = document.getElementById("tebexCmdList");
     if (list) {
@@ -124,9 +127,26 @@
     }).join("");
   }
 
+  function renderShopProducts() {
+    var box = document.getElementById("shopProducts");
+    var catalog = window.HeerlenCatalog;
+    if (!box || !catalog) return;
+    var overrides = state.shopProducts || {};
+    box.innerHTML = catalog.PACKS.map(function (pack) {
+      var item = overrides[pack.id] || {};
+      return '<fieldset class="shop-product-row" data-shop-product="' + esc(pack.id) + '">' +
+        '<legend>' + esc(pack.name) + '</legend>' +
+        '<label><span>Productnaam</span><input data-shop-field="name" maxlength="60" value="' + esc(item.name || pack.name) + '"></label>' +
+        '<label><span>Omschrijving</span><textarea data-shop-field="blurb" rows="2" maxlength="240">' + esc(item.blurb || pack.blurb) + '</textarea></label>' +
+        '<div class="shop-product-fields"><label><span>Coins</span><input data-shop-field="amount" type="number" min="1" max="100000" value="' + esc(item.amount || pack.amount) + '"></label>' +
+        '<label><span>Bonus (%)</span><input data-shop-field="bonus" type="number" min="0" max="10000" value="' + esc(item.bonus == null ? pack.bonus : item.bonus) + '"></label></div>' +
+        '</fieldset>';
+    }).join("");
+  }
+
   function readForms() {
     var next = cfg.clone(state);
-    document.querySelectorAll("#siteForm [name], #playersForm [name], #toastForm [name], #tebexForm [name]").forEach(function (el) {
+    document.querySelectorAll("#siteForm [name], #playersForm [name], #toastForm [name], #tebexForm [name], #shopPromoForm [name]").forEach(function (el) {
       var key = el.name;
       if (key === "seasonPages") return;
       if (el.type === "checkbox") next[key] = el.checked;
@@ -138,6 +158,16 @@
     next.tebexPackages = next.tebexPackages || {};
     document.querySelectorAll("[data-tebex-pack]").forEach(function (el) {
       next.tebexPackages[el.getAttribute("data-tebex-pack")] = el.value.trim();
+    });
+    next.shopProducts = next.shopProducts || {};
+    document.querySelectorAll("[data-shop-product]").forEach(function (row) {
+      var id = row.getAttribute("data-shop-product");
+      var product = {};
+      row.querySelectorAll("[data-shop-field]").forEach(function (field) {
+        var key = field.getAttribute("data-shop-field");
+        product[key] = field.type === "number" ? Number(field.value) : field.value.trim();
+      });
+      next.shopProducts[id] = product;
     });
     return next;
   }
@@ -181,6 +211,7 @@
     sharedSettingsKeys.forEach(function (key) { settings[key] = state[key]; });
     settings.tebexToken = state.tebexToken;
     settings.tebexPackages = state.tebexPackages;
+    settings.shopProducts = state.shopProducts;
     api({ action: "save-site-settings", settings: settings }).then(function (result) {
       if (result.ok) { siteSettingsDirty = false; show("Website- en winkelinstellingen gepubliceerd voor alle bezoekers"); }
       else show(result.error || "De website- en winkelinstellingen konden niet gedeeld worden.");
@@ -209,13 +240,13 @@
     root.dataset.autosave = "1";
     root.addEventListener("input", function (e) {
       if (!e.target.closest("input, textarea, select")) return;
-      if (e.target.closest("#siteForm, #tebexForm")) siteSettingsDirty = true;
+      if (e.target.closest("#siteForm, #tebexForm, #shopPromoForm, #shopProducts")) siteSettingsDirty = true;
       if (e.target.closest("#siteForm")) updateSeasonPreview();
       scheduleSave();
     });
     root.addEventListener("change", function (e) {
       if (!e.target.closest("input, textarea, select")) return;
-      if (e.target.closest("#siteForm, #tebexForm")) siteSettingsDirty = true;
+      if (e.target.closest("#siteForm, #tebexForm, #shopPromoForm, #shopProducts")) siteSettingsDirty = true;
       if (e.target.closest("#siteForm")) updateSeasonPreview();
       scheduleSave();
     });
@@ -248,6 +279,29 @@
   });
 
   document.getElementById("saveAll").addEventListener("click", function () { persist("", true, true); });
+  var refreshSales = document.getElementById("refreshTebexSales");
+  if (refreshSales) refreshSales.addEventListener("click", function () {
+    var status = document.getElementById("tebexSalesStatus");
+    status.textContent = "Tebex-sales ophalen…";
+    if (!window.HeerlenTebex || !window.HeerlenTebex.loadActiveSales) {
+      status.textContent = "Tebex-koppeling is niet beschikbaar.";
+      return;
+    }
+    window.HeerlenTebex.loadStoreSettings().then(function () {
+      if (!window.HeerlenTebex.configured()) {
+        status.textContent = "Vul eerst de publieke Tebex-token in en klik op Opslaan.";
+        return null;
+      }
+      return window.HeerlenTebex.loadActiveSales(true);
+    }).then(function (sales) {
+      if (!sales) return;
+      status.textContent = sales.length
+        ? sales.map(function (sale) { return sale.name; }).join(" · ") + " — actieve sales uit Tebex."
+        : "Geen actieve sales gevonden in Tebex.";
+    }).catch(function (error) {
+      status.textContent = error.message || "Tebex-sales konden niet worden opgehaald.";
+    });
+  });
   document.getElementById("saveNotes").addEventListener("click", function () { persist("Meldingen opgeslagen"); });
 
   document.getElementById("addNote").addEventListener("click", function () {
@@ -286,7 +340,13 @@
     var select = document.querySelector('#siteForm [name="seasonTheme"]');
     var preview = document.getElementById("seasonPreview");
     if (!select || !preview) return;
-    var themes = { standard: ["✨", "Standaard", "De normale Heerlen-uitstraling."], halloween: ["🎃", "Halloween", "Warme accenten met vallende bladeren, vleermuizen en spookjes."], christmas: ["❄", "Kerst", "Een lichte wintergloed met vallende sneeuw en kerstlichtjes."], newyear: ["🎆", "Oud en nieuw", "Gouden lichtaccenten met bewegend vuurwerk."], easter: ["🐣", "Pasen", "Frisse lentekleuren met bewegende paaselementen."] };
+    var themes = {
+      standard: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4zM8 9h8M8 13h5"/></svg>', "Standaard", "De normale Heerlen-uitstraling."],
+      halloween: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3 14.7 8.5 21 9.4l-4.5 4.4 1.1 6.2L12 17l-5.6 3 1.1-6.2L3 9.4l6.3-.9L12 3Z"/></svg>', "Halloween", "Warme accenten met vallende bladeren, vleermuizen en spookjes."],
+      christmas: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17 20.7 7M8 4l4 2 4-2M8 20l4-2 4 2"/></svg>', "Kerst", "Een lichte wintergloed met vallende sneeuw en kerstlichtjes."],
+      newyear: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M12 12 12 3M12 12l8-4M12 12l7 7M12 12l-8 5M12 12 4 6"/></svg>', "Oud en nieuw", "Gouden lichtaccenten met bewegend vuurwerk."],
+      easter: ['<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21c-4.5 0-7-3.1-7-7.5S8.2 3 12 3s7 6.1 7 10.5S16.5 21 12 21Z"/><path d="M9 10h.01M15 10h.01M9 15h6"/></svg>', "Pasen", "Frisse lentekleuren met bewegende paaselementen."]
+    };
     var selected = themes[select.value] || themes.standard;
     preview.dataset.season = select.value;
     preview.classList.toggle("is-disabled", !document.querySelector('#siteForm [name="seasonEnabled"]').checked);
@@ -294,7 +354,7 @@
     var icon = preview.querySelector(".season-preview-icon");
     var title = preview.querySelector("strong");
     var copy = preview.querySelector("p");
-    if (icon) icon.textContent = selected[0];
+    if (icon) icon.innerHTML = selected[0];
     if (title) title.textContent = selected[1];
     if (copy) copy.textContent = selected[2];
     var scene = document.getElementById("seasonPreviewScene");

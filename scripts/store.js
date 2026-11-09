@@ -20,6 +20,12 @@
     return (cartApi && cartApi.cart()[id]) || 0;
   }
 
+  function priceMarkup(product) {
+    var info = cat.priceInfo(product);
+    if (!info.sale) return '<span class="price">' + cat.money(info.price) + "</span>";
+    return '<span class="price-sale"><del class="price-old">' + cat.money(info.original) + '</del><span class="price">' + cat.money(info.price) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label) + "</small></span>";
+  }
+
   function artHtml(p, link) {
     var img = p.image
       ? cat.asset(p.image)
@@ -54,7 +60,7 @@
         ? '<a class="read-more" href="' + cat.productUrl(p) + '">Lees meer</a>'
         : "") +
       '<div class="card-row">' +
-      '<div class="price-wrap"><span class="price">' + cat.money(p.price) + "</span>" +
+      '<div class="price-wrap">' + priceMarkup(p) +
       (p.bonus ? '<span class="bonus-inline">+' + p.bonus + "% bonus</span>" : "") +
       "</div>" +
       round +
@@ -70,7 +76,7 @@
       '<h3><a href="' + cat.productUrl(p) + '">' + cat.esc(p.name) + "</a></h3>" +
       "<p>" + cat.esc(p.blurb) + "</p>" +
       '<div class="card-row">' +
-      '<div class="price-wrap"><span class="price">' + cat.money(p.price) + "</span>" +
+      '<div class="price-wrap">' + priceMarkup(p) +
       (p.bonus ? '<span class="bonus-inline">+' + p.bonus + "% bonus</span>" : "") +
       "</div>" +
       '<button type="button" class="cart-round" data-add="' + p.id + '" aria-label="In mand">' +
@@ -90,7 +96,11 @@
     var list = cat.byCat(currentCat).filter(function (p) {
       return !q || p.name.toLowerCase().indexOf(q) !== -1 || String(p.amount).indexOf(q) !== -1;
     });
-    if (sort) list.sort(function (a, b) { return sort.value === "desc" ? b.price - a.price : a.price - b.price; });
+    if (sort) list.sort(function (a, b) {
+      var first = cat.priceInfo(a).price;
+      var second = cat.priceInfo(b).price;
+      return sort.value === "desc" ? second - first : first - second;
+    });
     grid.hidden = false;
     if (toolbar) toolbar.hidden = false;
     grid.innerHTML = list.map(function (p) { return shopCard(p, { roundCart: true }); }).join("");
@@ -122,7 +132,7 @@
       "<h1>" + cat.esc(p.name) + "</h1>" +
       "<p class=\"product-lead\">" + cat.esc(p.blurb) + "</p>" +
       '<div class="product-buy">' +
-      '<div class="price-wrap"><span class="price">' + cat.money(p.price) + "</span>" +
+      '<div class="price-wrap">' + priceMarkup(p) +
       (p.bonus ? '<span class="bonus-inline">+' + p.bonus + "% bonus</span>" : "") +
       "</div>" +
       '<button type="button" class="btn btn-primary" data-add="' + p.id + '" data-keep-label="1">In winkelmand</button>' +
@@ -140,18 +150,68 @@
   }
 
   function bootShop() {
-    setCat("coins");
     if (search) search.addEventListener("input", renderShop);
     if (sort) sort.addEventListener("change", renderShop);
+    loadStoreData().then(function () { setCat("coins"); }).catch(function (error) {
+      setCat("coins");
+      showSalesError(error);
+    });
   }
 
-  if (page === "home") renderPopular();
-  if (page === "winkel") bootShop();
-  if (page === "product") renderProduct();
+  function showSalesError(error) {
+    console.error("[store] Tebex-kortingen konden niet worden geladen.", error);
+    var status = storeNote || productRoot;
+    if (status) {
+      var message = "Tebex-kortingen konden niet worden opgehaald. De actuele afrekening verloopt via Tebex.";
+      if (status === productRoot) {
+        var productStatus = productRoot.querySelector(".store-sale-status") || document.createElement("p");
+        productStatus.className = "store-sale-status";
+        productStatus.setAttribute("role", "status");
+        productStatus.textContent = message;
+        if (!productStatus.parentNode) productRoot.insertBefore(productStatus, productRoot.firstChild);
+      } else {
+        status.textContent = message;
+        status.hidden = false;
+      }
+      return;
+    }
+    if (popularGrid && popularGrid.parentNode) {
+      var homeStatus = document.getElementById("storeSaleStatus");
+      if (!homeStatus) {
+        homeStatus = document.createElement("p");
+        homeStatus.id = "storeSaleStatus";
+        homeStatus.className = "store-sale-status";
+        homeStatus.setAttribute("role", "status");
+        popularGrid.parentNode.insertBefore(homeStatus, popularGrid);
+      }
+      homeStatus.textContent = "Tebex-kortingen konden niet worden opgehaald. De actuele afrekening verloopt via Tebex.";
+    }
+  }
 
-  window.addEventListener("heerlen:cart", function () {
+  function loadStoreData() {
+    var api = window.HeerlenTebex;
+    if (!api) return Promise.resolve();
+    return api.loadStoreSettings().then(function () { return api.loadActiveSales(); });
+  }
+
+  function renderPage() {
     if (page === "home") renderPopular();
     if (page === "winkel") renderShop();
     if (page === "product") renderProduct();
+  }
+
+  if (page === "winkel") bootShop();
+  else if (page === "home" || page === "product") {
+    loadStoreData().then(renderPage).catch(function (error) {
+      renderPage();
+      showSalesError(error);
+    });
+  }
+
+  window.addEventListener("heerlen:tebex-sales", renderPage);
+  window.addEventListener("heerlen:settings", renderPage);
+
+  window.addEventListener("heerlen:cart", function () {
+    renderPage();
   });
 })();

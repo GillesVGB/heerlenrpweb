@@ -32,7 +32,7 @@ function tpl(slug, name) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../styles/heerlen.css?v=20261106-9">
+<link rel="stylesheet" href="../styles/heerlen.css?v=20261109-13">
 <script>
   (function () {
     try {
@@ -156,13 +156,13 @@ function tpl(slug, name) {
 </aside>
 
 <script src="../scripts/settings.js"></script>
-<script src="../scripts/catalog.js"></script>
-<script src="../scripts/tebex.js?v=20261109-2"></script>
-<script src="../scripts/auth.js?v=20261109-2"></script>
-<script src="../scripts/cart.js?v=20261109-2"></script>
+<script src="../scripts/catalog.js?v=20261109-1"></script>
+<script src="../scripts/tebex.js?v=20261109-3"></script>
+<script src="../scripts/auth.js?v=20261109-3"></script>
+<script src="../scripts/cart.js?v=20261109-3"></script>
 <script src="../scripts/nav.js?v=20261106-11"></script>
-<script src="../scripts/store.js"></script>
-<script src="../scripts/live.js?v=20261106-7"></script>
+<script src="../scripts/store.js?v=20261109-1"></script>
+<script src="../scripts/live.js?v=20261109-5"></script>
 </body>
 </html>
 `;

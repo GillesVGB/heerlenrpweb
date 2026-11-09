@@ -36,18 +36,18 @@
     body.appendChild(meta);
     body.appendChild(element("h2", "", item.title));
     body.appendChild(element("p", "content-card-copy", item.excerpt || item.content));
-    if (type === "changelog" && item.content) {
-      var more = element("details", "content-details");
-      more.appendChild(element("summary", "", "Bekijk de volledige update"));
-      more.appendChild(element("p", "", item.content));
-      body.appendChild(more);
-    }
     var foot = element("div", "content-card-foot");
     foot.appendChild(element("span", "", formatDate(item.publishAt || item.updatedAt)));
     if (type === "news") {
       var link = element("a", "content-more", "Lees bericht →");
       link.href = "/nieuws/?id=" + encodeURIComponent(item.id);
       foot.appendChild(link);
+    } else if (type === "changelog") {
+      var updateLink = element("a", "content-more", "Volledige update");
+      updateLink.href = "/updates/?id=" + encodeURIComponent(item.id);
+      updateLink.setAttribute("aria-label", "Open update: " + item.title);
+      updateLink.innerHTML += ' <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>';
+      foot.appendChild(updateLink);
     }
     body.appendChild(foot);
     article.appendChild(body);
@@ -88,6 +88,40 @@
     var filters = document.getElementById("changelogFilters");
     if (!target) return;
     var items = data.changelog || [];
+    var detail = document.getElementById("changelogDetail");
+    var selectedId = new URLSearchParams(location.search).get("id");
+    if (selectedId && detail) {
+      var selected = items.find(function (item) { return item.id === selectedId; });
+      if (!selected) {
+        detail.appendChild(element("p", "content-empty", "Deze update is niet beschikbaar."));
+      } else {
+        var article = element("article", "news-article update-article");
+        var meta = element("p", "kicker", [selected.version || selected.category, formatDate(selected.publishAt || selected.updatedAt)].filter(Boolean).join(" · "));
+        article.appendChild(meta);
+        article.appendChild(element("h2", "", selected.title));
+        if (selected.image) {
+          var image = element("img", "news-article-image");
+          image.src = selected.image;
+          image.alt = "";
+          image.fetchPriority = "high";
+          article.appendChild(image);
+        }
+        if (selected.author) article.appendChild(element("p", "content-muted update-author", "Door " + selected.author));
+        var content = element("div", "update-article-content");
+        renderMarkdown(content, selected.content || selected.excerpt || "");
+        article.appendChild(content);
+        detail.appendChild(article);
+        document.title = selected.title + " | Heerlen Roleplay";
+      }
+      if (filters) filters.hidden = true;
+      var back = element("a", "update-back", "Alle updates");
+      back.href = "/updates/";
+      back.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6"/><path d="M9 12h11"/></svg> Alle updates';
+      detail.prepend(back);
+      fillCards(target, items.filter(function (item) { return item.id !== selectedId; }).slice(0, 3), "changelog", "");
+      target.setAttribute("aria-label", "Meer serverupdates");
+      return;
+    }
     var categories = Array.from(new Set(items.map(function (item) { return item.category; }).filter(Boolean)));
     var active = "Alles";
     function render() { fillCards(target, items.filter(function (item) { return active === "Alles" || item.category === active; }), "changelog", "Er zijn nog geen serverupdates gepubliceerd."); }

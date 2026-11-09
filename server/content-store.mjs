@@ -182,6 +182,16 @@ export function publicContent(state) {
   const tebexPackages = Object.fromEntries(Object.entries(savedPackages)
     .filter(([id, packageId]) => /^[a-z0-9-]{1,60}$/.test(id) && typeof packageId === 'string' && /^\d{0,32}$/.test(packageId))
     .map(([id, packageId]) => [id, packageId]));
+  const savedProducts = savedStore.shopProducts && typeof savedStore.shopProducts === 'object' && !Array.isArray(savedStore.shopProducts) ? savedStore.shopProducts : {};
+  const allowedProductIds = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200].map(amount => `coins-${amount}`));
+  const shopProducts = Object.fromEntries(Object.entries(savedProducts)
+    .filter(([id, product]) => allowedProductIds.has(id) && product && typeof product === 'object' && !Array.isArray(product))
+    .map(([id, product]) => [id, {
+      ...(typeof product.name === 'string' ? { name: product.name.slice(0, 60) } : {}),
+      ...(typeof product.blurb === 'string' ? { blurb: product.blurb.slice(0, 240) } : {}),
+      ...(Number.isInteger(product.amount) && product.amount >= 1 && product.amount <= 100000 ? { amount: product.amount } : {}),
+      ...(Number.isInteger(product.bonus) && product.bonus >= 0 && product.bonus <= 10000 ? { bonus: product.bonus } : {})
+    }]));
   const themes = ['standard', 'halloween', 'christmas', 'newyear', 'easter'];
   const allowedSeasonPages = ['home', 'news', 'updates', 'staff', 'rules', 'shop'];
   const siteSettings = {
@@ -214,7 +224,8 @@ export function publicContent(state) {
     siteSettings,
     storeSettings: {
       tebexToken: typeof savedStore.tebexToken === 'string' ? savedStore.tebexToken.slice(0, 120) : '',
-      tebexPackages
+      tebexPackages,
+      shopProducts
     }
   };
 }

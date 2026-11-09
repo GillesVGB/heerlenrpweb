@@ -36,6 +36,7 @@
     toastGap: 8,
     notifications: [],
     tebexToken: "",
+    shopProducts: {},
     tebexPackages: {
       "coins-100": "",
       "coins-200": "",

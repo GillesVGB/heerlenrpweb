@@ -68,6 +68,25 @@
     return cat.asset("images/heerlen-mark.png");
   }
 
+  function cfxAvatar(name) {
+    var auth = root.HeerlenAuth;
+    return auth && auth.avatarUrl
+      ? auth.avatarUrl(name)
+      : "https://forum.cfx.re/user_avatar/forum.cfx.re/" + encodeURIComponent(String(name || "speler").toLowerCase()) + "/96/1.png";
+  }
+
+  function avatarMarkup(name, savedAvatar) {
+    var initial = cat.esc(String(name || "S").charAt(0).toUpperCase());
+    var src = cat.esc(savedAvatar || cfxAvatar(name));
+    return '<span class="avatar"><img src="' + src + '" alt="" loading="lazy" decoding="async"><span aria-hidden="true">' + initial + '</span></span>';
+  }
+
+  function removeBrokenAvatars(container) {
+    container.querySelectorAll(".avatar img").forEach(function (image) {
+      image.addEventListener("error", function () { image.remove(); }, { once: true });
+    });
+  }
+
   function renderFeed() {
     var e = els();
     var list = pays().slice().sort(function (a, b) { return new Date(b.at) - new Date(a.at); });
@@ -88,15 +107,17 @@
     });
     if (e.donor) {
       e.donor.innerHTML = topName
-        ? '<span class="avatar">' + cat.esc(topName.charAt(0).toUpperCase()) + '</span><div><strong>' + cat.esc(topName) + '</strong><small>' + cat.money(topAmount) + ' besteed</small></div>'
+        ? avatarMarkup(topName) + '<div><strong>' + cat.esc(topName) + '</strong><small>' + cat.money(topAmount) + ' besteed</small></div>'
         : '<span class="avatar"></span><div><strong>Nog niemand</strong><small>Deze maand is er nog niks gedoneerd.</small></div>';
+      removeBrokenAvatars(e.donor);
     }
     if (e.paysEl) {
       e.paysEl.innerHTML = list.length
         ? list.slice(0, 5).map(function (p) {
-            return '<li><span class="avatar">' + cat.esc(p.name.charAt(0).toUpperCase()) + '</span><div><strong>' + cat.esc(p.name) + '</strong><small>' + cat.esc(p.item) + '</small></div><time datetime="' + cat.esc(p.at) + '">' + when(p.at) + '</time></li>';
+            return '<li>' + avatarMarkup(p.name, p.avatar) + '<div><strong>' + cat.esc(p.name) + '</strong><small>' + cat.esc(p.item) + '</small></div><time datetime="' + cat.esc(p.at) + '">' + when(p.at) + '</time></li>';
           }).join("")
         : '<li class="pays-empty"><div><strong>Nog geen betalingen</strong><small>Zodra iemand doneert, zie je het hier.</small></div></li>';
+      removeBrokenAvatars(e.paysEl);
     }
   }
 
@@ -119,7 +140,7 @@
     var bag = cart();
     var ids = Object.keys(bag).filter(function (id) { return bag[id] > 0 && cat.pack(id); });
     var totalQty = ids.reduce(function (sum, id) { return sum + bag[id]; }, 0);
-    var total = ids.reduce(function (sum, id) { return sum + bag[id] * cat.pack(id).price; }, 0);
+    var total = ids.reduce(function (sum, id) { return sum + bag[id] * cat.priceInfo(cat.pack(id)).price; }, 0);
     if (e.cartBadge) {
       e.cartBadge.hidden = totalQty === 0;
       e.cartBadge.textContent = String(totalQty);
@@ -134,10 +155,11 @@
       e.cartBody.innerHTML = '<ul class="cart-items">' + ids.map(function (id) {
         var p = cat.pack(id);
         var qty = bag[id];
+        var price = cat.priceInfo(p).price;
         return '<li class="cart-item">' +
           '<a class="cart-thumb" href="' + cat.productUrl(p) + '"><img src="' + cat.esc(thumbFor(p)) + '" alt="" width="96" height="54" loading="lazy"></a>' +
-          '<div class="cart-info"><strong>' + cat.esc(p.name) + '</strong><span class="cart-unit">' + cat.money(p.price) + ' · eenmalig</span></div>' +
-          '<div class="cart-row"><span class="cart-price">' + cat.money(p.price * qty) + '</span>' +
+          '<div class="cart-info"><strong>' + cat.esc(p.name) + '</strong><span class="cart-unit">' + cat.money(price) + ' · eenmalig</span></div>' +
+          '<div class="cart-row"><span class="cart-price">' + cat.money(price * qty) + '</span>' +
           '<span class="qty"><button type="button" data-dec="' + id + '" aria-label="Minder">−</button>' +
           '<span>' + qty + '</span><button type="button" data-inc="' + id + '" aria-label="Meer">+</button></span>' +
           '<button type="button" class="drop" data-drop="' + id + '">Verwijderen</button></div></li>';
@@ -200,9 +222,10 @@
       if (!first) first = p.name;
       list.push({
         name: name,
+        avatar: cfxAvatar(name),
         discordId: discordId || "",
         item: p.name,
-        amount: p.price * it.quantity,
+        amount: cat.priceInfo(p).price * it.quantity,
         at: now
       });
     });
@@ -210,7 +233,7 @@
     save({});
     renderFeed();
     if (first) {
-      root.dispatchEvent(new CustomEvent("heerlen:purchase", { detail: { name: name, item: first, discordId: discordId || "" } }));
+      root.dispatchEvent(new CustomEvent("heerlen:purchase", { detail: { name: name, item: first, avatar: cfxAvatar(name), discordId: discordId || "" } }));
     }
   }
 
@@ -430,6 +453,8 @@
     bind: bind
   };
 
+  root.addEventListener("heerlen:tebex-sales", renderCart);
+  root.addEventListener("heerlen:settings", renderCart);
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", bind);
   else bind();
 })(window);

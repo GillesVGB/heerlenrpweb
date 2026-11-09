@@ -55,7 +55,8 @@ try {
     seasonEnabled: true, seasonTheme: 'newyear', seasonAccentEnabled: true, seasonAccent: '#f0b44f', seasonEffects: true,
     seasonIntensity: 1.4, seasonSpeed: 1.2, seasonDensity: 22, seasonFrequency: 1.6,
     seasonPages: ['home', 'rules'], seasonStart: '2027-12-31T18:00', seasonEnd: '2028-01-01T23:59',
-    tebexToken: 'public-token-test', tebexPackages: { 'coins-100': '12345' }
+    tebexToken: 'public-token-test', tebexPackages: { 'coins-100': '12345' },
+    shopProducts: { 'coins-100': { name: 'Test Coins', blurb: 'Aangepaste producttekst', amount: 150, bonus: 12 } }
   };
   const savedTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: themeSettings }, cookie);
   assert.equal(savedTheme.status, 200, 'site managers can publish seasonal theme settings');
@@ -70,10 +71,14 @@ try {
   assert.equal(publicTheme.seasonStart, '2027-12-31T18:00', 'theme schedule persists in shared storage');
   assert.equal(themeBody.storeSettings.tebexToken, 'public-token-test', 'public Tebex token is available to every shop visitor');
   assert.equal(themeBody.storeSettings.tebexPackages['coins-100'], '12345', 'Tebex package IDs persist in shared storage');
+  assert.equal(themeBody.storeSettings.shopProducts['coins-100'].name, 'Test Coins', 'shop product edits persist in shared storage');
+  assert.equal(themeBody.storeSettings.shopProducts['coins-100'].amount, 150, 'edited package coin amounts are published');
   const badTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: { seasonTheme: 'unknown' } }, cookie);
   assert.equal(badTheme.status, 400, 'unknown seasonal themes are rejected server-side');
   const badPackage = await run(admin, 'POST', { action: 'save-site-settings', settings: { tebexPackages: { 'coins-100': 'not-an-id' } } }, cookie);
   assert.equal(badPackage.status, 400, 'invalid Tebex package IDs are rejected server-side');
+  const badShopProduct = await run(admin, 'POST', { action: 'save-site-settings', settings: { shopProducts: { 'coins-100': { amount: 0 } } } }, cookie);
+  assert.equal(badShopProduct.status, 400, 'invalid shop product values are rejected server-side');
   const badSchedule = await run(admin, 'POST', { action: 'save-site-settings', settings: { seasonStart: '2028-01-02T00:00', seasonEnd: '2028-01-01T00:00' } }, cookie);
   assert.equal(badSchedule.status, 400, 'invalid theme date ranges are rejected server-side');
 
@@ -123,22 +128,44 @@ try {
 
   const browserSettings = { tebexToken: 'stale-local-token', tebexPackages: {} };
   const browser = {
+    dispatchEvent: () => {},
     HeerlenSettings: {
       load: () => browserSettings,
       save: value => Object.assign(browserSettings, value)
-    },
-    HeerlenCatalog: { pack: () => null }
+    }
   };
+  class BrowserCustomEvent {
+    constructor(type, options) { this.type = type; this.detail = options && options.detail; }
+  }
+  const catalogScript = await readFile(new URL('./catalog.js', import.meta.url), 'utf8');
+  const browserContext = { window: browser, CustomEvent: BrowserCustomEvent };
+  runInNewContext(catalogScript, browserContext);
   const tebexScript = await readFile(new URL('./tebex.js', import.meta.url), 'utf8');
   runInNewContext(tebexScript, {
+    ...browserContext,
     window: browser,
-    fetch: async () => ({ ok: true, json: async () => ({ storeSettings: themeBody.storeSettings }) })
+    fetch: async url => {
+      if (url === '/api/content') return { ok: true, json: async () => ({ storeSettings: themeBody.storeSettings }) };
+      if (url.endsWith('/sales')) return { ok: true, json: async () => ({ data: [{
+        name: 'Test Sale', requirements: [], discount: { type: 'percentage', percentage: 10 },
+        applies_to: { type: 'package', packages: [{ id: 12345 }], categories: [], excluded_packages: [], variable_options: [] }
+      }] }) };
+      if (url.endsWith('/packages')) return { ok: true, json: async () => ({ data: [{ id: 12345, category: { id: 7 }, base_price: 8, currency: 'EUR' }] }) };
+      throw new Error('Unexpected request: ' + url);
+    }
   });
   await browser.HeerlenTebex.loadStoreSettings();
   assert.equal(browserSettings.tebexToken, 'public-token-test', 'shop login loads the shared Tebex token for visitors');
   assert.equal(browser.HeerlenTebex.packageIdFor('coins-100'), '12345', 'checkout loads shared package IDs for visitors');
+  assert.equal(browserSettings.shopProducts['coins-100'].name, 'Test Coins', 'shop product edits load for every visitor');
+  const sales = await browser.HeerlenTebex.loadActiveSales();
+  assert.equal(sales[0].name, 'Test Sale', 'active Tebex sales are loaded from the public Headless API');
+  const editedPack = browser.HeerlenCatalog.pack('coins-100');
+  assert.equal(editedPack.name, 'Test Coins', 'product overrides are used by the store catalog');
+  assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).original, 8, 'the current base price is synchronized from Tebex');
+  assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).price, 7.2, 'active package sales produce a verified discounted price');
 
-  console.log('CMS and shop checks passed: origin guard, login, current Discord roles, authorization, news publish, staff permissions, shared seasonal and Tebex settings, shop configuration loading, schedule validation, immutable APV versions.');
+  console.log('CMS and shop checks passed: origin guard, login, current Discord roles, authorization, news publish, staff permissions, shared shop product settings, Tebex package mapping and active sales, schedule validation, immutable APV versions.');
 } finally {
   await unlink(process.env.CONTENT_STORE_PATH).catch(() => {});
 }

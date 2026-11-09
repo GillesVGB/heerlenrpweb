@@ -27,7 +27,7 @@
       maintenanceLayer = document.createElement("main");
       maintenanceLayer.className = "site-maintenance";
       maintenanceLayer.setAttribute("role", "status");
-      maintenanceLayer.innerHTML = '<div class="maintenance-panel"><span class="maintenance-mark" aria-hidden="true">⚙</span><p class="kicker">HEERLEN ROLEPLAY</p><h1>We zijn even bezig</h1><p class="maintenance-copy"></p><span class="maintenance-status"><i></i> Onderhoud</span></div>';
+      maintenanceLayer.innerHTML = '<div class="maintenance-panel"><span class="maintenance-mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8v4l2.5 2.5"/><circle cx="12" cy="12" r="9"/><path d="M3.5 9h2M18.5 9h2"/></svg></span><p class="kicker">HEERLEN ROLEPLAY</p><h1>We zijn even bezig</h1><p class="maintenance-copy"></p><span class="maintenance-status"><i></i> Onderhoud</span></div>';
       document.body.appendChild(maintenanceLayer);
     }
     maintenanceLayer.querySelector(".maintenance-copy").textContent = s.maintenanceMessage || "We zijn snel weer terug. Probeer het later opnieuw.";
@@ -95,7 +95,7 @@
     video.dataset.heroScheduled = "1";
     var start = function () {
       if (!document.documentElement.contains(video) || video.dataset.heroBooted === "1") return;
-      scheduleHeroVideo(video, hero);
+      bootHeroVideo(video, hero);
     };
     if ("requestIdleCallback" in window) window.requestIdleCallback(start, { timeout: 2500 });
     else window.setTimeout(start, 1200);
@@ -160,7 +160,17 @@
     toastName.textContent = note.name;
     toastItem.textContent = note.item;
     var base = document.body.getAttribute("data-base") || "./";
-    toastAvatar.innerHTML = '<img src="' + base + 'images/heerlen-mark.png" alt="">';
+    toastAvatar.replaceChildren();
+    var avatar = document.createElement("img");
+    avatar.alt = "";
+    avatar.src = note.avatar || (window.HeerlenAuth && window.HeerlenAuth.avatarUrl
+      ? window.HeerlenAuth.avatarUrl(note.name)
+      : base + "images/heerlen-mark.png");
+    avatar.addEventListener("error", function () {
+      if (avatar.src.indexOf("heerlen-mark.png") !== -1) return;
+      avatar.src = base + "images/heerlen-mark.png";
+    });
+    toastAvatar.appendChild(avatar);
     toast.hidden = false;
     toast.classList.add("is-on");
     clearTimeout(timer);
