@@ -4,7 +4,7 @@
   "outputDirectory": "dist",
   "headers": [
     {
-      "source": "/(.*\\.(svg|png|jpe?g|gif|webp|mp4))",
+      "source": "/images/:path*",
       "headers": [
         {
           "key": "Cache-Control",
