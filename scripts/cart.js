@@ -400,7 +400,7 @@
       clearTimeout(timer);
       if (result && result.launched) {
         setPayBusy(false);
-        showToast("Checkout geopend");
+        closeCart();
       } else if (result && result.needsClick) {
         offerPopup(result);
       } else if (result && result.redirected) {
@@ -435,7 +435,7 @@
       tebex.resumeCheckout().then(function (result) {
         if (result && result.launched) {
           setPayBusy(false);
-          showToast("Checkout geopend");
+          closeCart();
         } else if (result && result.needsClick) {
           offerPopup(result);
         } else if (result && result.redirected) {

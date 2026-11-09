@@ -157,9 +157,9 @@ function tpl(slug, name) {
 
 <script src="../scripts/settings.js"></script>
 <script src="../scripts/catalog.js?v=20261109-3"></script>
-<script src="../scripts/tebex.js?v=20261110-2"></script>
+<script src="../scripts/tebex.js?v=20261110-3"></script>
 <script src="../scripts/auth.js?v=20261109-4"></script>
-<script src="../scripts/cart.js?v=20261110-2"></script>
+<script src="../scripts/cart.js?v=20261110-3"></script>
 <script src="../scripts/nav.js?v=20261106-11"></script>
 <script src="../scripts/store.js?v=20261109-2"></script>
 <script src="../scripts/live.js?v=20261109-6"></script>

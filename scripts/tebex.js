@@ -298,36 +298,63 @@
     return !!document.querySelector('iframe[src*="tebex"], [class*="tebex"] iframe');
   }
 
+  function checkoutOptions(ident) {
+    return {
+      ident: ident,
+      theme: themeForCheckout(),
+      locale: "nl_NL",
+      closeOnPaymentComplete: true,
+      closeOnClickOutside: true,
+      closeOnEsc: true,
+      // Altijd de popup IN de site tonen. Zonder dit opent Tebex.js op mobiel (en in
+      // DevTools-mobiele weergave) een los browservenster dat vaak wordt geblokkeerd.
+      popupOnMobile: false,
+      colors: [
+        { name: "primary", color: "#5aaefd" },
+        { name: "secondary", color: "#4ade80" }
+      ]
+    };
+  }
+
+  function launchLightbox(ident) {
+    root.Tebex.checkout.init(checkoutOptions(ident));
+    var result = root.Tebex.checkout.launch();
+    // Tebex.js geeft soms een promise terug die kan rejecten; voorkom "Uncaught (in promise)".
+    if (result && typeof result.catch === "function") {
+      result.catch(function (err) {
+        if (typeof console !== "undefined") console.warn("[tebex] launch", err);
+      });
+    }
+  }
+
   async function launchCheckout(ident, payUrl) {
-    // Betrouwbaarste route: de gehoste Tebex-betaalpagina. Na betalen stuurt Tebex
-    // terug naar complete_url (?tebex=done), dus de site handelt de afronding af.
+    // 1) Popup binnen de site (Tebex.js lightbox).
+    try {
+      await loadTebexJs();
+      bindCheckoutEvents();
+      var framesBefore = document.querySelectorAll("iframe").length;
+      launchLightbox(ident);
+      await new Promise(function (resolve) { setTimeout(resolve, 2000); });
+      if (popupVisible(framesBefore)) return { launched: true, ident: ident };
+    } catch (err) {
+      if (typeof console !== "undefined") console.warn("[tebex] lightbox mislukt", err);
+    }
+
+    // 2) Popup verscheen niet: gehoste Tebex-betaalpagina. Na betalen stuurt Tebex terug
+    //    naar complete_url (?tebex=done), dus de site handelt de afronding af.
     if (payUrl) {
       location.href = payUrl;
       return { redirected: true };
     }
 
-    // Geen betaal-URL ontvangen: Tebex.js-pop-up. Browsers blokkeren een pop-up die niet
-    // direct door een klik wordt geopend, dus laad het script alvast en laat de speler
-    // zelf op een knop klikken (zie openPopup).
-    await loadTebexJs();
-    bindCheckoutEvents();
+    // 3) Laatste redmiddel: laat de speler zelf op een knop klikken (zie openPopup).
     return { needsClick: true, ident: ident };
   }
 
   // Moet synchroon vanuit een klik-handler worden aangeroepen.
   function openPopup(ident) {
     if (!root.Tebex || !root.Tebex.checkout) throw new Error("Tebex.js is niet geladen. Ververs de pagina en probeer opnieuw.");
-    root.Tebex.checkout.init({
-      ident: ident,
-      theme: themeForCheckout(),
-      locale: "nl_NL",
-      closeOnPaymentComplete: true,
-      colors: [
-        { name: "primary", color: "#5aaefd" },
-        { name: "secondary", color: "#4ade80" }
-      ]
-    });
-    root.Tebex.checkout.launch();
+    launchLightbox(ident);
   }
 
   async function openCheckout(basket) {
