@@ -94,7 +94,7 @@
       if (actions.querySelector(".auth-wrap #authLoginCfx")) return;
       link = document.createElement("a");
       link.className = "nav-login";
-      link.href = "https://cfx.re/join/5oayqbr";
+      link.href = "https://cfx.re/join/j48ry5k";
       link.textContent = "Connect";
       actions.insertBefore(link, actions.querySelector(".nav-discord, #menuBtn") || null);
     }
@@ -109,6 +109,11 @@
     var links = document.querySelector(".nav-links");
     if (!links) return;
     Array.from(links.querySelectorAll("a")).forEach(function (anchor) {
+      try {
+        if (new URL(anchor.href, location.href).pathname.replace(/\/$/, "") === "/staff") anchor.remove();
+      } catch (e) {}
+    });
+    Array.from(links.querySelectorAll("a")).forEach(function (anchor) {
       if (anchor.closest(".nav-rules-menu")) return;
       try {
         var path = new URL(anchor.href, location.href).pathname.replace(/\/$/, "");
@@ -122,8 +127,7 @@
       ["Regels", "/regels/"],
       ["FAQ", "/faq/"],
       ["Nieuws", "/nieuws/"],
-      ["Updates", "/updates/"],
-      ["Staff", "/staff/"]
+      ["Updates", "/updates/"]
     ].forEach(function (item) {
       var existing = Array.from(links.querySelectorAll("a")).some(function (anchor) {
         try { return new URL(anchor.href, location.href).pathname.replace(/\/$/, "") === item[1].replace(/\/$/, ""); }
