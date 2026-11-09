@@ -1,0 +1,16 @@
+{
+  "name": "fantasy-roleplay-site",
+  "version": "1.2.0",
+  "private": true,
+  "scripts": {
+    "build": "node scripts/build-vercel.mjs",
+    "preview": "node scripts/_serve.js",
+    "products": "node scripts/_gen-products.js",
+    "test:cms": "node scripts/test-cms-workflows.mjs",
+    "test:themes": "node scripts/test-season-effects.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.0.2",
+    "@vercel/blob": "^2.0.0"
+  }
+}

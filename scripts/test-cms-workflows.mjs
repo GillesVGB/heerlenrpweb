@@ -1,0 +1,136 @@
+import assert from 'node:assert/strict';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { unlink } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
+import { runInNewContext } from 'node:vm';
+
+process.env.SESSION_SECRET = 'cms-workflow-test-session-secret-not-for-production';
+process.env.ADMIN_PASSWORD = 'cms-workflow-test-password-not-for-production';
+process.env.CONTENT_STORE_PATH = path.join(tmpdir(), `heerlen-cms-test-${process.pid}.json`);
+
+const [{ default: admin }, { default: content }, { makeSession, permissionsForRoleIds, sessionCookie }] = await Promise.all([
+  import('../api/admin.mjs'), import('../api/content.mjs'), import('../server/security.mjs')
+]);
+const base = 'http://127.0.0.1:8765';
+const origin = { origin: base, 'content-type': 'application/json' };
+const run = (handler, method, payload, cookie) => handler(new Request(base + '/api/admin', {
+  method,
+  headers: { ...origin, ...(cookie ? { cookie } : {}) },
+  ...(method === 'GET' ? {} : { body: JSON.stringify(payload || {}) })
+}));
+
+try {
+  const wrongOrigin = await admin(new Request(base + '/api/admin', { method: 'POST', headers: { origin: 'https://untrusted.example', 'content-type': 'application/json' }, body: JSON.stringify({ action: 'password-login', password: process.env.ADMIN_PASSWORD }) }));
+  assert.equal(wrongOrigin.status, 403, 'cross-origin state changes are rejected');
+
+  const unauthenticated = await run(admin, 'POST', { action: 'save', type: 'news', item: { title: 'No access', content: 'No' } });
+  assert.equal(unauthenticated.status, 401, 'content writes require a session');
+
+  const login = await run(admin, 'POST', { action: 'password-login', password: process.env.ADMIN_PASSWORD });
+  assert.equal(login.status, 200, 'admin password login succeeds in configured local mode');
+  const cookie = login.headers.get('set-cookie').split(';')[0];
+  const adminData = await run(admin, 'GET', undefined, cookie);
+  assert.equal(adminData.status, 200, 'authenticated admin can read protected CMS data');
+  const data = await adminData.json();
+  assert.equal(data.content.rulesVersions[0].version, '1.0', 'complete source rules were migrated as version 1');
+  assert.equal(data.content.rulesDraft.documents.length, 3, 'the APV and two code books are present in the draft');
+
+  const created = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'test-news', title: 'Testbericht', category: 'Nieuws', excerpt: 'Intro', content: 'Eerste alinea', status: 'published', publishAt: new Date(Date.now() - 1000).toISOString() } }, cookie);
+  assert.equal(created.status, 200, 'news can be created: ' + JSON.stringify(await created.clone().json()));
+  const publicData = await content(new Request(base + '/api/content'));
+  const publicBody = await publicData.json();
+  assert.equal(publicBody.news[0].id, 'test-news', 'published news is visible publicly');
+  assert.equal('auditLog' in publicBody, false, 'private audit data is not part of the public feed');
+
+  const themeSettings = {
+    seasonEnabled: true, seasonTheme: 'newyear', seasonAccentEnabled: true, seasonAccent: '#f0b44f', seasonEffects: true,
+    seasonIntensity: 1.4, seasonSpeed: 1.2, seasonDensity: 22, seasonFrequency: 1.6,
+    seasonPages: ['home', 'rules'], seasonStart: '2027-12-31T18:00', seasonEnd: '2028-01-01T23:59',
+    tebexToken: 'public-token-test', tebexPackages: { 'coins-100': '12345' }
+  };
+  const savedTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: themeSettings }, cookie);
+  assert.equal(savedTheme.status, 200, 'site managers can publish seasonal theme settings');
+  const themeFeed = await content(new Request(base + '/api/content'));
+  const themeBody = await themeFeed.json();
+  const publicTheme = themeBody.siteSettings;
+  assert.equal(publicTheme.seasonTheme, 'newyear', 'the public feed returns the selected season');
+  assert.equal(publicTheme.seasonIntensity, 1.4, 'theme intensity persists in shared storage');
+  assert.equal(publicTheme.seasonFrequency, 1.6, 'theme animation frequency persists in shared storage');
+  assert.deepEqual(publicTheme.seasonPages, ['home', 'rules'], 'page selection persists in shared storage');
+  assert.equal(publicTheme.seasonAccent, '#f0b44f', 'custom theme accent persists in shared storage');
+  assert.equal(publicTheme.seasonStart, '2027-12-31T18:00', 'theme schedule persists in shared storage');
+  assert.equal(themeBody.storeSettings.tebexToken, 'public-token-test', 'public Tebex token is available to every shop visitor');
+  assert.equal(themeBody.storeSettings.tebexPackages['coins-100'], '12345', 'Tebex package IDs persist in shared storage');
+  const badTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: { seasonTheme: 'unknown' } }, cookie);
+  assert.equal(badTheme.status, 400, 'unknown seasonal themes are rejected server-side');
+  const badPackage = await run(admin, 'POST', { action: 'save-site-settings', settings: { tebexPackages: { 'coins-100': 'not-an-id' } } }, cookie);
+  assert.equal(badPackage.status, 400, 'invalid Tebex package IDs are rejected server-side');
+  const badSchedule = await run(admin, 'POST', { action: 'save-site-settings', settings: { seasonStart: '2028-01-02T00:00', seasonEnd: '2028-01-01T00:00' } }, cookie);
+  assert.equal(badSchedule.status, 400, 'invalid theme date ranges are rejected server-side');
+
+  const staffPermissions = permissionsForRoleIds(['1567581357004038184']);
+  assert.deepEqual(staffPermissions, ['staff:read'], 'the configured staff-site role only grants access to the staff page');
+  assert.ok(!staffPermissions.includes('rules:write') && !staffPermissions.includes('admin:site') && !staffPermissions.includes('news:write'), 'the staff-site role cannot manage the admin panel');
+  const staffToken = makeSession({ id: 'staff-test', username: 'StaffTest', roles: ['1567581357004038184'], permissions: staffPermissions });
+  const staffCookie = sessionCookie(staffToken, { url: base + '/api/admin' }).split(';')[0];
+  const denied = await run(admin, 'POST', { action: 'publish-rules', title: 'Staff mag dit niet' }, staffCookie);
+  assert.equal(denied.status, 403, 'staff role cannot publish rule versions');
+  const staffNews = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'staff-news', title: 'Staff update', content: 'Staff mag nieuws beheren.', status: 'draft' } }, staffCookie);
+  assert.equal(staffNews.status, 403, 'staff-site role cannot change admin content');
+
+  const originalFetch = globalThis.fetch;
+  const oldGuildId = process.env.DISCORD_GUILD_ID;
+  const oldBotToken = process.env.DISCORD_BOT_TOKEN;
+  process.env.DISCORD_GUILD_ID = 'test-guild';
+  process.env.DISCORD_BOT_TOKEN = 'test-bot-token';
+  try {
+    const discordToken = makeSession({ id: 'discord-test', username: 'DiscordTest', roles: ['1567581357004038184'], permissions: staffPermissions, provider: 'discord' });
+    const discordCookie = sessionCookie(discordToken, { url: base + '/api/admin' }).split(';')[0];
+    globalThis.fetch = async () => new Response(JSON.stringify({ user: { username: 'DiscordTest', global_name: 'Discord Test' }, roles: ['1568033014384951366'] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    const promotedView = await run(admin, 'GET', undefined, discordCookie);
+    assert.equal(promotedView.status, 200, 'Discord role changes are checked against the current guild roles');
+    assert.ok((await promotedView.json()).content.rulesDraft, 'a newly assigned admin role is effective without re-login');
+
+    globalThis.fetch = async () => new Response(JSON.stringify({ user: { username: 'DiscordTest' }, roles: [] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    const removedRoleWrite = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'removed-role', title: 'Geen toegang', content: 'Niet bewaren', status: 'draft' } }, discordCookie);
+    assert.equal(removedRoleWrite.status, 403, 'removed Discord roles lose access immediately');
+  } finally {
+    globalThis.fetch = originalFetch;
+    if (oldGuildId === undefined) delete process.env.DISCORD_GUILD_ID; else process.env.DISCORD_GUILD_ID = oldGuildId;
+    if (oldBotToken === undefined) delete process.env.DISCORD_BOT_TOKEN; else process.env.DISCORD_BOT_TOKEN = oldBotToken;
+  }
+
+  const draftDocs = data.content.rulesDraft.documents.map(doc => ({ ...doc }));
+  draftDocs[0].content += '\n### Testwijziging\n- Alleen testinhoud';
+  const savedDraft = await run(admin, 'POST', { action: 'save-rules-draft', documents: draftDocs }, cookie);
+  assert.equal(savedDraft.status, 200, 'rule draft can be saved');
+  const published = await run(admin, 'POST', { action: 'publish-rules', title: 'Testversie' }, cookie);
+  assert.equal(published.status, 200, 'rule version can be published');
+  const afterPublish = await run(admin, 'GET', undefined, cookie);
+  const afterBody = await afterPublish.json();
+  assert.equal(afterBody.content.rulesVersions.length, 2, 'publishing adds a new version without overwriting version 1');
+  assert.equal(afterBody.content.rulesVersions[0].documents[0].content.includes('Testwijziging'), false, 'historical rule snapshot stays immutable');
+  assert.equal(afterBody.content.rulesVersions[1].documents[0].content.includes('Testwijziging'), true, 'new rule snapshot contains the published edit');
+
+  const browserSettings = { tebexToken: 'stale-local-token', tebexPackages: {} };
+  const browser = {
+    HeerlenSettings: {
+      load: () => browserSettings,
+      save: value => Object.assign(browserSettings, value)
+    },
+    HeerlenCatalog: { pack: () => null }
+  };
+  const tebexScript = await readFile(new URL('./tebex.js', import.meta.url), 'utf8');
+  runInNewContext(tebexScript, {
+    window: browser,
+    fetch: async () => ({ ok: true, json: async () => ({ storeSettings: themeBody.storeSettings }) })
+  });
+  await browser.HeerlenTebex.loadStoreSettings();
+  assert.equal(browserSettings.tebexToken, 'public-token-test', 'shop login loads the shared Tebex token for visitors');
+  assert.equal(browser.HeerlenTebex.packageIdFor('coins-100'), '12345', 'checkout loads shared package IDs for visitors');
+
+  console.log('CMS and shop checks passed: origin guard, login, current Discord roles, authorization, news publish, staff permissions, shared seasonal and Tebex settings, shop configuration loading, schedule validation, immutable APV versions.');
+} finally {
+  await unlink(process.env.CONTENT_STORE_PATH).catch(() => {});
+}

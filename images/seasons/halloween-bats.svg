@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 90">
+  <style>
+    .wing{transform-box:fill-box;transform-origin:50% 60%;animation:flap .42s ease-in-out infinite alternate}
+    .left{transform-origin:100% 70%}.right{transform-origin:0% 70%;animation-delay:-.12s}
+    @keyframes flap{from{transform:rotate(-13deg) scaleY(.9)}to{transform:rotate(15deg) scaleY(1.08)}}
+  </style>
+  <g fill="#1c1023" stroke="#3a2444" stroke-width="2" stroke-linejoin="round">
+    <path class="wing left" d="M88 45Q53 3 13 14q22 8 10 29Q8 30 1 45q24-1 33 28 18-18 48-9z"/>
+    <path class="wing right" d="M92 45q35-42 75-31-22 8-10 29 15-13 22 2-24-1-33 28-18-18-48-9z"/>
+    <path d="m82 43 1-23 13 15 13-15 1 23q6 20-14 31-20-11-14-31z"/>
+  </g>
+  <circle cx="87" cy="52" r="2.5" fill="#ffac53"/><circle cx="105" cy="52" r="2.5" fill="#ffac53"/>
+</svg>

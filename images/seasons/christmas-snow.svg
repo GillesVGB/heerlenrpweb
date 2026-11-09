@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 360 540" aria-hidden="true">
+  <defs>
+    <g id="flake" fill="none" stroke="#f4fbff" stroke-linecap="round" opacity=".88">
+      <path stroke-width="2.2" d="M0-10v20M-8.7-5l17.4 10M-8.7 5l17.4-10"/>
+      <path stroke-width="1.5" d="m0-10-2.5 3m2.5-3 2.5 3M0 10l-2.5-3m2.5 3 2.5-3M-8.7-5l3.8.4m-3.8-.4 1.2 3.6M8.7 5l-3.8-.4m3.8.4-1.2-3.6M-8.7 5l3.8-.4m-3.8.4 1.2-3.6M8.7-5l-3.8.4m3.8-.4-1.2 3.6"/>
+    </g>
+    <radialGradient id="glow"><stop stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#d9f4ff" stop-opacity="0"/></radialGradient>
+  </defs>
+  <style>.snow-art{animation:snow-drift 5s ease-in-out infinite alternate}@keyframes snow-drift{from{transform:translate(0,-8px)}to{transform:translate(10px,22px)}}</style>
+  <g class="snow-art">
+  <g fill="#fff" opacity=".84">
+    <circle cx="35" cy="48" r="2.2"/><circle cx="196" cy="76" r="1.5"/><circle cx="287" cy="31" r="2"/>
+    <circle cx="110" cy="162" r="1.5"/><circle cx="331" cy="191" r="2.1"/><circle cx="53" cy="267" r="1.8"/>
+    <circle cx="221" cy="303" r="1.6"/><circle cx="145" cy="418" r="2"/><circle cx="312" cy="472" r="1.6"/>
+  </g>
+  <circle cx="287" cy="31" r="16" fill="url(#glow)"/>
+  <use href="#flake" x="70" y="94"/><use href="#flake" x="245" y="124" transform="scale(.72) translate(95 49)"/>
+  <use href="#flake" x="158" y="225" transform="scale(.85) translate(28 40)"/><use href="#flake" x="289" y="276"/>
+  <use href="#flake" x="91" y="353" transform="scale(.66) translate(46 180)"/><use href="#flake" x="252" y="400" transform="scale(.8) translate(63 100)"/>
+  <use href="#flake" x="34" y="490"/><use href="#flake" x="178" y="505" transform="scale(.7) translate(76 216)"/>
+  </g>
+</svg>

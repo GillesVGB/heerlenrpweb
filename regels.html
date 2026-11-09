@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Regels en wetgeving | Heerlen Roleplay</title>
+<meta name="description" content="De serverregels en wetboeken van Heerlen Roleplay. APV, Strafrecht en Strafvordering.">
+<meta name="theme-color" content="#141614">
+<link rel="icon" href="./images/heerlen-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles/heerlen.css?v=20261106-11">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem("heerlenrp_theme");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+<link rel="stylesheet" href="./styles/regels.css">
+</head>
+<body>
+
+<script src="/scripts/promo.js?v=20261106-6"></script>
+
+<header class="nav" id="nav">
+  <div class="nav-shell">
+    <a class="brand" href="./index.html" aria-label="Heerlen Roleplay">
+      <img src="./images/heerlen-logo.png" alt="Heerlen Roleplay">
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="./index.html">Home</a>
+      <a href="./winkel/index.html">Store</a>
+      <a href="./regels/" class="is-active">Regels</a>
+      <a href="./nieuws/">Nieuws</a>
+      <a href="./updates/">Updates</a>
+      <a href="./staff/">Staff</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="nav-discord" href="https://discord.gg/heerlenrp" target="_blank" rel="noopener">Discord</a>
+      <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main class="rules">
+  <section class="rules-hero">
+    <div class="wrap">
+      <p class="kicker">GG / HEERLENRP</p>
+      <h1>Regels en wetgeving</h1>
+      <p class="rules-lead">De serverregels en de wetboeken van Heerlen Roleplay. Kies een document en blader per onderdeel door de regels.</p>
+      <nav class="doc-tabs" aria-label="Documenten">
+        <button type="button" class="is-on" data-doc="apv">Algemene Plaatselijke Verordening</button>
+        <button type="button" data-doc="strafrecht">Wetboek van Strafrecht</button>
+        <button type="button" data-doc="strafvordering">Wetboek van Strafvordering</button>
+      </nav>
+    </div>
+  </section>
+
+  <div class="wrap rules-layout">
+    <aside class="toc" aria-label="Inhoud">
+      <h2>Inhoud</h2>
+      <nav id="toc"></nav>
+    </aside>
+
+    <article class="doc" id="doc">
+      <!-- APV -->
+      <section class="doc-pane is-on" data-pane="apv">
+        <h2>Algemene Plaatselijke Verordening</h2>
+        <p class="doc-intro">De serverregels voor iedere speler: wat we van je verwachten in de roleplay en welke straf staff oplegt bij een overtreding.</p>
+        <p>Deze APV is het kader voor gedrag, roleplay en overtredingen binnen Heerlen Roleplay. Staff mag hem toepassen bij in-game situaties én bij zaken die de server raken.</p>
+        <p>De APV richt zich op jou als speler. Wat je personage in de stad strafbaar maakt staat in het <button type="button" class="doc-jump" data-doc="strafrecht">Wetboek van Strafrecht</button>. Hoe politie, OM en rechtbank een zaak afhandelen staat in het <button type="button" class="doc-jump" data-doc="strafvordering">Wetboek van Strafvordering</button>.</p>
+
+        <div class="callout">
+          <strong>Let op</strong>
+          <p>Onbekendheid met de regels is geen excuus. Door te spelen op Heerlen Roleplay ga je akkoord met deze APV.</p>
+        </div>
+
+        <section id="apv-algemeen">
+          <h3>Algemene bepalingen</h3>
+          <h4>A-1 - Reikwijdte</h4>
+          <ol>
+            <li>Deze APV geldt voor heel Heerlen Roleplay: de stad, de Discord en alles wat eraan hangt.</li>
+            <li>Waar “speler” staat, bedoelen we iedere gebruiker van de server.</li>
+            <li>Staff mag de APV aanvullen of verduidelijken via aankondigingen. Die gelden vanaf publicatie.</li>
+          </ol>
+          <h4>A-2 - Beoordeling</h4>
+          <ol>
+            <li>Bij een regelwijziging na een overtreding geldt de versie die voor de speler het gunstigst is.</li>
+            <li>Een stafflid oordeelt niet over een zaak waarin hij of zij zelf betrokken is.</li>
+            <li>Staff mag van de standaard straf afwijken als de omstandigheden dat vragen.</li>
+            <li>Refunds vraag je binnen 14 dagen na het incident aan. Daarna vervalt het recht.</li>
+          </ol>
+          <h4>A-3 - Strafcategorieën</h4>
+          <p>Straffen lopen via deze categorieën:</p>
+          <ol>
+            <li><strong>Categorie 1</strong> - waarschuwing + taakstraf.</li>
+            <li><strong>Categorie 2</strong> - 1 dag ban of zwaardere waarschuwing + taakstraf.</li>
+            <li><strong>Categorie 3</strong> - 2 tot 3 dagen ban + taakstraf.</li>
+            <li><strong>Categorie 4</strong> - 5 tot 7 dagen ban.</li>
+            <li><strong>Categorie 5</strong> - 14 dagen ban.</li>
+            <li><strong>Categorie 6</strong> - 30 dagen ban.</li>
+            <li><strong>Categorie 7</strong> - permanente ban, met herziening mogelijk.</li>
+            <li><strong>Categorie 8</strong> - permanente ban zonder herziening bij grove of herhaalde overtredingen.</li>
+          </ol>
+        </section>
+
+        <section id="apv-roleplay">
+          <h3>Roleplay en gedrag</h3>
+          <h4>Artikel 1 - FailRP</h4>
+          <ol>
+            <li>Je speelt je personage geloofwaardig. Onrealistische acties zonder basis zijn FailRP.</li>
+            <li>Je houdt rekening met pijn, angst, risico en de situatie om je heen.</li>
+          </ol>
+          <h4>Artikel 2 - Powergaming</h4>
+          <ol>
+            <li>Je forceert geen uitkomst die de ander geen eerlijke kans geeft om te reageren.</li>
+            <li>Je gebruikt geen kennis of middelen die je personage in die situatie niet heeft.</li>
+          </ol>
+          <h4>Artikel 3 - OOC</h4>
+          <ol>
+            <li>Out-of-character praat je niet in IC-kanalen tenzij het echt nodig is.</li>
+            <li>Je breekt je karakter niet om een conflict OOC te winnen.</li>
+          </ol>
+          <h4>Artikel 4 - Metagaming</h4>
+          <ol>
+            <li>Informatie van Discord, streams of OOC gebruik je niet in-game tenzij je personage die info heeft.</li>
+          </ol>
+          <h4>Artikel 5 - New Life Rule</h4>
+          <ol>
+            <li>Na een NL/respawn onthoud je geen details van het voorafgaande conflict, behalve wat staff of regels toestaan.</li>
+          </ol>
+          <h4>Artikel 6 - RDM</h4>
+          <ol>
+            <li>Je valt iemand niet aan of dood zonder geloofwaardige IC-reden en initiatie.</li>
+          </ol>
+          <h4>Artikel 7 - NVOL</h4>
+          <ol>
+            <li>Je waardeert je eigen leven. Zinloos risico zonder IC-grond is niet toegestaan.</li>
+          </ol>
+        </section>
+
+        <section id="apv-server">
+          <h3>Servergebruik en technische regels</h3>
+          <h4>Artikel 8 - Safezones</h4>
+          <ol>
+            <li>In gemarkeerde safezones geen geweld, overvallen of intimidatie, tenzij staff uitzondering geeft.</li>
+          </ol>
+          <h4>Artikel 9 - Combatlogging</h4>
+          <ol>
+            <li>Je disconnect niet om een conflict, arrestatie of straf te ontlopen.</li>
+          </ol>
+          <h4>Artikel 10 - Exploits en bugs</h4>
+          <ol>
+            <li>Bugs melden mag. Misbruiken is strafbaar.</li>
+          </ol>
+          <h4>Artikel 11 - Cheats</h4>
+          <ol>
+            <li>Cheats, injectors en andere oneerlijke software zijn verboden. Gevolg: zware of permanente ban.</li>
+          </ol>
+          <h4>Artikel 12 - /report</h4>
+          <ol>
+            <li>Reports zijn voor serieuze zaken. Misbruik of spammen leidt tot straf.</li>
+          </ol>
+          <h4>Artikel 13 - Voertalen</h4>
+          <ol>
+            <li>In-game en op Discord communiceer je Nederlands, tenzij een situatie dat anders vraagt.</li>
+          </ol>
+          <h4>Artikel 14 - ERP en zelfmoord-RP</h4>
+          <ol>
+            <li>ERP zonder wederzijdse toestemming is verboden. Zelfmoord-RP is niet toegestaan.</li>
+          </ol>
+        </section>
+
+        <section id="apv-voertuigen">
+          <h3>Voertuigen en kleding</h3>
+          <h4>Artikel 15 - Voertuigen</h4>
+          <ol>
+            <li>Rijden moet in de roleplay passen. Zinloos rammen of weird-driving zonder IC-reden is FailRP.</li>
+            <li>Gestolen of overheidsvoertuigen gebruik je alleen met geloofwaardige IC-grond.</li>
+          </ol>
+          <h4>Artikel 16 - Kleding</h4>
+          <ol>
+            <li>Overheidsuniformen zijn voor bevoegde personages. Misbruik is strafbaar.</li>
+          </ol>
+        </section>
+
+        <section id="apv-crime">
+          <h3>Criminaliteit</h3>
+          <h4>Artikel 17 - Overvallen</h4>
+          <ol>
+            <li>Overvallen en oplichting doe je met initiatie, logica en respect voor NVOL/FailRP.</li>
+            <li>Je gijzelt of bedreigt niet zonder IC-doel dat bij de situatie past.</li>
+          </ol>
+          <h4>Artikel 18 - Witwassen en acties</h4>
+          <ol>
+            <li>Criminele acties moeten roleplay opleveren, geen pure farm zonder verhaal.</li>
+          </ol>
+          <h4>Artikel 19 - Ontsnappen</h4>
+          <ol>
+            <li>Ontsnappen uit cellen of transport mag alleen als de regels en de situatie dat toelaten.</li>
+          </ol>
+        </section>
+
+        <section id="apv-overheid">
+          <h3>Overheid en organisaties</h3>
+          <h4>Artikel 20 - Overheidsmedewerkers</h4>
+          <ol>
+            <li>Politie, ambulance, brandweer en andere diensten spelen hun rol professioneel en IC.</li>
+          </ol>
+          <h4>Artikel 21 - Samenwerken met diensten</h4>
+          <ol>
+            <li>Je neemt hun roleplay serieus. Trollen van hulpdiensten is FailRP.</li>
+          </ol>
+          <h4>Artikel 22 - Criminele organisaties</h4>
+          <ol>
+            <li>Gangs en organisaties houden zich aan gangregels én deze APV.</li>
+          </ol>
+        </section>
+
+        <section id="apv-account">
+          <h3>Persoons- en accountregels</h3>
+          <h4>Artikel 23 - Alts en multiboxing</h4>
+          <ol>
+            <li>Meerdere characters mogen, zolang ze elkaar niet oneerlijk bevoordelen.</li>
+            <li>Twee clients tegelijk voor voordeel is verboden.</li>
+          </ol>
+          <h4>Artikel 24 - Stemherkenning</h4>
+          <ol>
+            <li>Je herkent iemand niet alleen aan de stem zonder IC-basis.</li>
+          </ol>
+          <h4>Artikel 25 - Belediging</h4>
+          <ol>
+            <li>Discriminatie, doxing en grensoverschrijdend OOC-gedrag zijn verboden.</li>
+          </ol>
+          <h4>Artikel 26 - IRL trading</h4>
+          <ol>
+            <li>In-game spullen of accounts verkopen voor echt geld buiten de officiële store is verboden.</li>
+          </ol>
+        </section>
+
+        <section id="apv-overig">
+          <h3>Overige serverregels</h3>
+          <h4>Artikel 27 - Bedrijven en jobs</h4>
+          <ol>
+            <li>Jobhoppen om systemen te misbruiken is niet toegestaan.</li>
+          </ol>
+          <h4>Artikel 28 - Staff</h4>
+          <ol>
+            <li>Je bent eerlijk tegen staff. Liegen met bewijs erbij verzwaart de straf.</li>
+          </ol>
+          <h4>Artikel 29 - Baiting</h4>
+          <ol>
+            <li>Je lokt anderen niet bewust in overtredingen om ze te laten straffen.</li>
+          </ol>
+        </section>
+
+        <section id="apv-slot">
+          <h3>Slotbepalingen</h3>
+          <h4>Slot</h4>
+          <ol>
+            <li>Staff heeft het laatste woord bij interpretatie van deze APV.</li>
+            <li>Regels kunnen wijzigen. De actuele versie staat altijd op deze pagina.</li>
+            <li>Vragen? Open een ticket in de support-Discord.</li>
+          </ol>
+        </section>
+      </section>
+
+      <!-- Strafrecht -->
+      <section class="doc-pane" data-pane="strafrecht" hidden>
+        <h2>Wetboek van Strafrecht</h2>
+        <p class="doc-intro">Wat personages in Heerlen strafbaar kunnen maken. Dit is IC-recht voor politie, OM en rechtbank.</p>
+        <div class="callout">
+          <strong>IC-document</strong>
+          <p>Dit wetboek gebruikt je in roleplay. Serverstraffen via staff staan in de <button type="button" class="doc-jump" data-doc="apv">APV</button>.</p>
+        </div>
+
+        <section id="sr-algemeen">
+          <h3>Algemene bepalingen</h3>
+          <h4>Artikel 1 - Toepasselijkheid</h4>
+          <ol>
+            <li>Dit wetboek geldt voor alle personages in de gemeente Heerlen Roleplay.</li>
+            <li>Een feit is strafbaar als het in dit wetboek of een bijzondere wet staat.</li>
+          </ol>
+          <h4>Artikel 2 - Poging en medeplichtigheid</h4>
+          <ol>
+            <li>Poging tot een misdrijf kan strafbaar zijn als de uitvoering is begonnen.</li>
+            <li>Medeplegers en opdrachtgevers kunnen dezelfde of een lagere straf krijgen.</li>
+          </ol>
+        </section>
+
+        <section id="sr-geweld">
+          <h3>Geweld en bedreiging</h3>
+          <h4>Artikel 10 - Mishandeling</h4>
+          <ol>
+            <li>Opzettelijk letsel toebrengen is mishandeling.</li>
+          </ol>
+          <h4>Artikel 11 - Zware mishandeling</h4>
+          <ol>
+            <li>Letsel met blijvende gevolgen of levensgevaar is zware mishandeling.</li>
+          </ol>
+          <h4>Artikel 12 - Doodslag en moord</h4>
+          <ol>
+            <li>Opzettelijk doden is doodslag. Met voorbedachten rade is het moord.</li>
+          </ol>
+          <h4>Artikel 13 - Bedreiging</h4>
+          <ol>
+            <li>Iemand dreigen met geweld of een misdrijf is strafbaar.</li>
+          </ol>
+        </section>
+
+        <section id="sr-vermogen">
+          <h3>Vermogensdelicten</h3>
+          <h4>Artikel 20 - Diefstal</h4>
+          <ol>
+            <li>Andermans goed wegnemen met het oogmerk het zich toe te eigenen is diefstal.</li>
+          </ol>
+          <h4>Artikel 21 - Afpersing en diefstal met geweld</h4>
+          <ol>
+            <li>Diefstal met geweld of dreiging is een zwaarder misdrijf.</li>
+          </ol>
+          <h4>Artikel 22 - Fraude en oplichting</h4>
+          <ol>
+            <li>Iemand met list bewegen tot afgifte van goed of voordeel is oplichting.</li>
+          </ol>
+          <h4>Artikel 23 - Heling</h4>
+          <ol>
+            <li>Weten of vermoeden dat een goed uit misdrijf komt en het toch verwerven is heling.</li>
+          </ol>
+        </section>
+
+        <section id="sr-verkeer">
+          <h3>Openbare orde en verkeer</h3>
+          <h4>Artikel 30 - Openbare geweldpleging</h4>
+          <ol>
+            <li>Geweld in het openbaar of tegen hulpverleners is strafbaar.</li>
+          </ol>
+          <h4>Artikel 31 - Vernieling</h4>
+          <ol>
+            <li>Opzettelijk andermans goed vernielen of beschadigen is strafbaar.</li>
+          </ol>
+          <h4>Artikel 32 - Verkeer</h4>
+          <ol>
+            <li>Roekeloos rijden, vluchten na een ongeval en rijden zonder rijbewijs kunnen strafbaar zijn.</li>
+          </ol>
+        </section>
+
+        <section id="sr-drugs">
+          <h3>Drugs en wapens</h3>
+          <h4>Artikel 40 - Verboden middelen</h4>
+          <ol>
+            <li>Bezitten, verkopen of produceren van verboden middelen is strafbaar volgens de IC-wetgeving.</li>
+          </ol>
+          <h4>Artikel 41 - Wapens</h4>
+          <ol>
+            <li>Illegaal wapenbezit, -handel of gebruik zonder bevoegdheid is strafbaar.</li>
+          </ol>
+        </section>
+
+        <section id="sr-slot">
+          <h3>Slot</h3>
+          <ol>
+            <li>Straffen en procedures volgen het <button type="button" class="doc-jump" data-doc="strafvordering">Wetboek van Strafvordering</button>.</li>
+            <li>De rechter of bevoegde IC-instantie bepaalt de eindstraf binnen de roleplay.</li>
+          </ol>
+        </section>
+      </section>
+
+      <!-- Strafvordering -->
+      <section class="doc-pane" data-pane="strafvordering" hidden>
+        <h2>Wetboek van Strafvordering</h2>
+        <p class="doc-intro">Hoe politie, Openbaar Ministerie en rechtbank een zaak IC afhandelen.</p>
+        <div class="callout">
+          <strong>Procedure</strong>
+          <p>Dit document stuurt de IC-rechtsgang. Serverregels voor spelers blijven in de <button type="button" class="doc-jump" data-doc="apv">APV</button>.</p>
+        </div>
+
+        <section id="sv-opsporing">
+          <h3>Opsporing</h3>
+          <h4>Artikel 1 - Aanhouding</h4>
+          <ol>
+            <li>Politie mag aanhouden bij heterdaad of met een bevel, binnen de IC-regels.</li>
+            <li>De aangehoudene krijgt te horen waarvan hij wordt verdacht, zodra dat redelijk is.</li>
+          </ol>
+          <h4>Artikel 2 - Fouillering en inbeslagname</h4>
+          <ol>
+            <li>Fouilleren en inbeslagname gebeuren met IC-grondslag en proportionaliteit.</li>
+          </ol>
+          <h4>Artikel 3 - Verhoor</h4>
+          <ol>
+            <li>Verhoren blijven roleplay: geen OOC-druk, wel IC-spanning.</li>
+          </ol>
+        </section>
+
+        <section id="sv-om">
+          <h3>Vervolging</h3>
+          <h4>Artikel 10 - Openbaar Ministerie</h4>
+          <ol>
+            <li>Het OM beslist over sepot, schikking of dagvaarding binnen de serverafspraken.</li>
+          </ol>
+          <h4>Artikel 11 - Voorlopige hechtenis</h4>
+          <ol>
+            <li>Voorlopige hechtenis mag alleen met IC-reden, zoals vluchtgevaar of herhalingsgevaar.</li>
+          </ol>
+        </section>
+
+        <section id="sv-rechtbank">
+          <h3>Berechting</h3>
+          <h4>Artikel 20 - Zitting</h4>
+          <ol>
+            <li>Op de zitting krijgen OM, verdediging en rechter de ruimte voor roleplay.</li>
+          </ol>
+          <h4>Artikel 21 - Bewijs</h4>
+          <ol>
+            <li>Bewijs is IC: verklaringen, camerabeelden, goederen en andere roleplay-middelen.</li>
+          </ol>
+          <h4>Artikel 22 - Uitspraak</h4>
+          <ol>
+            <li>De rechter doet uitspraak volgens het Wetboek van Strafrecht en dit wetboek.</li>
+          </ol>
+        </section>
+
+        <section id="sv-slot">
+          <h3>Slot</h3>
+          <ol>
+            <li>Bij twifel over procedure stemt men af met staff of justitie-roleplay leads.</li>
+            <li>Misbruik van procedures om OOC te winnen valt onder de APV.</li>
+          </ol>
+        </section>
+      </section>
+    </article>
+  </div>
+  <section class="rule-history wrap" id="ruleHistory" aria-labelledby="ruleHistoryTitle" hidden>
+    <div class="rule-history-head"><div><p class="kicker">Archief</p><h2 id="ruleHistoryTitle">Eerdere regelversies</h2></div><label>Versie <select id="ruleHistorySelect"></select></label></div>
+    <p id="ruleHistoryMeta" class="content-muted"></p><div id="ruleHistoryBody" class="rule-history-body"></div>
+  </section>
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a href="./index.html">
+          <img src="./images/heerlen-logo.png" alt="">
+          <span>Heerlen Roleplay</span>
+        </a>
+        <p>Een Nederlandse FiveM roleplay server met een toegankelijke economie, waar jij zelf het verhaal van de stad schrijft.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Navigatie</h4>
+        <nav aria-label="Navigatie">
+          <a href="./index.html">Home</a>
+          <a href="./winkel/index.html">Store</a>
+          <a href="./regels/">Regels</a>
+          <a href="./nieuws/">Nieuws</a>
+          <a href="./updates/">Serverupdates</a>
+          <a href="./staff/">Staff</a>
+          <a data-join href="https://cfx.re/join/5oayqbr">Connect</a>
+        </nav>
+      </div>
+      <div class="foot-col">
+        <h4>Regelgeving</h4>
+        <nav aria-label="Regelgeving">
+          <a href="./regels/">Serverregels</a>
+          <a href="./regels.html#apv">APV</a>
+          <a href="./regels.html#strafrecht">Wetboek van Strafrecht</a>
+          <a href="./regels.html#strafvordering">Wetboek van Strafvordering</a>
+        </nav>
+      </div>
+      <div class="foot-col">
+        <h4>Discord</h4>
+        <nav aria-label="Discord">
+          <a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener">Heerlen Roleplay</a>
+          <a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener">Support</a>
+          <a href="./regels/">Regels lezen</a>
+          <a data-join href="https://cfx.re/join/5oayqbr">Server joinen</a>
+        </nav>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <p>© <span id="year">2026</span> Heerlen Roleplay. Alle rechten voorbehouden.</p>
+      <p>Betalingen verlopen veilig via Tebex.</p>
+    </div>
+  </div>
+</footer>
+
+<script src="./scripts/settings.js"></script>
+<script src="./scripts/tebex.js?v=20261109-2"></script>
+<script src="./scripts/auth.js?v=20261109-2"></script>
+<script src="./scripts/nav.js?v=20261106-14"></script>
+<script src="./scripts/regels.js"></script>
+<script src="./scripts/content/public-content.js?v=20261106-6"></script>
+</body>
+</html>

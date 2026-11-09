@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="nl" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0c1018">
+  <meta name="description" content="Alle APV-artikelen, strafcategorieën, algemene regels en Discord-regels van Heerlen Roleplay. Vind snel de regel die je zoekt.">
+  <title>APV · Heerlen Roleplay</title>
+  <link rel="icon" href="heerlen-logo.png" type="image/png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="/styles/heerlen.css?v=20261109-10">
+  <link rel="stylesheet" href="/styles/heerlen-regulations.css?v=20261109-7">
+  <link rel="stylesheet" href="/styles/site-effects.css?v=20261106-11">
+  <script src="content.js" defer></script>
+  <script src="app.js?v=20261109-2" defer></script>
+</head>
+<body class="apv-page" data-base="/">
+<script src="/scripts/promo.js?v=20261106-6"></script>
+<header class="nav" id="nav">
+  <div class="nav-shell">
+    <a class="brand" href="/" aria-label="Heerlen Roleplay">
+      <img src="/images/heerlen-logo.png" alt="Heerlen Roleplay">
+    </a>
+    <nav class="nav-links" id="navLinks" aria-label="Hoofdnavigatie">
+      <a href="/">Home</a>
+      <a href="/winkel/">Store</a>
+      <a href="/regels/" aria-current="page">Regels</a>
+      <a href="/nieuws/">Nieuws</a>
+      <a href="/updates/">Updates</a>
+      <a href="/staff/">Staff</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="nav-login" data-join href="https://cfx.re/join/5oayqbr" title="Connect naar de server">Connect</a>
+      <button type="button" class="cart-btn" id="cartOpen" aria-label="Winkelmand openen">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+        <span id="cartBadge" hidden>0</span>
+      </button>
+      <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+<div id="apv-root">
+  <a class="skip-link" href="#main">Ga naar de inhoud</a>
+  <div class="workspace">
+    <main id="main" tabindex="-1">
+      <section class="hero" id="hero" aria-labelledby="hero-title">
+        <div class="hero-copy"><div class="eyebrow"><span></span> HEERLEN ROLEPLAY · APV</div><h1 id="hero-title">De regels van<br><em>onze stad.</em></h1></div>
+        <div class="hero-art" aria-hidden="true"><div class="art-grid"></div><div class="orbit orbit-one"></div><div class="orbit orbit-two"></div><span class="art-coordinate coordinate-one">50°53′ N</span><span class="art-coordinate coordinate-two">05°59′ E</span><img src="heerlen-logo.png" alt="" width="310" height="310"><div class="art-caption"><span></span> JOUW STAD. JOUW VERHAAL.</div></div>
+      </section>
+      <section id="topic-cards" class="topic-cards" aria-label="Blader per onderwerp"></section>
+      <section class="rules-section" aria-labelledby="section-title">
+        <div class="section-heading"><div><div class="eyebrow section-eyebrow" id="section-eyebrow">HET REGLEMENT</div><h2 id="section-title">Algemene Plaatselijke Verordening<span class="heading-count" id="heading-count">65</span></h2><p id="section-description"></p></div><button class="text-button" id="expand-all" type="button"><span data-icon="expand"></span><span>Alles uitklappen</span></button></div>
+        <div class="filter-bar"><label class="search-field"><span data-icon="search"></span><input id="search" type="search" placeholder="Zoek op artikel, onderwerp of trefwoord…" aria-label="Zoek in het reglement" autocomplete="off"><kbd>/</kbd></label><label class="category-field"><span data-icon="filter"></span><select id="category" aria-label="Filter op strafcategorie"><option value="all">Alle strafcategorieën</option></select></label></div>
+        <div class="results-line"><div id="result-count" role="status" aria-live="polite">65 artikelen</div><div class="active-filters" id="active-filters"></div><span id="list-hint">Klik op een artikel om het te lezen <span data-icon="arrow-down"></span></span></div>
+        <div class="source-note" id="source-note" hidden><span data-icon="info"></span><p>De strafduren in sommige artikelen wijken af van dit overzicht. Beide zijn overgenomen uit de aangeleverde APV. Vraag bij twijfel een stafflid om verduidelijking.</p></div>
+        <div id="rules-list" class="rules-list"></div>
+        <div class="empty-state" id="empty-state" hidden><span data-icon="search"></span><h3>Geen artikelen gevonden</h3><p id="empty-description">Probeer een ander trefwoord of pas je filters aan.</p><button type="button" id="reset-filters" class="primary-button">Filters wissen</button></div>
+      </section>
+      <section class="help-banner"><div class="help-icon" data-icon="message"></div><div><h3>Twijfel over een regel?</h3><p>Gebruik je gezonde verstand. Ons staffteam helpt je graag verder.</p></div><a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener noreferrer">Vraag het in Discord <span data-icon="arrow-right"></span></a></section>
+      
+    </main>
+  </div>
+  <button class="back-top icon-button" id="back-top" type="button" aria-label="Terug naar boven" hidden><span data-icon="arrow-up"></span></button>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <noscript><div class="noscript">Schakel JavaScript in om de APV te doorzoeken en te lezen.</div></noscript>
+<script src="/scripts/settings.js"></script>
+
+</div><footer class="foot site-footer"><div class="wrap"><div class="foot-bottom"><p>© <span data-year>2026</span> Heerlen Roleplay. Alle rechten voorbehouden.</p><nav aria-label="Voettekst"><a href="/">Home</a><a href="/regels/">Regels</a><a href="/nieuws/">Nieuws</a><a href="/updates/">Updates</a><a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener noreferrer">Discord</a><button id="print-button" class="footer-print" type="button"><span data-icon="print"></span>Afdrukken / PDF</button></nav></div></div></footer><script src="/scripts/tebex.js?v=20261109-2"></script><script src="/scripts/auth.js?v=20261109-2"></script><script src="/scripts/nav.js?v=20261106-14"></script><script src="/scripts/site-footer.js?v=20261109-1" defer></script>
+</body>
+</html>

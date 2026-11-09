@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin | Heerlen Roleplay</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#141614">
+<link rel="icon" href="/images/heerlen-logo.png">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/heerlen.css?v=20261106-11">
+<link rel="stylesheet" href="/styles/admin.css?v=20261106-9">
+<link rel="stylesheet" href="/styles/cms.css">
+</head>
+<body class="admin-body">
+
+<header class="nav is-scrolled" id="nav">
+  <div class="nav-shell">
+    <a class="brand" href="/" aria-label="Heerlen Roleplay">
+      <img src="/images/heerlen-logo.png" alt="Heerlen Roleplay">
+    </a>
+    <nav class="nav-links">
+      <a href="/">Home</a>
+      <a href="/winkel/">Store</a>
+      <a href="/regels.html">Regels</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="nav-login" href="/">Terug naar de site</a>
+    </div>
+  </div>
+</header>
+
+<main class="admin wrap">
+  <section class="gate" id="gate">
+    <h1>Admin</h1>
+      <p>Beheer via Discord of het ingestelde beheerderswachtwoord.</p>
+      <a class="btn btn-ghost discord-admin-login" href="/api/auth/discord">Inloggen met Discord</a>
+    <form id="loginForm" class="gate-form">
+      <label>
+        <span>Wachtwoord</span>
+        <input type="password" id="pass" autocomplete="current-password" required>
+      </label>
+      <button class="btn btn-blue" type="submit">Inloggen met wachtwoord</button>
+      <p class="gate-error" id="loginError" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <section class="panel-board" id="board" hidden>
+    <div class="admin-head">
+      <div>
+        <p class="kicker">Beheer</p>
+        <h1>Alles aanpassen</h1>
+      </div>
+      <div class="admin-actions">
+        <button type="button" class="btn btn-ghost" id="logout">Uitloggen</button>
+        <button type="button" class="btn btn-blue" id="saveAll">Opslaan</button>
+      </div>
+    </div>
+
+    <nav class="cms-tabs" aria-label="Beheerdelen" id="cmsTabs">
+      <button type="button" class="is-active" data-section="settings">Site & shop</button>
+      <button type="button" data-section="news">Nieuws</button>
+      <button type="button" data-section="changelog">Serverupdates</button>
+      <button type="button" data-section="staff">Staff</button>
+      <button type="button" data-section="rules">Regels & versies</button>
+      <button type="button" data-section="audit">Logboek & Discord</button>
+    </nav>
+
+    <div class="cms-section" data-admin-section="settings">
+    <div class="admin-grid">
+      <form class="admin-card" id="siteForm">
+        <h2>Homepage</h2>
+        <label class="check"><input name="promoEnabled" type="checkbox"><span>Promo / mededeling tonen</span></label>
+        <label><span>Weergave</span><select name="promoMode"><option value="promo">Promotie</option><option value="announcement">Mededeling</option></select></label>
+        <label><span>Badge of korte kop</span><input name="promoBonus" maxlength="40"></label>
+        <label><span>Tekst</span><input name="promoText" maxlength="120"></label>
+        <label><span>Knoptekst (optioneel)</span><input name="promoCta" maxlength="40"></label>
+        <label><span>Hero titel</span><input name="heroTitle" maxlength="60"></label>
+        <label><span>Hero tekst</span><textarea name="heroLead" rows="3" maxlength="240"></textarea></label>
+        <label><span>Video URL of pad</span><input name="heroVideo" placeholder="./images/hero.mp4"></label>
+        <p class="hint">Zet je eigen filmpje in <code>images/hero.mp4</code>, of plak hier een link. Zonder video zie je de Heerlen-banner.</p>
+        <h2>Thema en seizoenen</h2>
+        <label class="check"><input name="seasonEnabled" type="checkbox"><span>Seizoensthema activeren</span></label>
+        <label><span>Actief thema</span><select name="seasonTheme"><option value="standard">Standaard</option><option value="halloween">Halloween</option><option value="christmas">Kerst</option><option value="newyear">Oud en nieuw</option><option value="easter">Pasen</option></select></label>
+        <label class="check"><input name="seasonAccentEnabled" type="checkbox"><span>Aangepaste accentkleur gebruiken</span></label>
+        <label><span>Accentkleur</span><input name="seasonAccent" type="color" value="#5aaefd"></label>
+        <label class="check"><input name="seasonEffects" type="checkbox"><span>Animaties tonen</span></label>
+        <div class="season-controls">
+          <label><span>Intensiteit</span><input name="seasonIntensity" type="range" min="0.2" max="2" step="0.1"><output data-range-output="seasonIntensity">1×</output></label>
+          <label><span>Snelheid</span><input name="seasonSpeed" type="range" min="0.5" max="2" step="0.1"><output data-range-output="seasonSpeed">1×</output></label>
+          <label><span>Bewegingsfrequentie</span><input name="seasonFrequency" type="range" min="0.5" max="2" step="0.1"><output data-range-output="seasonFrequency">1×</output></label>
+          <label><span>Aantal elementen</span><input name="seasonDensity" type="range" min="0" max="40" step="1"><output data-range-output="seasonDensity">16</output></label>
+        </div>
+        <fieldset class="season-pages"><legend>Toon animaties op pagina's</legend>
+          <label class="check"><input name="seasonPages" type="checkbox" value="home"><span>Home</span></label>
+          <label class="check"><input name="seasonPages" type="checkbox" value="news"><span>Nieuws</span></label>
+          <label class="check"><input name="seasonPages" type="checkbox" value="updates"><span>Updates</span></label>
+          <label class="check"><input name="seasonPages" type="checkbox" value="staff"><span>Staff</span></label>
+          <label class="check"><input name="seasonPages" type="checkbox" value="rules"><span>Regels</span></label>
+          <label class="check"><input name="seasonPages" type="checkbox" value="shop"><span>Winkel</span></label>
+        </fieldset>
+        <div class="season-schedule"><label><span>Start automatisch</span><input name="seasonStart" type="datetime-local"></label><label><span>Eindigt automatisch</span><input name="seasonEnd" type="datetime-local"></label></div>
+        <div class="season-preview" id="seasonPreview" data-season="standard">
+          <div class="season-preview-scene" id="seasonPreviewScene" aria-hidden="true"></div>
+          <span class="season-preview-icon">✦</span><div class="season-preview-copy"><strong>Standaard</strong><p>De normale Heerlen-uitstraling.</p></div><span class="season-preview-label">Live voorbeeld</span>
+        </div>
+        <div class="season-actions"><button type="button" class="btn btn-ghost" id="previewSeason">Volledige website bekijken</button><button type="button" class="btn btn-ghost" id="resetSeason">Standaard herstellen</button></div>
+        <h2>Onderhoud</h2>
+        <label class="check"><input name="maintenanceEnabled" type="checkbox"><span>Onderhoudspagina tonen</span></label>
+        <label><span>Melding voor bezoekers</span><textarea name="maintenanceMessage" rows="2" maxlength="240"></textarea></label>
+        <p class="hint" id="sitePublishState">Wijzigingen worden direct lokaal bewaard. Klik rechtsboven op Opslaan om thema en onderhoud voor alle bezoekers te publiceren.</p>
+      </form>
+
+      <form class="admin-card" id="playersForm">
+        <h2>Spelers & connect</h2>
+        <label><span>Server IP</span><input name="serverHost" maxlength="64" placeholder="185.228.81.117"></label>
+        <label><span>Server poort</span><input name="serverPort" maxlength="8" placeholder="30120"></label>
+        <label><span>CFX join-code</span><input name="joinCode" maxlength="32" placeholder="5oayqbr"></label>
+        <label><span>Connect-link</span><input name="joinUrl" maxlength="120" placeholder="https://cfx.re/join/5oayqbr"></label>
+        <label><span>Fallback aantal</span><input name="players" type="number" min="0" max="999"></label>
+        <label class="check"><input name="playersLive" type="checkbox"><span>Live spelers uit de game</span></label>
+        <label><span>Players API</span><input name="playersApi" maxlength="180" placeholder="/api/players?host={host}&port={port}&code={code}"></label>
+        <p class="hint">Live-telling komt rechtstreeks van je server-IP via <code>/dynamic.json</code> (proxy: <code>/api/players</code>). Lukt dat niet, dan CFX/join-code of fallback.</p>
+      </form>
+
+      <form class="admin-card" id="toastForm">
+        <h2>Meldingen</h2>
+        <label><span>Zichtbaar (seconden)</span><input name="toastSeconds" type="number" min="2" max="30"></label>
+        <label><span>Pauze ertussen (seconden)</span><input name="toastGap" type="number" min="3" max="120"></label>
+        <p class="hint">Echte aankopen uit de store springen er meteen tussen.</p>
+      </form>
+
+      <form class="admin-card" id="tebexForm">
+        <h2>Tebex + hl-tebexwrapper</h2>
+        <label><span>Public token / webstore ID</span><input name="tebexToken" maxlength="120" placeholder="uit Tebex Creators → Integrations → Headless API"></label>
+        <p class="hint">Webstore checkt uit via Tebex.js. Levering doet <strong>hl-tebexwrapper</strong>. De publieke token en pakket-ID's worden met Opslaan gedeeld met alle bezoekers. Plak onderstaande command 1-op-1 in elk Tebex-package onder <strong>Game server commands</strong>.</p>
+        <div class="tebex-cmd-list" id="tebexCmdList" aria-label="Tebex givecoins commands"></div>
+        <p class="hint">Speler logt in met <strong>Cfx.re</strong>. Tebex-plugin + Secret Key verplicht. Resource: <code>ensure hl-tebexwrapper</code>.</p>
+        <div class="tebex-packages" id="tebexPackages"></div>
+      </form>
+    </div>
+
+    <section class="admin-card notes-card">
+      <div class="notes-head">
+        <h2>Koopmeldingen</h2>
+        <button type="button" class="btn btn-blue" id="addNote">Nieuwe melding</button>
+      </div>
+      <div class="notes" id="notes"></div>
+      <div class="notes-foot">
+        <button type="button" class="btn btn-ghost" id="resetAll">Alles terugzetten</button>
+        <button type="button" class="btn btn-blue" id="saveNotes">Opslaan</button>
+      </div>
+    </section>
+    </div>
+
+    <section class="admin-card cms-panel" data-admin-section="news" hidden>
+      <header class="cms-panel-head"><div><h2>Nieuwsbeheer</h2><p class="hint">Bewaar concepten of publiceer een bericht. Uitgestelde publicatiedata worden pas dan zichtbaar.</p></div><button class="btn btn-blue" type="button" data-new="news">Nieuw bericht</button></header>
+      <div class="cms-layout"><div class="cms-list" id="newsList"></div><form class="cms-editor" id="newsEditor" hidden></form></div>
+    </section>
+
+    <section class="admin-card cms-panel" data-admin-section="changelog" hidden>
+      <header class="cms-panel-head"><div><h2>Serverupdates</h2><p class="hint">Publiceer functies, bugfixes, aanpassingen en regelwijzigingen.</p></div><button class="btn btn-blue" type="button" data-new="changelog">Update toevoegen</button></header>
+      <div class="cms-layout"><div class="cms-list" id="changelogList"></div><form class="cms-editor" id="changelogEditor" hidden></form></div>
+    </section>
+
+    <section class="admin-card cms-panel" data-admin-section="staff" hidden>
+      <header class="cms-panel-head"><div><h2>Staffprofielen</h2><p class="hint">De staffpagina is zichtbaar voor accounts met de opgegeven staffrol. Rangschik profielen met het volgnummer.</p></div><button class="btn btn-blue" type="button" data-new="staff">Stafflid toevoegen</button></header>
+      <div class="cms-layout"><div class="cms-list" id="staffList"></div><form class="cms-editor" id="staffEditor" hidden></form></div>
+    </section>
+
+    <section class="admin-card cms-panel" data-admin-section="rules" hidden>
+      <header class="cms-panel-head"><div><h2>Regels & versiebeheer</h2><p class="hint">Bewerk het concept. Publiceren maakt een nieuwe, blijvend bewaarde versie; oude versies blijven ongewijzigd.</p></div><button class="btn btn-blue" type="button" id="publishRules">Nieuwe versie publiceren</button></header>
+      <label class="rules-version-title"><span>Versietitel</span><input id="rulesVersionTitle" maxlength="120" placeholder="Bijv. APV-update november"></label>
+      <div class="rules-editors" id="rulesEditors"></div>
+      <div class="cms-actions"><button class="btn btn-ghost" type="button" id="saveRulesDraft">Concept bewaren</button><span class="hint" id="ruleVersionState"></span></div>
+      <h3 class="cms-subhead">Gepubliceerde versies</h3><div id="rulesVersionList" class="cms-list"></div>
+      <div class="rules-compare"><h3>Versies vergelijken</h3><div class="rules-compare-controls"><label><span>Oudere versie</span><select id="rulesCompareFrom"></select></label><label><span>Nieuwere versie</span><select id="rulesCompareTo"></select></label><button type="button" class="btn btn-ghost" id="compareRules">Vergelijk</button></div><div id="rulesDiff" class="rules-diff" aria-live="polite"></div></div>
+    </section>
+
+    <section class="admin-card cms-panel" data-admin-section="audit" hidden>
+      <h2>Activiteitenlogboek</h2><p class="hint">Wie publiceerde, wijzigde of verwijderde inhoud.</p><div id="auditList" class="cms-list"></div>
+      <h2 class="cms-subhead">Discord-toegang</h2><p class="hint" id="discordState">Integratiestatus laden…</p>
+      <div class="permission-grid"><p><strong>Beheerder</strong><br>Rol <code>1568033014384951366</code> — volledige toegang tot beheer.</p><p><strong>Staffpagina</strong><br>Rol <code>1567581357004038184</code> — toegang tot het afgeschermde staffoverzicht; geen beheerrechten.</p></div>
+    </section>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" hidden></div>
+<dialog class="season-preview-dialog" id="seasonPreviewDialog" aria-labelledby="seasonPreviewDialogTitle">
+  <div class="season-preview-dialog-head"><div><strong id="seasonPreviewDialogTitle">Thema bekijken</strong><span>Voorbeeld — nog niet gepubliceerd</span></div><button class="btn btn-ghost" type="button" id="closeSeasonPreview">Sluiten</button></div>
+  <iframe id="seasonPreviewFrame" title="Voorbeeld van de gekozen seizoensstijl" loading="lazy"></iframe>
+</dialog>
+<script src="/scripts/settings.js"></script>
+<script src="/scripts/catalog.js"></script>
+<script src="/scripts/nav.js?v=20261106-14"></script>
+<script src="/scripts/admin.js?v=20261109-2"></script>
+<script src="/scripts/admin/content-manager.js"></script>
+</body>
+</html>
