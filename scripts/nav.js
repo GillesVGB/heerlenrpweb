@@ -94,7 +94,7 @@
       if (actions.querySelector(".auth-wrap #authLoginCfx")) return;
       link = document.createElement("a");
       link.className = "nav-login";
-      link.href = "https://cfx.re/join/5oayqbr";
+      link.href = "https://cfx.re/join/j48ry5k";
       link.textContent = "Connect";
       actions.insertBefore(link, actions.querySelector(".nav-discord, #menuBtn") || null);
     }
@@ -298,7 +298,7 @@
               <a href="/nieuws/">Nieuws</a>
               <a href="/updates/">Serverupdates</a>
               <a href="/staff/">Staff</a>
-              <a data-join href="https://cfx.re/join/5oayqbr">Connect</a>
+              <a data-join href="https://cfx.re/join/j48ry5k">Connect</a>
             </nav>
           </div>
           <div class="foot-col">
@@ -316,7 +316,7 @@
               <a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener noreferrer">Heerlen Roleplay</a>
               <a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener noreferrer">Support</a>
               <a href="/regels/">Regels lezen</a>
-              <a data-join href="https://cfx.re/join/5oayqbr">Server joinen</a>
+              <a data-join href="https://cfx.re/join/j48ry5k">Server joinen</a>
             </nav>
           </div>
         </div>

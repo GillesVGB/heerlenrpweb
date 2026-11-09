@@ -1,7 +1,7 @@
 import { json, badMethod } from '../server/http.mjs';
 import { vercelHandler } from '../server/vercel-adapter.mjs';
 
-const DEFAULT_CODE = '5oayqbr';
+const DEFAULT_CODE = 'j48ry5k';
 const DEFAULT_PORT = 30120;
 const REQUEST_TIMEOUT_MS = 7000;
 

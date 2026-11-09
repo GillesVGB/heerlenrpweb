@@ -14,7 +14,7 @@ try {
   delete process.env.CFX_JOIN_CODE;
   globalThis.fetch = async (url) => {
     calls.push(String(url));
-    return new Response(JSON.stringify({ Data: { clients: 7, sv_maxclients: 64, hostname: 'Heerlen' } }), {
+    return new Response(JSON.stringify({ Data: { clients: 0, sv_maxclients: 64, hostname: 'Heerlen' } }), {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -24,8 +24,8 @@ try {
   let data = await response.json();
   assert.equal(response.status, 200);
   assert.equal(data.online, true);
-  assert.equal(data.clients, 7);
-  assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/5oayqbr', 'Browser query parameters must not select a host or CFX code');
+  assert.equal(data.clients, 0, 'A server with zero players is still online when CFX returns a valid listing');
+  assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/j48ry5k', 'Browser query parameters must not select a host or CFX code');
 
   calls.length = 0;
   process.env.FIVEM_SERVER_HOST = 'status.example.net';
@@ -73,8 +73,8 @@ try {
   assert.equal(data.clients, 0);
   assert.equal(data.max, 64);
   assert.deepEqual(calls, [
-    'https://frontend.cfx-services.net/api/servers/single/5oayqbr',
-    'https://cfx.re/join/5oayqbr',
+    'https://frontend.cfx-services.net/api/servers/single/j48ry5k',
+    'https://cfx.re/join/j48ry5k',
     'http://status.example.net:30120/dynamic.json'
   ]);
 

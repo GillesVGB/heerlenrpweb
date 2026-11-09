@@ -25,7 +25,7 @@
     heroTitle: "Heerlen Roleplay",
     heroLead: "Nederlandse FiveM-stad. Straten, wagens, je eigen verhaal - met een toegankelijke economie waarin roleplay voorop staat.",
     heroVideo: "./images/hero.mp4",
-    joinUrl: "https://cfx.re/join/5oayqbr",
+    joinUrl: "https://cfx.re/join/j48ry5k",
     toastSeconds: 5,
     toastGap: 8,
     notifications: [],

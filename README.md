@@ -34,7 +34,7 @@ Open `/admin.html`. Beheer kan via Discord met rol `1568033014384951366` of via 
 
 De overige shop- en FiveM-velden blijven lokale browserinstellingen. De publieke Tebex-token en pakket-ID's worden gedeeld opgeslagen zodat de winkel op de apparaten van bezoekers dezelfde instellingen gebruikt.
 
-Voor live serverstatus gebruikt de homepage standaard de bestaande CFX-joincode `5oayqbr`. Voor directe status via FiveM `dynamic.json`, vul in Vercel `FIVEM_SERVER_HOST` in met de actuele publieke serverhost en optioneel `FIVEM_SERVER_PORT` (standaard `30120`). Stel `CFX_JOIN_CODE` in als de joincode wijzigt. De statusroute accepteert geen host uit een browserverzoek; zonder directe host probeert hij alleen de ingestelde CFX-joincode. Als geen statusbron bereikbaar is, toont de site een onbekende status in plaats van een verzonnen spelersaantal.
+Voor live serverstatus gebruikt de homepage standaard de bestaande CFX-joincode `j48ry5k`. Voor directe status via FiveM `dynamic.json`, vul in Vercel `FIVEM_SERVER_HOST` in met de actuele publieke serverhost en optioneel `FIVEM_SERVER_PORT` (standaard `30120`). Stel `CFX_JOIN_CODE` in als de joincode wijzigt. De statusroute accepteert geen host uit een browserverzoek; zonder directe host probeert hij alleen de ingestelde CFX-joincode. Als geen statusbron bereikbaar is, toont de site een onbekende status in plaats van een verzonnen spelersaantal.
 
 De FAQ staat op `/faq/`. Whitelist-aanmeldvoorwaarden kunnen wijzigen en zijn daarom bewust niet als vaste voorwaarden op de website vastgelegd; de FAQ verwijst hiervoor naar de actuele Discord-instructies.
 

@@ -71,7 +71,7 @@
     if (title) title.textContent = s.heroTitle;
     if (lead) lead.textContent = s.heroLead;
     document.querySelectorAll("[data-join]").forEach(function (el) {
-      el.setAttribute("href", s.joinUrl || "https://cfx.re/join/5oayqbr");
+      el.setAttribute("href", s.joinUrl || "https://cfx.re/join/j48ry5k");
     });
     if (video) {
       var next = s.heroVideo || "./images/hero.mp4";
