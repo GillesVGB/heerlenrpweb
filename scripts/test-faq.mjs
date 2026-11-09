@@ -18,7 +18,7 @@ assert.ok(page.includes('aria-live="polite"') && page.includes('role="status"'),
 assert.ok(styles.includes('.faq-item summary:focus-visible'), 'FAQ disclosures should have a visible keyboard focus style');
 assert.ok(page.includes('<script src="/scripts/promo.js?'), 'FAQ should load the shared promo/announcement strip');
 assert.ok(page.indexOf('scripts/promo.js') < page.indexOf('<header class="nav'), 'Promo strip should be inserted before the shared navigation');
-assert.ok(page.includes('scripts/nav.js?v=20261109-5'), 'FAQ should load the current shared navigation behavior');
+assert.ok(page.includes('scripts/nav.js?v=20261109-6'), 'FAQ should load the current shared navigation behavior');
 const navMarkup = page.match(/<nav class="nav-links"[\s\S]*?<\/nav>/)?.[0] || '';
 assert.deepEqual(
   Array.from(navMarkup.matchAll(/<a href="([^"]+)"/g), (match) => match[1]),

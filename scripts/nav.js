@@ -153,7 +153,7 @@
       return anchor;
     });
     Array.from(links.children).forEach(function (child) {
-      if (child.tagName === "A" && pathFor(child) === "/staff") child.remove();
+      if (child.tagName === "A" && ["/staff", "/server-statistieken"].indexOf(pathFor(child)) >= 0) child.remove();
     });
     extras = Array.from(links.children).filter(function (child) { return ordered.indexOf(child) < 0; });
     ordered.concat(extras).forEach(function (child) { links.appendChild(child); });

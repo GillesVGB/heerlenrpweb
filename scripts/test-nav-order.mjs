@@ -39,7 +39,7 @@ function makeAnchor(href, label) {
 }
 
 const cases = [
-  [['/staff/', 'Staff'], ['/updates/', 'Updates'], ['/nieuws/', 'Nieuws'], ['/regels/', 'Regels'], ['/winkel/', 'Store'], ['/', 'Home']],
+  [['/staff/', 'Staff'], ['/server-statistieken/', 'Serverstatistieken'], ['/updates/', 'Updates'], ['/nieuws/', 'Nieuws'], ['/regels/', 'Regels'], ['/winkel/', 'Store'], ['/', 'Home']],
   [['../index.html', 'Home'], ['./', 'Store'], ['../regels.html', 'Regels']],
   [['/', 'Home'], ['/faq/', 'FAQ'], ['/nieuws/', 'Nieuws'], ['/updates/', 'Updates'], ['/staff/', 'Staff'], ['/regels/', 'Regels'], ['/winkel/', 'Store']]
 ];
@@ -69,6 +69,7 @@ for (const links of cases) {
     'Home', 'Store', 'Regels', 'FAQ', 'Nieuws', 'Updates'
   ]);
   assert.ok(!container.children.some((anchor) => anchor.href === '/staff/'), 'Staff should not appear in the top navigation');
+  assert.ok(!container.children.some((anchor) => anchor.href === '/server-statistieken/'), 'Server statistics should not appear in the top navigation');
 }
 
 const footer = await readFile(new URL('./site-footer.js', import.meta.url), 'utf8');
@@ -76,4 +77,4 @@ const styles = await readFile(new URL('../styles/heerlen.css', import.meta.url),
 assert.match(footer, /class="hr-footer-staff" href="\/staff\/"/, 'Staff should be linked from the shared footer');
 assert.match(styles, /\.hr-footer-staff \{[^}]*font-size:\.72rem/, 'The footer Staff link should remain visually small');
 
-console.log('Navigation checks passed: six shared top links, Staff removed from every menu variant, and small footer Staff link.');
+console.log('Navigation checks passed: six shared top links, Staff and server statistics removed from every menu variant, and small footer Staff link.');
