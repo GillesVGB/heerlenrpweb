@@ -111,7 +111,7 @@
         original: original,
         sale: {
           name: String(sale.name || "Tebex-aanbieding"),
-          label: discount.type === "percentage" ? Math.round(discountAmount) + "% korting" : "Aanbieding",
+          label: discount.type === "percentage" ? Math.round(discountAmount) + "%" : "Aanbieding",
           eligible: eligible,
           minimumBasketValue: minimumBasketRequirement ? threshold : 0
         }

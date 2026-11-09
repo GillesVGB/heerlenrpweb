@@ -213,17 +213,18 @@
     if (e.shade && !document.body.classList.contains("nav-open")) e.shade.hidden = true;
   }
 
-  function recordLocalPayment(name, items, discordId) {
+  function recordLocalPayment(name, items, discordId, savedAvatar) {
     var list = pays();
     var now = new Date().toISOString();
     var first = "";
+    var avatar = savedAvatar || cfxAvatar(name);
     items.forEach(function (it) {
       var p = cat.pack(it.id);
       if (!p) return;
       if (!first) first = p.name;
       list.push({
         name: name,
-        avatar: cfxAvatar(name),
+        avatar: avatar,
         discordId: discordId || "",
         item: p.name,
         amount: cat.priceInfo(p).price * it.quantity,
@@ -234,7 +235,7 @@
     save({});
     renderFeed();
     if (first) {
-      root.dispatchEvent(new CustomEvent("heerlen:purchase", { detail: { name: name, item: first, avatar: cfxAvatar(name), discordId: discordId || "" } }));
+      root.dispatchEvent(new CustomEvent("heerlen:purchase", { detail: { name: name, item: first, avatar: avatar, discordId: discordId || "" } }));
     }
   }
 
@@ -252,7 +253,7 @@
         return { id: id, quantity: bag[id] };
       });
     }
-    if (items.length) recordLocalPayment(name, items, discordId);
+    if (items.length) recordLocalPayment(name, items, discordId, pending.avatar);
     save({});
     if (tebex && tebex.clearPending) tebex.clearPending();
     showToast("Bedankt! Je coins komen automatisch op je account.");

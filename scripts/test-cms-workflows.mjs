@@ -165,6 +165,7 @@ try {
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).original, 8, 'the current base price is synchronized from Tebex');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).price, 8, 'conditional sales do not lower prices before the basket qualifies');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.minimumBasketValue, 10, 'the minimum basket threshold is published with the active sale');
+  assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.label, '10%', 'percentage sale badge contains only the percentage');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack, 10).price, 7.2, 'active package sales lower prices once the minimum basket is reached');
 
   console.log('CMS and shop checks passed: origin guard, login, current Discord roles, authorization, news publish, staff permissions, shared shop product settings, Tebex package mapping and active sales, schedule validation, immutable APV versions.');

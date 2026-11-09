@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "updatedAt": "2026-11-09T18:36:28.758Z",
+  "updatedAt": "2026-11-09T18:41:18.933Z",
   "news": [],
   "changelog": [],
   "staff": [],
@@ -29,7 +29,7 @@
       "version": "1.0",
       "title": "Oorspronkelijke regels",
       "status": "published",
-      "publishedAt": "2026-11-09T18:36:28.758Z",
+      "publishedAt": "2026-11-09T18:41:18.933Z",
       "author": "Migratie uit bestaande website",
       "documents": [
         {

@@ -192,6 +192,12 @@
     return "";
   }
 
+  function cfxAvatarUrl(name) {
+    var auth = root.HeerlenAuth;
+    if (auth && typeof auth.avatarUrl === "function") return auth.avatarUrl(name);
+    return "https://forum.cfx.re/user_avatar/forum.cfx.re/" + encodeURIComponent(String(name || "speler").toLowerCase()) + "/96/1.png";
+  }
+
   function checkoutUrl(basket) {
     return basket && basket.links && (basket.links.checkout || basket.links.payment) || "";
   }
@@ -356,6 +362,7 @@
       ident: ident,
       items: items,
       username: username,
+      avatar: cfxAvatarUrl(username),
       discordId: discordId || "",
       createdAt: Date.now()
     });
