@@ -118,24 +118,41 @@
         anchor.classList.toggle("is-active", isHome || (current !== "/" && path === current));
       } catch (e) {}
     });
-    [
+    var order = [
+      ["Home", "/"],
+      ["Store", "/winkel/"],
       ["Regels", "/regels/"],
       ["FAQ", "/faq/"],
       ["Nieuws", "/nieuws/"],
-      ["Updates", "/updates/"],
-      ["Staff", "/staff/"]
-    ].forEach(function (item) {
-      var existing = Array.from(links.querySelectorAll("a")).some(function (anchor) {
-        try { return new URL(anchor.href, location.href).pathname.replace(/\/$/, "") === item[1].replace(/\/$/, ""); }
-        catch (e) { return false; }
-      });
-      if (existing) return;
-      var anchor = document.createElement("a");
-      anchor.href = item[1];
-      anchor.textContent = item[0];
-      if (location.pathname.startsWith(item[1])) anchor.classList.add("is-active");
-      links.appendChild(anchor);
+      ["Updates", "/updates/"]
+    ];
+    function normPath(anchor) {
+      try {
+        var path = new URL(anchor.href, location.href).pathname.replace(/\/index\.html$/, "/").replace(/\/$/, "");
+        return path === "/regels.html" ? "/regels" : path;
+      } catch (e) { return null; }
+    }
+    // Staff hoort niet in de navigatiebalk; verwijder een eventuele oude link.
+    Array.from(links.querySelectorAll("a")).forEach(function (anchor) {
+      if (normPath(anchor) === "/staff") anchor.remove();
     });
+    var rulesGroup = links.querySelector(".nav-rules-group");
+    var ordered = order.map(function (item) {
+      var target = item[1].replace(/\/$/, "");
+      if (item[0] === "Regels" && rulesGroup) return rulesGroup;
+      var anchor = Array.from(links.children).find(function (candidate) {
+        return candidate.tagName === "A" && normPath(candidate) === target;
+      });
+      if (!anchor) {
+        anchor = document.createElement("a");
+        anchor.href = item[1];
+        anchor.textContent = item[0];
+        if (item[1] !== "/" && location.pathname.startsWith(item[1])) anchor.classList.add("is-active");
+      }
+      return anchor;
+    });
+    // Zet de zes hoofdlinks vooraan in vaste volgorde; mobiele extra's blijven erachter.
+    for (var i = ordered.length - 1; i >= 0; i--) links.insertBefore(ordered[i], links.firstChild);
     if (!links.querySelector(".nav-mobile-discord")) {
       var discord = document.createElement("a");
       discord.className = "nav-mobile-discord";
@@ -276,7 +293,6 @@
               <a href="/faq/">FAQ</a>
               <a href="/nieuws/">Nieuws</a>
               <a href="/updates/">Serverupdates</a>
-              <a href="/staff/">Staff</a>
               <a data-join href="https://cfx.re/join/5oayqbr">Connect</a>
             </nav>
           </div>

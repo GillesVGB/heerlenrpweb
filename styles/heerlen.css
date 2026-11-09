@@ -2152,3 +2152,7 @@ body.tebex-modal-open { overflow: hidden; }
   .tebex-modal-box { width: 100%; height: 100%; height: 100dvh; border: 0; border-radius: 0; }
   .tebex-modal-ext { display: none; }
 }
+
+.hero-statusline { flex-direction: column; align-items: center; gap: 10px; text-decoration: none; }
+.hero-statusline-link { display: inline-flex; align-items: center; gap: 6px; color: rgba(255,255,255,.82); font-size: .82rem; font-weight: 600; letter-spacing: .01em; }
+.hero-statusline:hover .hero-statusline-link, .hero-statusline:focus-visible .hero-statusline-link { color: #fff; text-decoration: underline; text-underline-offset: 3px; }

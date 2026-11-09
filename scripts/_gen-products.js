@@ -32,7 +32,7 @@ function tpl(slug, name) {
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../styles/heerlen.css?v=20261110-2">
+<link rel="stylesheet" href="../styles/heerlen.css?v=20261110-3">
 <script>
   (function () {
     try {
@@ -52,9 +52,12 @@ function tpl(slug, name) {
       <img src="../images/heerlen-logo.png" alt="Heerlen Roleplay">
     </a>
     <nav class="nav-links" id="navLinks">
-      <a href="../index.html">Home</a>
-      <a href="./" class="is-active">Store</a>
-      <a href="../regels.html">Regels</a>
+      <a href="../">Home</a>
+      <a href="./" class="is-active" aria-current="page">Store</a>
+      <a href="../regels/">Regels</a>
+      <a href="../faq/">FAQ</a>
+      <a href="../nieuws/">Nieuws</a>
+      <a href="../updates/">Updates</a>
     </nav>
     <div class="nav-actions">
       <a class="nav-login" data-join href="https://cfx.re/join/5oayqbr">Connect</a>
@@ -160,7 +163,7 @@ function tpl(slug, name) {
 <script src="../scripts/tebex.js?v=20261110-5"></script>
 <script src="../scripts/auth.js?v=20261109-4"></script>
 <script src="../scripts/cart.js?v=20261110-5"></script>
-<script src="../scripts/nav.js?v=20261106-11"></script>
+<script src="../scripts/nav.js?v=20261110-1"></script>
 <script src="../scripts/store.js?v=20261109-2"></script>
 <script src="../scripts/live.js?v=20261109-6"></script>
 </body>

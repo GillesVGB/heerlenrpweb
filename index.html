@@ -17,7 +17,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="image" href="./images/hero-poster.webp" fetchpriority="high">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="./styles/heerlen.css?v=20261110-2">
+<link rel="stylesheet" href="./styles/heerlen.css?v=20261110-3">
 <link rel="stylesheet" href="./styles/content.css?v=20261109-2">
 <script>
   (function () {
@@ -38,13 +38,12 @@
       <img src="./images/heerlen-logo.png" alt="Heerlen - GG/HEERLENRP">
     </a>
     <nav class="nav-links" id="navLinks">
-      <a href="#top" class="is-active">Home</a>
-      <a href="./winkel/index.html">Store</a>
+      <a href="#top" class="is-active" aria-current="page">Home</a>
+      <a href="./winkel/">Store</a>
       <a href="./regels/">Regels</a>
       <a href="./faq/">FAQ</a>
       <a href="./nieuws/">Nieuws</a>
       <a href="./updates/">Updates</a>
-      <a href="./staff/">Staff</a>
     </nav>
     <div class="nav-actions">
       <a class="nav-login" data-join href="https://cfx.re/join/5oayqbr" title="Connect naar de server">Connect</a>
@@ -72,9 +71,10 @@
         <a class="btn btn-primary" data-join href="https://cfx.re/join/5oayqbr">Connect <span aria-hidden="true">↗</span></a>
         <a class="btn btn-secondary" href="./regels/">Regels</a>
       </div>
-      <div class="hero-statusline server-status is-unknown" id="serverStatus" role="status" aria-live="polite" aria-atomic="true">
-        <p class="players server-status is-unknown"><i class="players-status-dot" aria-hidden="true"></i><span id="serverStatusLabel">Status controleren…</span><span class="server-players"><span id="playersOnline">— / —</span> spelers</span></p>
-      </div>
+      <a class="hero-statusline server-status is-unknown" id="serverStatus" href="/server-statistieken/">
+        <span class="players server-status is-unknown" role="status" aria-live="polite" aria-atomic="true"><i class="players-status-dot" aria-hidden="true"></i><span id="serverStatusLabel">Status controleren…</span><span class="server-players"><span id="playersOnline">— / —</span> spelers</span></span>
+        <span class="hero-statusline-link">Bekijk serverstatistieken <span aria-hidden="true">→</span></span>
+      </a>
     </div>
     <a class="hero-scroll" href="#popular" aria-label="Scroll naar de winkel"><span aria-hidden="true"></span> Ontdek de winkel</a>
   </section>
@@ -120,7 +120,6 @@
           <a href="./faq/">FAQ</a>
           <a href="./nieuws/">Nieuws</a>
           <a href="./updates/">Serverupdates</a>
-          <a href="./staff/">Staff</a>
           <a data-join href="https://cfx.re/join/5oayqbr">Connect</a>
         </nav>
       </div>
@@ -193,7 +192,7 @@
 <script src="./scripts/tebex.js?v=20261110-5"></script>
 <script src="./scripts/auth.js?v=20261109-4"></script>
 <script src="./scripts/cart.js?v=20261110-5"></script>
-<script src="./scripts/nav.js?v=20261109-2"></script>
+<script src="./scripts/nav.js?v=20261110-1"></script>
 <script src="./scripts/store.js?v=20261109-2"></script>
 <script src="./scripts/live.js?v=20261109-7"></script>
 <script src="./scripts/content/public-content.js?v=20261109-2"></script>

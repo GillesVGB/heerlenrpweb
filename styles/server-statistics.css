@@ -1,0 +1,96 @@
+.server-stats-page {
+  min-height: 100vh;
+  padding: 126px 24px 84px;
+  background:
+    radial-gradient(ellipse at 50% 0, rgba(90, 174, 253, .13), transparent 44rem),
+    var(--bg);
+}
+
+.server-stats-wrap { width: min(100%, 980px); margin: 0 auto; }
+.stats-breadcrumb { display:flex; align-items:center; gap:10px; margin-bottom:30px; color:var(--muted); font-size:.86rem; }
+.stats-breadcrumb a { color:var(--ink); }
+.stats-breadcrumb a:hover { color:var(--blue); }
+.stats-breadcrumb [aria-current="page"] { color:var(--blue); }
+.server-stats-hero > .server-stats-wrap > .kicker { margin-bottom:12px; }
+.server-stats-hero h1 { max-width:15ch; font-size:clamp(2.4rem, 6vw, 4.7rem); }
+.stats-intro { max-width:58ch; margin-top:18px; color:var(--muted); font-size:1.08rem; line-height:1.7; }
+
+.stats-status-card {
+  display:flex;
+  align-items:center;
+  gap:18px;
+  margin-top:38px;
+  padding:24px;
+  border:1px solid var(--line-strong);
+  border-radius:18px;
+  background:var(--card);
+  box-shadow:0 20px 60px rgba(0,0,0,.12);
+}
+.stats-status-indicator { width:13px; height:13px; flex:none; border-radius:50%; background:#f4b942; box-shadow:0 0 0 6px rgba(244,185,66,.12); }
+.stats-status-card.is-online .stats-status-indicator { background:#31c66b; box-shadow:0 0 0 6px rgba(49,198,107,.13); }
+.stats-status-card.is-offline .stats-status-indicator { background:#f05252; box-shadow:0 0 0 6px rgba(240,82,82,.13); }
+.stats-status-copy { flex:1; min-width:0; }
+.stats-eyebrow { color:var(--muted); font-size:.78rem; font-weight:700; letter-spacing:.08em; text-transform:uppercase; }
+.stats-status-copy h2 { margin-top:5px; font-size:1.55rem; }
+.stats-status-copy > p:last-child { margin-top:6px; color:var(--muted); }
+.stats-connect-link { display:inline-flex; align-items:center; gap:8px; min-height:44px; padding:0 15px; border:1px solid var(--line-strong); border-radius:9px; font-weight:700; transition:border-color .18s ease, background .18s ease; }
+.stats-connect-link:hover { border-color:var(--blue); background:rgba(90,174,253,.1); }
+.stats-connect-link:focus-visible, .stats-refresh:focus-visible, .stats-breadcrumb a:focus-visible { outline:3px solid var(--blue); outline-offset:3px; }
+
+.stats-overview { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; margin-top:14px; }
+.stats-metric { min-height:158px; padding:22px; border:1px solid var(--line); border-radius:16px; background:var(--card); }
+.stats-value { margin-top:13px; font-family:"Space Grotesk", Figtree, sans-serif; font-size:clamp(2.1rem, 4vw, 3rem); font-weight:700; line-height:1; font-variant-numeric:tabular-nums; letter-spacing:-.05em; }
+.stats-caption { margin-top:12px; color:var(--muted); font-size:.88rem; }
+.stats-metric-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:10px; }
+.stats-metric-heading .stats-caption { margin:0 0 2px; text-align:right; }
+.stats-progress { height:9px; margin-top:22px; overflow:hidden; border-radius:99px; background:var(--line-strong); }
+.stats-progress > span { display:block; width:0; height:100%; border-radius:inherit; background:linear-gradient(90deg, #5aaefd, #8dd5ff); transition:width .35s ease; }
+
+.stats-chart-card { margin-top:14px; padding:24px; border:1px solid var(--line); border-radius:16px; background:var(--card); }
+.stats-chart-header { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+.stats-chart-header h2 { margin-top:7px; font-size:1.55rem; }
+.stats-chart-badge { padding:7px 10px; border:1px solid var(--line); border-radius:99px; color:var(--muted); font-size:.75rem; font-weight:600; white-space:nowrap; }
+.stats-chart-description { margin-top:10px; color:var(--muted); font-size:.9rem; }
+.stats-chart-wrap { position:relative; min-height:235px; margin-top:16px; }
+.stats-chart-wrap svg { display:block; width:100%; height:auto; overflow:visible; }
+.stats-chart-wrap svg[hidden] { display:none; }
+.stats-chart-grid-line { stroke:var(--line); stroke-width:1; }
+.stats-chart-axis-label { fill:var(--muted); font-family:Figtree, "Segoe UI", sans-serif; font-size:12px; }
+.stats-chart-area { fill:url(#statsChartGradient); }
+.stats-chart-line { fill:none; stroke:#5aaefd; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
+.stats-chart-point { fill:var(--bg); stroke:#75bdff; stroke-width:2.5; vector-effect:non-scaling-stroke; }
+.stats-chart-empty { position:absolute; inset:50% auto auto 50%; width:min(90%, 420px); transform:translate(-50%,-50%); color:var(--muted); font-size:.9rem; line-height:1.6; text-align:center; }
+.stats-chart-footnote { margin-top:8px; color:var(--muted); font-size:.78rem; line-height:1.55; }
+
+.stats-details { display:flex; align-items:center; gap:30px; margin-top:22px; padding:18px 2px; border-bottom:1px solid var(--line); }
+.stats-details > div { display:grid; gap:4px; }
+.stats-detail-label { color:var(--muted); font-size:.78rem; }
+.stats-details strong { font-size:.9rem; font-weight:600; }
+.stats-refresh { display:inline-flex; align-items:center; justify-content:center; gap:9px; min-height:44px; margin-left:auto; padding:0 14px; border:1px solid var(--line-strong); border-radius:9px; color:var(--ink); font-size:.88rem; font-weight:700; }
+.stats-refresh:hover:not(:disabled) { border-color:var(--blue); }
+.stats-refresh:disabled { cursor:wait; opacity:.65; }
+.stats-refresh svg { width:17px; height:17px; }
+.stats-note { max-width:78ch; margin-top:20px; color:var(--muted); font-size:.87rem; line-height:1.7; }
+
+@media (max-width:700px) {
+  .server-stats-page { padding:108px 18px 60px; }
+  .stats-breadcrumb { margin-bottom:24px; }
+  .stats-status-card { align-items:flex-start; flex-wrap:wrap; padding:20px; }
+  .stats-status-copy { flex-basis:calc(100% - 34px); }
+  .stats-connect-link { margin-left:31px; }
+  .stats-overview { grid-template-columns:1fr; gap:10px; }
+  .stats-metric { min-height:0; padding:18px; }
+  .stats-value { margin-top:9px; font-size:2.35rem; }
+  .stats-caption { margin-top:8px; }
+  .stats-progress { margin-top:16px; }
+  .stats-chart-card { padding:18px 14px; }
+  .stats-chart-header { align-items:flex-start; flex-direction:column; gap:10px; }
+  .stats-chart-wrap { min-height:180px; margin-inline:-6px; }
+  .stats-chart-axis-label { font-size:10px; }
+  .stats-details { align-items:stretch; flex-direction:column; gap:16px; }
+  .stats-refresh { margin-left:0; }
+}
+
+@media (prefers-reduced-motion:reduce) {
+  .stats-progress > span, .stats-connect-link { transition:none; }
+}

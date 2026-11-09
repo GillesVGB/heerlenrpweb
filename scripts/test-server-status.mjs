@@ -25,7 +25,38 @@ try {
   assert.equal(response.status, 200);
   assert.equal(data.online, true);
   assert.equal(data.clients, 7);
-  assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/5oayqbr', 'Browser query parameters must not select a host or CFX code');
+  assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/j48ry5k', 'Browser query parameters must not select a host or CFX code');
+
+  calls.length = 0;
+  process.env.CFX_JOIN_CODE = '5oayqbr';
+  response = await handler(new Request('https://site.test/api/players'));
+  data = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/j48ry5k', 'The stale legacy join code must not override the current default');
+
+  calls.length = 0;
+  process.env.CFX_JOIN_CODE = 'custom123';
+  response = await handler(new Request('https://site.test/api/players'));
+  data = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/custom123', 'An explicitly configured current join code should remain supported');
+
+  calls.length = 0;
+  delete process.env.CFX_JOIN_CODE;
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify({ Data: { clients: 0, sv_maxclients: 64, hostname: 'Heerlen Roleplay' } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+  response = await handler(new Request('https://site.test/api/players'));
+  data = await response.json();
+  assert.equal(response.status, 200);
+  assert.equal(data.online, true, 'A reachable server with zero players is still online');
+  assert.equal(data.clients, 0);
+  assert.equal(data.max, 64);
+  assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/j48ry5k');
 
   calls.length = 0;
   process.env.FIVEM_SERVER_HOST = 'status.example.net';

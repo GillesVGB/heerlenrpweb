@@ -9,7 +9,9 @@
     "test:cms": "node scripts/test-cms-workflows.mjs",
     "test:themes": "node scripts/test-season-effects.mjs",
     "test:faq": "node scripts/test-faq.mjs",
+    "test:nav": "node scripts/test-nav-order.mjs",
     "test:server-status": "node scripts/test-server-status.mjs",
+    "test:server-statistics": "npm run build && node scripts/test-server-statistics.mjs",
     "test:404": "npm run build && node scripts/test-404-page.mjs"
   },
   "dependencies": {

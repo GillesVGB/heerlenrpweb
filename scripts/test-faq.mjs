@@ -5,6 +5,7 @@ import vm from 'node:vm';
 const source = await readFile(new URL('./faq.js', import.meta.url), 'utf8');
 const page = await readFile(new URL('../faq/index.html', import.meta.url), 'utf8');
 const styles = await readFile(new URL('../styles/content.css', import.meta.url), 'utf8');
+const navigation = await readFile(new URL('./nav.js', import.meta.url), 'utf8');
 const questions = [
   'Hoe vraag ik een whitelist aan?',
   'Waar vind ik de serverregels?',
@@ -16,6 +17,17 @@ for (const question of questions) assert.ok(page.includes(question), `FAQ should
 assert.ok(page.includes('id="faqSearch"') && page.includes('type="search"'), 'FAQ should expose a search field');
 assert.ok(page.includes('aria-live="polite"') && page.includes('role="status"'), 'Search results should be announced accessibly');
 assert.ok(styles.includes('.faq-item summary:focus-visible'), 'FAQ disclosures should have a visible keyboard focus style');
+assert.ok(page.indexOf('scripts/promo.js') < page.indexOf('<header class="nav'), 'The announcement strip should be placed before the FAQ navigation');
+const navMarkup = page.match(/<nav class="nav-links"[\s\S]*?<\/nav>/)?.[0] || '';
+assert.deepEqual(
+  Array.from(navMarkup.matchAll(/<a href="([^"]+)"[^>]*>([^<]+)<\/a>/g))
+    .map(([, href, label]) => [label.trim(), href])
+    .filter(([, href]) => ['/', '/winkel/', '/regels/', '/faq/', '/nieuws/', '/updates/', '/staff/'].includes(href)),
+  [['Home', '/'], ['Store', '/winkel/'], ['Regels', '/regels/'], ['FAQ', '/faq/'], ['Nieuws', '/nieuws/'], ['Updates', '/updates/']],
+  'The FAQ navigation should match the shared site order without Staff'
+);
+assert.doesNotMatch(navMarkup, /href="\/server-statistieken\/"/, 'The FAQ navigation should not expose server statistics');
+assert.doesNotMatch(navigation, /\["Serverstatistieken",\s*"\/server-statistieken\/"\]/, 'Shared navigation must not add server statistics');
 
 const input = { value: '', handlers: {}, addEventListener(type, handler) { this.handlers[type] = handler; } };
 const items = [
