@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heerlen Roleplay | Nederlandse FiveM Roleplay Server</title>
+<meta name="description" content="Heerlen Roleplay - Nederlandse FiveM-stad. Koop coins, join de Discord en stap de stad in.">
+<meta name="theme-color" content="#080808">
+<style>
+  /* Keep the video hero clear; use only the video element's own poster. */
+  html, body { background: #080808; }
+  .home-hero { background: #080808 !important; }
+  .hero-video { opacity: 1 !important; visibility: visible !important; }
+</style>
+<link rel="icon" href="./images/heerlen-logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="image" href="./images/hero-poster.webp" fetchpriority="high">
+<link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./styles/heerlen.css?v=20261110-3">
+<link rel="stylesheet" href="./styles/content.css?v=20261109-2">
+<script>
+  (function () {
+    try {
+      var t = localStorage.getItem("heerlenrp_theme");
+      if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+    } catch (e) {}
+  })();
+</script>
+</head>
+<body data-page="home" data-base="./">
+
+<script src="./scripts/promo.js?v=20261106-6"></script>
+
+<header class="nav" id="nav">
+  <div class="nav-shell">
+    <a class="brand" href="#top" aria-label="Heerlen Roleplay">
+      <img src="./images/heerlen-logo.png" alt="Heerlen - GG/HEERLENRP">
+    </a>
+    <nav class="nav-links" id="navLinks">
+      <a href="#top" class="is-active" aria-current="page">Home</a>
+      <a href="./winkel/">Store</a>
+      <a href="./regels/">Regels</a>
+      <a href="./faq/">FAQ</a>
+      <a href="./nieuws/">Nieuws</a>
+      <a href="./updates/">Updates</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="nav-login" data-join href="https://cfx.re/join/5oayqbr" title="Connect naar de server">Connect</a>
+      <button type="button" class="cart-btn" id="cartOpen" aria-label="Winkelmand">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+        <span id="cartBadge" hidden>0</span>
+      </button>
+      <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="top">
+  <section class="home-hero" aria-label="Heerlen Roleplay" style="background-color:#080808">
+    <video class="hero-video" id="heroVideo" muted autoplay loop playsinline preload="none" poster="./images/hero-poster.webp">
+      <source type="video/mp4">
+    </video>
+    <div class="hero-shade" aria-hidden="true"></div>
+    <div class="home-hero-inner wrap">
+      <h1 id="heroTitle">Heerlen Roleplay</h1>
+      <p class="home-lead" id="heroLead">Nederlandse FiveM-stad. Straten, wagens, je eigen verhaal - met een toegankelijke economie waarin roleplay voorop staat.</p>
+      <div class="home-actions">
+        <a class="btn btn-primary" data-join href="https://cfx.re/join/5oayqbr">Connect <span aria-hidden="true">↗</span></a>
+        <a class="btn btn-secondary" href="./regels/">Regels</a>
+      </div>
+      <a class="hero-statusline server-status is-unknown" id="serverStatus" href="/server-statistieken/">
+        <span class="players server-status is-unknown" role="status" aria-live="polite" aria-atomic="true"><i class="players-status-dot" aria-hidden="true"></i><span id="serverStatusLabel">Status controleren…</span><span class="server-players"><span id="playersOnline">— / —</span> spelers</span></span>
+        <span class="hero-statusline-link">Bekijk serverstatistieken <span aria-hidden="true">→</span></span>
+      </a>
+    </div>
+    <a class="hero-scroll" href="#popular" aria-label="Scroll naar de winkel"><span aria-hidden="true"></span> Ontdek de winkel</a>
+  </section>
+
+  <section class="popular" id="popular">
+    <div class="wrap">
+      <div class="popular-head">
+        <div>
+          <h2>Populair in de shop</h2>
+          <p>Veilig afrekenen via Tebex. Je aankoop staat direct klaar op je account.</p>
+        </div>
+        <a class="popular-all" href="./winkel/index.html">Alle producten <span aria-hidden="true">→</span></a>
+      </div>
+      <div class="grid popular-grid" id="popularGrid"></div>
+    </div>
+  </section>
+
+  <section class="content-preview" id="newsPreview">
+    <div class="wrap">
+      <div class="content-section-head"><div><p class="kicker">Uit de stad</p><h2>Nieuws</h2><p>De nieuwste berichten van Heerlen Roleplay.</p></div><a class="popular-all" href="./nieuws/">Alle berichten <span aria-hidden="true">→</span></a></div>
+      <div class="content-cards" id="homeNewsCards"><p class="content-empty">Nieuws verschijnt hier zodra er berichten zijn gepubliceerd.</p></div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <a href="./index.html">
+          <img src="./images/heerlen-logo.png" alt="">
+          <span>Heerlen Roleplay</span>
+        </a>
+        <p>Een Nederlandse FiveM roleplay server met een toegankelijke economie, waar jij zelf het verhaal van de stad schrijft.</p>
+      </div>
+      <div class="foot-col">
+        <h4>Navigatie</h4>
+        <nav aria-label="Navigatie">
+          <a href="./index.html">Home</a>
+          <a href="./winkel/index.html">Store</a>
+          <a href="./regels/">Regels</a>
+          <a href="./faq/">FAQ</a>
+          <a href="./nieuws/">Nieuws</a>
+          <a href="./updates/">Serverupdates</a>
+          <a data-join href="https://cfx.re/join/5oayqbr">Connect</a>
+        </nav>
+      </div>
+      <div class="foot-col">
+        <h4>Regelgeving</h4>
+        <nav aria-label="Regelgeving">
+          <a href="./regels/">Serverregels</a>
+          <a href="./regels.html#apv">APV</a>
+          <a href="./regels.html#strafrecht">Wetboek van Strafrecht</a>
+          <a href="./regels.html#strafvordering">Wetboek van Strafvordering</a>
+        </nav>
+      </div>
+      <div class="foot-col">
+        <h4>Discord</h4>
+        <nav aria-label="Discord">
+          <a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener">Heerlen Roleplay</a>
+          <a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener">Support</a>
+          <a href="./regels/">Regels lezen</a>
+          <a data-join href="https://cfx.re/join/5oayqbr">Server joinen</a>
+        </nav>
+      </div>
+    </div>
+    <div class="foot-bottom">
+      <p>© <span id="year">2026</span> Heerlen Roleplay. Alle rechten voorbehouden.</p>
+      <p>Betalingen verlopen veilig via Tebex.</p>
+    </div>
+  </div>
+</footer>
+
+<div class="shade" id="shade" hidden></div>
+<aside class="drawer" id="drawer" aria-label="Winkelmand" aria-hidden="true">
+  <header>
+    <div>
+      <h2>Winkelmand</h2>
+      <p id="cartSub">Leeg</p>
+    </div>
+    <button type="button" id="cartClose" aria-label="Sluiten">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </header>
+  <div class="drawer-body" id="cartBody"></div>
+  <footer id="cartFoot" hidden>
+    <div class="total"><span>Totaal</span><strong id="cartTotal">€0.00</strong></div>
+    <p class="cart-who" id="cartWho"></p>
+    <label class="payer">
+      <span>Je spelersnaam</span>
+      <input id="payerName" maxlength="24" autocomplete="nickname" placeholder="Bijv. speler123">
+    </label>
+    <label class="payer">
+      <span>Discord ID <em style="font-style:normal;opacity:.7">(optioneel)</em></span>
+      <input id="payerDiscord" maxlength="20" inputmode="numeric" autocomplete="off" placeholder="Alleen cijfers">
+    </label>
+    <p class="pay-note">Log in met <strong>Cfx.re</strong> en betaal via Tebex. Coins komen via <strong>hl-tebexwrapper</strong> op je account (ook offline in de wachtrij).</p>
+    <button type="button" class="btn btn-blue btn-block" id="payBtn">Betalen via Tebex</button>
+  </footer>
+</aside>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<aside class="buy-toast" id="buyToast" role="status" aria-live="polite" hidden>
+  <span class="buy-avatar" id="buyToastAvatar"></span>
+  <span class="buy-body"><strong id="buyToastName"></strong><span>kocht <strong id="buyToastItem"></strong></span></span>
+  <button type="button" class="buy-close" id="buyToastClose" aria-label="Sluit melding">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>
+  </button>
+</aside>
+
+<script src="./scripts/settings.js"></script>
+<script src="./scripts/catalog.js?v=20261109-3"></script>
+<script src="./scripts/tebex.js?v=20261110-5"></script>
+<script src="./scripts/auth.js?v=20261109-4"></script>
+<script src="./scripts/cart.js?v=20261110-5"></script>
+<script src="./scripts/nav.js?v=20261110-1"></script>
+<script src="./scripts/store.js?v=20261109-2"></script>
+<script src="./scripts/live.js?v=20261110-1"></script>
+<script src="./scripts/content/public-content.js?v=20261109-2"></script>
+<script src="/scripts/site-footer.js?v=20261109-2" defer></script>
+</body>
+</html>

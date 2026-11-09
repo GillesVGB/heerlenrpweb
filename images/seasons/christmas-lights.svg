@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 100" preserveAspectRatio="none">
+  <style>
+    .wire{fill:none;stroke:#b2b9a9;stroke-width:3;opacity:.65}
+    .bulb{animation:glow 2.8s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+    .b2{animation-delay:.45s}.b3{animation-delay:1.1s}.b4{animation-delay:.78s}.b5{animation-delay:1.7s}.b6{animation-delay:.22s}.b7{animation-delay:1.3s}.b8{animation-delay:.93s}
+    @keyframes glow{0%,100%{opacity:.55;filter:brightness(.85)}48%{opacity:1;filter:brightness(1.65)}}
+  </style>
+  <path class="wire" d="M0 9Q140 72 280 19T560 24 840 13t280 14 280-18 200 10"/>
+  <g stroke="#0d1815" stroke-width="2">
+    <g class="bulb b1" fill="#ff5d5d"><path d="M150 42v10"/><ellipse cx="150" cy="61" rx="8" ry="12"/></g>
+    <g class="bulb b2" fill="#f6d568"><path d="M330 24v10"/><ellipse cx="330" cy="45" rx="8" ry="12"/></g>
+    <g class="bulb b3" fill="#78d9a1"><path d="M505 27v10"/><ellipse cx="505" cy="47" rx="8" ry="12"/></g>
+    <g class="bulb b4" fill="#76caff"><path d="M680 21v10"/><ellipse cx="680" cy="41" rx="8" ry="12"/></g>
+    <g class="bulb b5" fill="#ff6f9d"><path d="M860 17v10"/><ellipse cx="860" cy="37" rx="8" ry="12"/></g>
+    <g class="bulb b6" fill="#ffd45c"><path d="M1045 23v10"/><ellipse cx="1045" cy="43" rx="8" ry="12"/></g>
+    <g class="bulb b7" fill="#7bddb0"><path d="M1225 24v10"/><ellipse cx="1225" cy="44" rx="8" ry="12"/></g>
+    <g class="bulb b8" fill="#74bcff"><path d="M1410 12v10"/><ellipse cx="1410" cy="32" rx="8" ry="12"/></g>
+  </g>
+</svg>

@@ -1,0 +1,7 @@
+.vercel
+.env*
+!.env.example
+data/local-content.json
+dist/
+node_modules/
+

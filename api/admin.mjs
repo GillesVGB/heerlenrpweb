@@ -1,0 +1,294 @@
+import { randomUUID } from 'node:crypto';
+import { readContent, updateContent } from '../server/content-store.mjs';
+import { clearSessionCookie, constantTimeEqual, hasPermission, makeSession, permissionsForRoleIds, readSession, safeUser, sessionCookie, verifyOrigin } from '../server/security.mjs';
+import { appendAudit, badMethod, cleanDate, cleanImage, cleanText, json, readJson } from '../server/http.mjs';
+import { vercelHandler } from '../server/vercel-adapter.mjs';
+
+const attempts = new Map();
+const maxPasswordAttempts = 8;
+
+function limiterKey(request) {
+  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anonymous';
+}
+
+function permitPasswordAttempt(request) {
+  const now = Date.now();
+  const key = limiterKey(request);
+  const row = attempts.get(key);
+  if (row && row.until > now && row.count >= maxPasswordAttempts) return false;
+  if (!row || row.until <= now) attempts.set(key, { count: 1, until: now + 10 * 60 * 1000 });
+  else row.count++;
+  if (attempts.size > 5000) for (const [entry, item] of attempts) if (item.until <= now) attempts.delete(entry);
+  return true;
+}
+
+function cleanRecord(type, raw) {
+  if (!raw || typeof raw !== 'object') throw new Error('Ongeldig bericht.');
+  const common = {
+    id: cleanText(raw.id || randomUUID(), 80, 'ID'),
+    title: cleanText(raw.title, 160, 'Titel'),
+    category: cleanText(raw.category || (type === 'news' ? 'Nieuws' : 'Serverupdate'), 60, 'Categorie'),
+    excerpt: cleanText(raw.excerpt || '', 600, 'Intro', true),
+    content: cleanText(raw.content, 12000, 'Beschrijving'),
+    image: cleanImage(raw.image),
+    publishAt: cleanDate(raw.publishAt),
+    status: raw.status === 'published' ? 'published' : 'draft',
+    featured: raw.featured === true,
+    author: cleanText(raw.author || 'Heerlen Roleplay', 80, 'Auteur'),
+    updatedAt: new Date().toISOString()
+  };
+  if (type === 'changelog') common.version = cleanText(raw.version || 'Update', 60, 'Versie');
+  return common;
+}
+
+function cleanStaff(raw) {
+  if (!raw || typeof raw !== 'object') throw new Error('Ongeldig staffprofiel.');
+  return {
+    id: cleanText(raw.id || randomUUID(), 80, 'ID'),
+    name: cleanText(raw.name, 80, 'Naam'),
+    username: cleanText(raw.username || '', 80, 'Gebruikersnaam', true),
+    category: cleanText(raw.category || 'Staff', 60, 'Categorie'),
+    role: cleanText(raw.role, 80, 'Functie'),
+    bio: cleanText(raw.bio || '', 600, 'Beschrijving', true),
+    avatar: cleanImage(raw.avatar),
+    discordId: cleanText(raw.discordId || '', 40, 'Discord-ID', true),
+    order: Math.max(0, Math.min(9999, Number(raw.order) || 0)),
+    active: raw.active !== false,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+async function currentSession(request) {
+  const session = readSession(request);
+  if (!session) return { status: 401, error: 'Log opnieuw in.' };
+  if (session.provider !== 'discord') return { user: session };
+  if (!process.env.DISCORD_GUILD_ID || !process.env.DISCORD_BOT_TOKEN) return { status: 503, error: 'Discord-rolcontrole is niet ingesteld.' };
+  try {
+    const response = await fetch(`https://discord.com/api/v10/guilds/${encodeURIComponent(process.env.DISCORD_GUILD_ID)}/members/${encodeURIComponent(session.id)}`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (response.status === 404) return { status: 401, error: 'Je Discord-account heeft geen toegang meer tot deze server.' };
+    if (!response.ok) return { status: 503, error: 'Discord kan je rechten nu niet controleren.' };
+    const member = await response.json();
+    const roles = Array.isArray(member.roles) ? member.roles : [];
+    const permissions = permissionsForRoleIds(roles);
+    if (!permissions.length) return { status: 403, error: 'Je Discord-rollen geven geen toegang meer.' };
+    const user = { ...session, username: member.user?.global_name || member.user?.username || session.username, roles, permissions };
+    return { user };
+  } catch { return { status: 503, error: 'Discord kan je rechten nu niet controleren.' }; }
+}
+
+async function resolveDiscordProfile(raw) {
+  const id = String(raw?.discordId || '').trim();
+  if (!/^\d{17,22}$/.test(id) || !process.env.DISCORD_GUILD_ID || !process.env.DISCORD_BOT_TOKEN) return {};
+  try {
+    const response = await fetch(`https://discord.com/api/v10/guilds/${encodeURIComponent(process.env.DISCORD_GUILD_ID)}/members/${id}`, {
+      headers: { Authorization: `Bot ${process.env.DISCORD_BOT_TOKEN}`, Accept: 'application/json' },
+      signal: AbortSignal.timeout(5000)
+    });
+    if (!response.ok) return {};
+    const member = await response.json();
+    const user = member.user || {};
+    const avatar = user.avatar ? `https://cdn.discordapp.com/avatars/${id}/${user.avatar}.${user.avatar.startsWith('a_') ? 'gif' : 'png'}?size=256` : '';
+    return { username: user.global_name || user.username || '', avatar };
+  } catch { return {}; }
+}
+
+function recordAction(state, user, type, action, raw) {
+  const item = type === 'staff' ? cleanStaff(raw) : cleanRecord(type, raw);
+  if (type !== 'staff') item.author = user.username;
+  const key = type === 'staff' ? 'staff' : type === 'news' ? 'news' : 'changelog';
+  state[key] ||= [];
+  const index = state[key].findIndex(current => current.id === item.id);
+  if (action === 'delete') {
+    if (index >= 0) state[key].splice(index, 1);
+  } else if (index >= 0) state[key][index] = { ...state[key][index], ...item };
+  else state[key].push(item);
+  appendAudit(state, user, action === 'delete' ? 'verwijderd' : index >= 0 ? 'aangepast' : 'aangemaakt', key, item.title || item.name);
+  return { ok: true };
+}
+
+async function handler(request) {
+  if (request.method === 'GET') {
+    const current = await currentSession(request);
+    if (!current.user) return json({ ok: false, error: current.error }, current.status);
+    const session = current.user;
+    if (!hasPermission(session, 'admin:site') && !hasPermission(session, 'staff:read')) return json({ ok: false }, 403);
+    try {
+      const content = await readContent();
+      const view = {
+        news: hasPermission(session, 'news:write') ? content.news : undefined,
+        changelog: hasPermission(session, 'changelog:write') ? content.changelog : undefined,
+        staff: hasPermission(session, 'staff:read') || hasPermission(session, 'staff:write') ? content.staff : undefined,
+        rulesDraft: hasPermission(session, 'rules:write') ? content.rulesDraft : undefined,
+        rulesVersions: hasPermission(session, 'audit:read') ? content.rulesVersions : undefined,
+        auditLog: hasPermission(session, 'audit:read') ? content.auditLog : undefined,
+        siteSettings: hasPermission(session, 'admin:site') ? (content.siteSettings || {}) : undefined,
+        storeSettings: hasPermission(session, 'admin:site') ? (content.storeSettings || {}) : undefined
+      };
+      return json({ ok: true, user: safeUser(session), content: view, integration: { discord: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET && process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN), database: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) || !!process.env.DATABASE_URL, privateBlob: !!process.env.BLOB_READ_WRITE_TOKEN || !!(process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN) } });
+    } catch (error) { return json({ error: error.message }, 503); }
+  }
+
+  if (request.method !== 'POST') return badMethod('GET, POST');
+  if (!verifyOrigin(request)) return json({ error: 'Ongeldige herkomst van het verzoek.' }, 403);
+
+  let body;
+  try { body = await readJson(request); }
+  catch (error) { return json({ error: error.message }, 400); }
+
+  if (body.action === 'password-login') {
+    if (!permitPasswordAttempt(request)) return json({ error: 'Te veel pogingen. Probeer het later opnieuw.' }, 429);
+    const expected = process.env.ADMIN_PASSWORD;
+    if (expected && expected.length < 12) return json({ error: 'Stel ADMIN_PASSWORD in op minstens 12 tekens.' }, 503);
+    if (!expected) return json({ error: 'ADMIN_PASSWORD ontbreekt op deze server. Stel de omgevingsvariabele in en herstart de preview.' }, 503);
+    if (!constantTimeEqual(body.password, expected)) return json({ error: 'Inloggen is niet gelukt.' }, 401);
+    try {
+      attempts.delete(limiterKey(request));
+      const permissions = ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read'];
+      const session = makeSession({ id: 'password-admin', username: 'Beheerder', roles: ['password-admin'], permissions, provider: 'password' });
+      return json({ ok: true, user: { id: 'password-admin', username: 'Beheerder', permissions } }, 200, { 'Set-Cookie': sessionCookie(session, request) });
+    } catch (error) { return json({ error: error.message }, 503); }
+  }
+
+  if (body.action === 'logout') return json({ ok: true }, 200, { 'Set-Cookie': clearSessionCookie(request) });
+  const current = await currentSession(request);
+  const user = current.user;
+  if (!user) return json({ error: current.error }, current.status);
+
+  try {
+    if (body.action === 'save-site-settings') {
+      if (!hasPermission(user, 'admin:site')) return json({ error: 'Alleen sitebeheerders mogen de openbare instellingen wijzigen.' }, 403);
+      const input = body.settings;
+      if (!input || typeof input !== 'object' || Array.isArray(input)) return json({ error: 'Ongeldige site-instellingen.' }, 400);
+      const themes = ['standard', 'halloween', 'christmas', 'newyear', 'easter'];
+      const allowedSeasonPages = ['home', 'news', 'updates', 'staff', 'rules', 'shop'];
+      if (input.seasonTheme !== undefined && !themes.includes(input.seasonTheme)) return json({ error: 'Kies een geldig seizoensthema.' }, 400);
+      for (const key of ['promoEnabled', 'seasonEnabled', 'seasonAccentEnabled', 'seasonEffects', 'maintenanceEnabled']) {
+        if (input[key] !== undefined && typeof input[key] !== 'boolean') return json({ error: 'Ongeldige schakelaar: ' + key }, 400);
+      }
+      if (input.seasonAccent !== undefined && (typeof input.seasonAccent !== 'string' || !/^#[\da-f]{6}$/i.test(input.seasonAccent))) return json({ error: 'Ongeldige accentkleur.' }, 400);
+      const numericSettings = { seasonIntensity: [0.2, 2], seasonSpeed: [0.5, 2], seasonDensity: [0, 40], seasonFrequency: [0.5, 2] };
+      for (const [key, [min, max]] of Object.entries(numericSettings)) {
+        if (input[key] !== undefined && (!Number.isFinite(Number(input[key])) || Number(input[key]) < min || Number(input[key]) > max)) return json({ error: 'Ongeldige waarde voor ' + key + '.' }, 400);
+      }
+      if (input.seasonPages !== undefined && (!Array.isArray(input.seasonPages) || input.seasonPages.some(page => !allowedSeasonPages.includes(page)))) return json({ error: 'Ongeldige themapaginaselectie.' }, 400);
+      for (const key of ['seasonStart', 'seasonEnd']) {
+        if (input[key] !== undefined && input[key] !== '' && (typeof input[key] !== 'string' || input[key].length > 32 || !Number.isFinite(Date.parse(input[key])))) return json({ error: 'Ongeldige datum voor ' + key + '.' }, 400);
+      }
+      if (input.seasonStart && input.seasonEnd && Date.parse(input.seasonStart) >= Date.parse(input.seasonEnd)) return json({ error: 'De einddatum moet na de startdatum liggen.' }, 400);
+      if (input.promoMode !== undefined && !['promo', 'announcement'].includes(input.promoMode)) return json({ error: 'Ongeldige mededelingweergave.' }, 400);
+      const textFields = { promoBonus: [40, 'Kop'], promoText: [120, 'Tekst'], promoCta: [40, 'Knoptekst'], heroTitle: [60, 'Hoofdtitel'], heroLead: [240, 'Introtekst'], maintenanceMessage: [240, 'Onderhoudsmelding'] };
+      const clean = {};
+      for (const [key, [limit, label]] of Object.entries(textFields)) {
+        if (input[key] !== undefined) clean[key] = cleanText(input[key], limit, label, true);
+      }
+      if (input.tebexToken !== undefined) {
+        if (typeof input.tebexToken !== 'string' || input.tebexToken.length > 120) return json({ error: 'Ongeldige Tebex-token.' }, 400);
+        clean.tebexToken = input.tebexToken.trim();
+      }
+      if (input.tebexPackages !== undefined) {
+        if (!input.tebexPackages || typeof input.tebexPackages !== 'object' || Array.isArray(input.tebexPackages) || Object.keys(input.tebexPackages).length > 100) return json({ error: 'Ongeldige Tebex-pakketten.' }, 400);
+        const packages = {};
+        for (const [id, packageId] of Object.entries(input.tebexPackages)) {
+          if (!/^[a-z0-9-]{1,60}$/.test(id) || typeof packageId !== 'string' || packageId.length > 32 || (packageId && !/^\d+$/.test(packageId))) return json({ error: 'Ongeldig Tebex-pakket-ID.' }, 400);
+          packages[id] = packageId.trim();
+        }
+        clean.tebexPackages = packages;
+      }
+      if (input.shopProducts !== undefined) {
+        const allowedProducts = new Set([100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100, 1200].map(amount => `coins-${amount}`));
+        if (!input.shopProducts || typeof input.shopProducts !== 'object' || Array.isArray(input.shopProducts) || Object.keys(input.shopProducts).length > 20) return json({ error: 'Ongeldige shopproducten.' }, 400);
+        const products = {};
+        for (const [id, product] of Object.entries(input.shopProducts)) {
+          if (!allowedProducts.has(id) || !product || typeof product !== 'object' || Array.isArray(product)) return json({ error: 'Ongeldig shopproduct.' }, 400);
+          const item = {};
+          if (product.name !== undefined) item.name = cleanText(product.name, 60, 'Productnaam', false);
+          if (product.blurb !== undefined) item.blurb = cleanText(product.blurb, 240, 'Productomschrijving', false);
+          if (product.amount !== undefined) {
+            if (!Number.isInteger(Number(product.amount)) || Number(product.amount) < 1 || Number(product.amount) > 100000) return json({ error: 'Ongeldig coin-aantal.' }, 400);
+            item.amount = Number(product.amount);
+          }
+          if (product.bonus !== undefined) {
+            if (!Number.isInteger(Number(product.bonus)) || Number(product.bonus) < 0 || Number(product.bonus) > 10000) return json({ error: 'Ongeldige productbonus.' }, 400);
+            item.bonus = Number(product.bonus);
+          }
+          products[id] = item;
+        }
+        clean.shopProducts = products;
+      }
+      for (const key of ['promoEnabled', 'seasonEnabled', 'seasonAccentEnabled', 'seasonEffects', 'maintenanceEnabled', 'promoMode', 'seasonTheme', 'seasonStart', 'seasonEnd', 'seasonAccent']) {
+        if (input[key] !== undefined) clean[key] = input[key];
+      }
+      for (const key of Object.keys(numericSettings)) if (input[key] !== undefined) clean[key] = Number(input[key]);
+      if (input.seasonPages !== undefined) clean.seasonPages = [...new Set(input.seasonPages)];
+      const result = await updateContent(state => {
+        const { tebexToken, tebexPackages, ...siteSettings } = clean;
+        state.siteSettings = { ...(state.siteSettings || {}), ...siteSettings, updatedAt: new Date().toISOString(), updatedBy: user.username };
+        if (clean.tebexToken !== undefined || clean.tebexPackages !== undefined || clean.shopProducts !== undefined) {
+          state.storeSettings = {
+            ...(state.storeSettings || {}),
+            ...(tebexToken !== undefined ? { tebexToken } : {}),
+            ...(tebexPackages !== undefined ? { tebexPackages } : {}),
+            ...(clean.shopProducts !== undefined ? { shopProducts: clean.shopProducts } : {}),
+            updatedAt: new Date().toISOString(),
+            updatedBy: user.username
+          };
+          appendAudit(state, user, 'aangepast', 'winkelinstellingen', 'Tebex-token, producten en pakket-ID’s');
+        }
+        appendAudit(state, user, 'aangepast', 'site-instellingen', 'Homepage, thema en onderhoud');
+        return { ok: true };
+      });
+      return json(result);
+    }
+
+    if (['news', 'changelog', 'staff'].includes(body.type) && ['save', 'delete'].includes(body.action)) {
+      const permission = body.type === 'staff' ? 'staff:write' : `${body.type}:write`;
+      if (!hasPermission(user, permission)) return json({ error: 'Je hebt geen rechten voor dit onderdeel.' }, 403);
+      let item = body.item;
+      if (body.type === 'staff' && body.action === 'save' && item && item.discordId) {
+        const profile = await resolveDiscordProfile(item);
+        item = { ...item, username: item.username || profile.username, avatar: item.avatar || profile.avatar };
+      }
+      const result = await updateContent(state => recordAction(state, user, body.type, body.action, item));
+      return json(result);
+    }
+
+    if (body.action === 'save-rules-draft') {
+      if (!hasPermission(user, 'rules:write')) return json({ error: 'Je mag de regels niet beheren.' }, 403);
+      const documents = Array.isArray(body.documents) ? body.documents.slice(0, 20).map((doc, index) => ({
+        id: cleanText(doc.id, 40, 'Document-ID'),
+        title: cleanText(doc.title, 120, `Document ${index + 1}`),
+        content: cleanText(doc.content, 150_000, `Document ${index + 1}`, true)
+      })) : [];
+      if (!documents.length) return json({ error: 'Voeg minstens één regelbestand toe.' }, 400);
+      const result = await updateContent(state => {
+        state.rulesDraft = { documents, updatedAt: new Date().toISOString(), updatedBy: user.username };
+        appendAudit(state, user, 'concept opgeslagen', 'regels', 'Regelconcept');
+        return { ok: true };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'publish-rules') {
+      if (!hasPermission(user, 'rules:write')) return json({ error: 'Je mag regels niet publiceren.' }, 403);
+      const result = await updateContent(state => {
+        if (!state.rulesDraft?.documents?.length) throw new Error('Er is geen regelconcept om te publiceren.');
+        const previous = state.rulesVersions?.[state.rulesVersions.length - 1]?.version || '1.0';
+        const parts = previous.split('.').map(Number);
+        const version = `${Number.isFinite(parts[0]) ? parts[0] : 1}.${(Number.isFinite(parts[1]) ? parts[1] : 0) + 1}`;
+        const snapshot = { id: randomUUID(), version, title: cleanText(body.title || `Versie ${version}`, 120, 'Versietitel'), status: 'published', publishedAt: new Date().toISOString(), author: user.username, documents: structuredClone(state.rulesDraft.documents) };
+        state.rulesVersions ||= [];
+        state.rulesVersions.push(snapshot);
+        appendAudit(state, user, 'gepubliceerd', 'regelversie', snapshot.title);
+        return { ok: true, version: snapshot };
+      });
+      return json(result);
+    }
+
+    return json({ error: 'Onbekende beheeractie.' }, 400);
+  } catch (error) { return json({ error: error.message || 'Opslaan is niet gelukt.' }, 400); }
+}
+
+export default vercelHandler(handler);
