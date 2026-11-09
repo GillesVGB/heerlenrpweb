@@ -58,13 +58,9 @@ async function livePlayers() {
       headers: { Accept: 'application/json', 'User-Agent': 'HeerlenRoleplayWeb/1.0' },
       signal: timeout()
     });
-    if (response.status === 404) {
-      return { online: false, clients: 0, max: 0, hostname: '', source: 'cfx-listing' };
-    }
     if (response.ok) {
       const body = await response.json();
       const data = body && body.Data;
-      if (data === null) return { online: false, clients: 0, max: 0, hostname: '', source: 'cfx-listing' };
       const clients = Number(data && data.clients);
       if (Number.isFinite(clients)) {
         return {

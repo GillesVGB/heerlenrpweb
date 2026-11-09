@@ -44,14 +44,39 @@ try {
   assert.equal(data.clients, 12);
   assert.deepEqual(calls, ['http://status.example.net:30125/dynamic.json'], 'Direct status must use only server-side host and port configuration');
 
-  globalThis.fetch = async () => new Response(JSON.stringify({ Data: null }), {
-    status: 200,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  delete process.env.FIVEM_SERVER_HOST;
+  delete process.env.FIVEM_SERVER_PORT;
+  calls.length = 0;
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    if (String(url).startsWith('https://frontend.cfx-services.net/')) {
+      return new Response(JSON.stringify({ Data: null }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    if (String(url).startsWith('https://cfx.re/join/')) {
+      return new Response(null, {
+        status: 302,
+        headers: { 'x-citizenfx-url': 'http://status.example.net:30120/' }
+      });
+    }
+    return new Response(JSON.stringify({ clients: 0, sv_maxclients: 64, hostname: 'Heerlen zero players' }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
   response = await handler(new Request('https://site.test/api/players'));
   data = await response.json();
   assert.equal(response.status, 200);
-  assert.equal(data.online, false, 'An explicit empty CFX listing should be represented as offline');
+  assert.equal(data.online, true, 'An empty listing should still check the join endpoint for an online server with zero players');
+  assert.equal(data.clients, 0);
+  assert.equal(data.max, 64);
+  assert.deepEqual(calls, [
+    'https://frontend.cfx-services.net/api/servers/single/5oayqbr',
+    'https://cfx.re/join/5oayqbr',
+    'http://status.example.net:30120/dynamic.json'
+  ]);
 
   globalThis.fetch = async () => { throw new Error('upstream unavailable'); };
   response = await handler(new Request('https://site.test/api/players'));
