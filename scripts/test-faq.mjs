@@ -19,6 +19,12 @@ assert.ok(styles.includes('.faq-item summary:focus-visible'), 'FAQ disclosures s
 assert.ok(page.includes('<script src="/scripts/promo.js?'), 'FAQ should load the shared promo/announcement strip');
 assert.ok(page.indexOf('scripts/promo.js') < page.indexOf('<header class="nav'), 'Promo strip should be inserted before the shared navigation');
 assert.ok(page.includes('scripts/nav.js?v=20261109-5'), 'FAQ should load the current shared navigation behavior');
+const navMarkup = page.match(/<nav class="nav-links"[\s\S]*?<\/nav>/)?.[0] || '';
+assert.deepEqual(
+  Array.from(navMarkup.matchAll(/<a href="([^"]+)"/g), (match) => match[1]),
+  ['/', '/winkel/', '/regels/', '/faq/', '/nieuws/', '/updates/'],
+  'FAQ should use the canonical shared navigation order without a top-level Staff link'
+);
 assert.ok(page.includes('cart-btn" id="cartOpen"') && page.includes('<svg viewBox="0 0 24 24"'), 'FAQ navigation should use the shared cart icon instead of a text glyph');
 assert.ok(page.includes('href="/faq/" class="is-active"'), 'FAQ should mark its own navigation item as active');
 
