@@ -286,7 +286,7 @@
   }
 
   // Blijvende melding in de mand (een toast van 2 sec wordt makkelijk gemist)
-  function showPayStatus(text, withLogin) {
+  function showPayStatus(text, withLogin, action) {
     var el = payStatusEl();
     if (!el) return;
     el.textContent = "";
@@ -302,7 +302,33 @@
       btn.addEventListener("click", function () { root.HeerlenAuth.startLogin("fivem"); });
       el.appendChild(btn);
     }
+    if (action) {
+      var act = document.createElement("button");
+      act.type = "button";
+      act.className = "pay-status-login";
+      act.textContent = action.label;
+      act.addEventListener("click", action.onClick);
+      el.appendChild(act);
+    }
+    el.classList.toggle("is-info", !!action);
     el.hidden = false;
+  }
+
+  // Pop-up van Tebex moet direct vanuit een klik komen, anders blokkeert de browser hem.
+  function offerPopup(result) {
+    setPayBusy(false);
+    showPayStatus("Je bestelling staat klaar bij Tebex.", false, {
+      label: "Open betaalvenster",
+      onClick: function () {
+        try {
+          root.HeerlenTebex.openPopup(result.ident);
+          showPayStatus("");
+        } catch (err) {
+          console.error("[cart] Pop-up openen mislukt", err);
+          showPayStatus(friendlyError(err));
+        }
+      }
+    });
   }
 
   function friendlyError(err) {
@@ -375,8 +401,11 @@
       if (result && result.launched) {
         setPayBusy(false);
         showToast("Checkout geopend");
+      } else if (result && result.needsClick) {
+        offerPopup(result);
+      } else if (result && result.redirected) {
+        showToast("Je wordt doorgestuurd…");
       }
-      // redirect naar Cfx of fallback volgt
     }).catch(function (err) {
       clearTimeout(timer);
       console.error("[cart] Betalen via Tebex mislukt", err);
@@ -407,6 +436,10 @@
         if (result && result.launched) {
           setPayBusy(false);
           showToast("Checkout geopend");
+        } else if (result && result.needsClick) {
+          offerPopup(result);
+        } else if (result && result.redirected) {
+          showToast("Je wordt doorgestuurd naar Tebex…");
         }
       }).catch(function (err) {
         console.error("[cart] Checkout hervatten mislukt", err);

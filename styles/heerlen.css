@@ -2117,3 +2117,4 @@ body.cart-open .shade { z-index: 85; }
   .store-layout .maincol { order: 1; }
   .store-hero p { max-width: 32ch; }
 }
+.pay-status.is-info { border-color: rgba(90, 174, 253, 0.55); background: rgba(90, 174, 253, 0.12); }

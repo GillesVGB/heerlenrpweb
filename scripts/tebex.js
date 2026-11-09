@@ -292,34 +292,48 @@
     return "dark";
   }
 
+  function popupVisible(before) {
+    var frames = document.querySelectorAll("iframe");
+    if (frames.length > before) return true;
+    return !!document.querySelector('iframe[src*="tebex"], [class*="tebex"] iframe');
+  }
+
   async function launchCheckout(ident, payUrl) {
-    try {
-      await loadTebexJs();
-      bindCheckoutEvents();
-      root.Tebex.checkout.init({
-        ident: ident,
-        theme: themeForCheckout(),
-        locale: "nl_NL",
-        closeOnPaymentComplete: true,
-        colors: [
-          { name: "primary", color: "#5aaefd" },
-          { name: "secondary", color: "#4ade80" }
-        ]
-      });
-      root.Tebex.checkout.launch();
-      return { launched: true, ident: ident };
-    } catch (err) {
-      if (payUrl) {
-        location.href = payUrl;
-        return { redirected: true };
-      }
-      throw err;
+    // Betrouwbaarste route: de gehoste Tebex-betaalpagina. Na betalen stuurt Tebex
+    // terug naar complete_url (?tebex=done), dus de site handelt de afronding af.
+    if (payUrl) {
+      location.href = payUrl;
+      return { redirected: true };
     }
+
+    // Geen betaal-URL ontvangen: Tebex.js-pop-up. Browsers blokkeren een pop-up die niet
+    // direct door een klik wordt geopend, dus laad het script alvast en laat de speler
+    // zelf op een knop klikken (zie openPopup).
+    await loadTebexJs();
+    bindCheckoutEvents();
+    return { needsClick: true, ident: ident };
+  }
+
+  // Moet synchroon vanuit een klik-handler worden aangeroepen.
+  function openPopup(ident) {
+    if (!root.Tebex || !root.Tebex.checkout) throw new Error("Tebex.js is niet geladen. Ververs de pagina en probeer opnieuw.");
+    root.Tebex.checkout.init({
+      ident: ident,
+      theme: themeForCheckout(),
+      locale: "nl_NL",
+      closeOnPaymentComplete: true,
+      colors: [
+        { name: "primary", color: "#5aaefd" },
+        { name: "secondary", color: "#4ade80" }
+      ]
+    });
+    root.Tebex.checkout.launch();
   }
 
   async function openCheckout(basket) {
     var ident = basket.ident || basket.id;
     var payUrl = checkoutUrl(basket);
+    if (typeof console !== "undefined") console.info("[tebex] basket", ident, { hasPayUrl: !!payUrl, packages: Array.isArray(basket.packages) ? basket.packages.length : "onbekend" });
     if (!ident) throw new Error("Checkout niet beschikbaar. Probeer opnieuw in te loggen met Cfx.re.");
     return launchCheckout(ident, payUrl);
   }
@@ -481,6 +495,7 @@
     loadPending: loadPending,
     clearPending: clearPending,
     loadTebexJs: loadTebexJs,
+    openPopup: openPopup,
     PENDING_KEY: PENDING_KEY,
     LOGIN_KEY: LOGIN_KEY
   };
