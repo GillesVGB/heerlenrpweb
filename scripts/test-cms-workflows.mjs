@@ -200,11 +200,8 @@ try {
           { type: 'top_customer', data: null }
         ] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
-      if (requestUrl.endsWith('/api/accounts/public-token-test')) {
-        return new Response(JSON.stringify({ data: { id: 98765 } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
-      }
       if (requestUrl.endsWith('/top-customers?period=none')) {
-        assert.equal(options.headers.Authorization, 'Basic ' + Buffer.from('98765:test-checkout-api-key').toString('base64'), 'the checkout API key stays in server-side basic auth');
+        assert.equal(options.headers.Authorization, 'Basic ' + Buffer.from('public-token-test:test-checkout-api-key').toString('base64'), 'Tebex basic auth uses the public token and keeps the private key server-side');
         return new Response(JSON.stringify({ data: { username: 'AllTimeTop', total: 240, currency: 'EUR' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
       }
       throw new Error('Unexpected donations request: ' + requestUrl);

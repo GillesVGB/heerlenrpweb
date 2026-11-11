@@ -60,12 +60,9 @@ async function handler(request) {
     let topDonorConfigured = Boolean(process.env.TEBEX_CHECKOUT_API_KEY);
     if (topDonorConfigured) {
       try {
-        const [store, apiKey] = await Promise.all([
-          getJson(accountUrl),
-          Promise.resolve(process.env.TEBEX_CHECKOUT_API_KEY.trim())
-        ]);
-        if (!store?.id || !apiKey) throw new Error('Tebex checkout credentials are incomplete.');
-        const authorization = Buffer.from(`${store.id}:${apiKey}`).toString('base64');
+        const apiKey = process.env.TEBEX_CHECKOUT_API_KEY.trim();
+        if (!apiKey) throw new Error('Tebex checkout credentials are incomplete.');
+        const authorization = Buffer.from(`${token}:${apiKey}`).toString('base64');
         const customer = await getJson(`${accountUrl}/top-customers?period=none`, {
           headers: { Authorization: `Basic ${authorization}` }
         });
