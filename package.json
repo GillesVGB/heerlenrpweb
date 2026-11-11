@@ -7,6 +7,7 @@
     "preview": "node scripts/_serve.js",
     "products": "node scripts/_gen-products.js",
     "test:cms": "node scripts/test-cms-workflows.mjs",
+    "test:shop-comparison": "node scripts/test-shop-comparison.mjs",
     "test:themes": "node scripts/test-season-effects.mjs",
     "test:faq": "node scripts/test-faq.mjs",
     "test:nav": "node scripts/test-nav-order.mjs",

@@ -8,7 +8,7 @@
 <meta name="theme-color" content="#141614">
 <link rel="icon" href="../images/heerlen-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="../styles/heerlen.css?v=20261111-7">
+<link rel="stylesheet" href="../styles/heerlen.css?v=20261112-1">
 <script>
   (function () {
     try {
@@ -177,6 +177,27 @@
   </footer>
 </aside>
 
+<aside class="compare-dock" id="compareDock" aria-live="polite" hidden>
+  <div class="compare-dock-copy">
+    <strong id="compareCount">0/3 producten geselecteerd</strong>
+    <span id="compareHint">Kies minimaal twee producten om te vergelijken.</span>
+  </div>
+  <div class="compare-dock-actions">
+    <button type="button" class="btn btn-blue" id="compareOpen" disabled>Vergelijk</button>
+    <button type="button" class="compare-clear" id="compareClear">Wissen</button>
+  </div>
+</aside>
+<dialog class="compare-dialog" id="compareDialog" aria-labelledby="compareTitle">
+  <div class="compare-dialog-head">
+    <div>
+      <h2 id="compareTitle">Producten vergelijken</h2>
+      <p>Vergelijk prijzen en pakketinhoud naast elkaar.</p>
+    </div>
+    <button type="button" class="compare-close" id="compareClose" aria-label="Vergelijking sluiten">×</button>
+  </div>
+  <div class="compare-table-wrap" id="compareTable"></div>
+</dialog>
+
 <div class="toast" id="toast" role="status" hidden></div>
 <aside class="buy-toast" id="buyToast" role="status" aria-live="polite" hidden>
   <span class="buy-avatar" id="buyToastAvatar"></span>
@@ -192,7 +213,7 @@
 <script src="../scripts/auth.js?v=20261109-4"></script>
 <script src="../scripts/cart.js?v=20261111-2"></script>
 <script src="../scripts/nav.js?v=20261110-1"></script>
-<script src="../scripts/store.js?v=20261111-6"></script>
+<script src="../scripts/store.js?v=20261112-1"></script>
 <script src="../scripts/live.js?v=20261110-1"></script>
 <script src="/scripts/site-footer.js?v=20261109-2" defer></script>
 </body>
