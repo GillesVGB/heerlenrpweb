@@ -15,7 +15,17 @@
   var storeTitle = document.getElementById("storeTitle");
   var storeNote = document.getElementById("storeNote");
   var productRoot = document.getElementById("productRoot");
+  var compareDock = document.getElementById("compareDock");
+  var compareCount = document.getElementById("compareCount");
+  var compareHint = document.getElementById("compareHint");
+  var compareOpen = document.getElementById("compareOpen");
+  var compareClear = document.getElementById("compareClear");
+  var compareDialog = document.getElementById("compareDialog");
+  var compareClose = document.getElementById("compareClose");
+  var compareTable = document.getElementById("compareTable");
   var currentCat = "coins";
+  var compareIds = [];
+  var maxCompareProducts = 3;
 
   function bagQty(id) {
     return (cartApi && cartApi.cart()[id]) || 0;
@@ -40,6 +50,70 @@
         ? " vanaf " + cat.money(info.sale.minimumBasketValue) + " winkelmand"
         : " na voorwaarden";
     return '<span class="price-sale"><del class="price-old">' + cat.money(info.original) + '</del><span class="price">' + cat.money(discountedPrice) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label + " KORTING" + condition) + "</small></span>";
+  }
+
+  function selectedCompareProducts() {
+    compareIds = compareIds.filter(function (id) { return !!cat.pack(id); });
+    return compareIds.map(function (id) { return cat.pack(id); });
+  }
+
+  function renderComparisonTable() {
+    if (!compareTable) return;
+    var products = selectedCompareProducts();
+    if (!products.length) {
+      compareTable.innerHTML = "";
+      return;
+    }
+
+    var headings = products.map(function (product) {
+      return '<th scope="col"><div class="compare-product-head"><strong>' + cat.esc(product.name) +
+        '</strong><button type="button" class="compare-remove" data-compare-remove="' + cat.esc(product.id) + '">Verwijderen</button></div></th>';
+    }).join("");
+    var rows = [
+      ["Categorie", products.map(function (product) {
+        var category = cat.categories().find(function (item) { return item.id === product.cat; });
+        return cat.esc(category ? category.name : "Overig");
+      })],
+      ["Prijs", products.map(priceMarkup)],
+      ["Coins", products.map(function (product) {
+        return product.amount > 0 ? cat.esc(Number(product.amount).toLocaleString("nl-NL")) + " Coins" : "—";
+      })],
+      ["Bonus", products.map(function (product) {
+        return product.bonus > 0 ? "+" + cat.esc(product.bonus) + "% extra" : "—";
+      })],
+      ["Inhoud", products.map(function (product) {
+        return '<span class="compare-description">' + cat.esc(product.blurb || "Geen extra informatie.") + "</span>";
+      })],
+      ["Meer info", products.map(function (product) {
+        return '<a class="compare-product-link" href="' + cat.esc(cat.productUrl(product)) + '">Bekijk product</a>';
+      })]
+    ];
+    compareTable.innerHTML =
+      '<table class="compare-table"><thead><tr><th scope="col">Kenmerk</th>' + headings + "</tr></thead><tbody>" +
+      rows.map(function (row) {
+        return "<tr><th scope=\"row\">" + cat.esc(row[0]) + "</th>" + row[1].map(function (value) {
+          return "<td>" + value + "</td>";
+        }).join("") + "</tr>";
+      }).join("") + "</tbody></table>";
+  }
+
+  function renderCompareControls() {
+    var products = selectedCompareProducts();
+    if (compareDock) compareDock.hidden = products.length === 0;
+    if (compareCount) compareCount.textContent = products.length + "/" + maxCompareProducts + " producten geselecteerd";
+    if (compareHint && products.length < 2) compareHint.textContent = "Kies nog " + (2 - products.length) + " product" + (products.length === 0 ? "en" : "") + " om te vergelijken.";
+    if (compareHint && products.length >= 2) compareHint.textContent = "Je kunt maximaal " + maxCompareProducts + " producten vergelijken.";
+    if (compareOpen) compareOpen.disabled = products.length < 2;
+    if (grid && typeof grid.querySelectorAll === "function") grid.querySelectorAll("[data-compare-toggle]").forEach(function (button) {
+      var selected = compareIds.indexOf(button.getAttribute("data-compare-toggle")) !== -1;
+      button.classList.toggle("is-selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
+      button.textContent = selected ? "Geselecteerd" : "Vergelijk";
+    });
+    if (compareDialog && compareDialog.open) {
+      if (products.length < 2) compareDialog.close();
+      else renderComparisonTable();
+    }
   }
 
   function artHtml(p, link) {
@@ -76,6 +150,11 @@
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></button>'
       : '<button type="button" class="buy' + (qty ? " is-in" : "") + '" data-add="' + p.id + '">' +
         (qty ? "In mand · " + qty : "In mand") + "</button>";
+    var compareSelected = compareIds.indexOf(p.id) !== -1;
+    var compareButton = page === "winkel"
+      ? '<button type="button" class="compare-toggle' + (compareSelected ? " is-selected" : "") + '" data-compare-toggle="' + cat.esc(p.id) + '" aria-pressed="' + compareSelected + '">' +
+        (compareSelected ? "Geselecteerd" : "Vergelijk") + "</button>"
+      : "";
     return (
       '<article class="card shop-card">' +
       artHtml(p, true) +
@@ -88,7 +167,7 @@
       (p.bonus ? '<span class="bonus-inline">+' + p.bonus + "% bonus</span>" : "") +
       "</div>" +
       round +
-      "</div></div></article>"
+      "</div>" + compareButton + "</div></article>"
     );
   }
 
@@ -130,6 +209,7 @@
     grid.innerHTML = list.map(function (p) { return shopCard(p, { roundCart: true }); }).join("");
     if (empty) empty.hidden = list.length !== 0;
     if (count) count.textContent = list.length + (list.length === 1 ? " product" : " producten");
+    renderCompareControls();
   }
 
   function setCat(catName) {
@@ -194,6 +274,38 @@
   function bootShop() {
     if (search) search.addEventListener("input", renderShop);
     if (sort) sort.addEventListener("change", renderShop);
+    if (grid && typeof grid.addEventListener === "function") grid.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-compare-toggle]");
+      if (!button) return;
+      var id = button.getAttribute("data-compare-toggle");
+      var index = compareIds.indexOf(id);
+      if (index >= 0) compareIds.splice(index, 1);
+      else if (compareIds.length < maxCompareProducts) compareIds.push(id);
+      else if (compareHint) compareHint.textContent = "Je kunt maximaal " + maxCompareProducts + " producten tegelijk vergelijken.";
+      renderShop();
+    });
+    if (compareOpen) compareOpen.addEventListener("click", function () {
+      if (selectedCompareProducts().length < 2 || !compareDialog) return;
+      renderComparisonTable();
+      compareDialog.showModal();
+    });
+    if (compareClose && compareDialog) compareClose.addEventListener("click", function () { compareDialog.close(); });
+    if (compareClear) compareClear.addEventListener("click", function () {
+      compareIds = [];
+      renderCompareControls();
+      if (compareDialog && compareDialog.open) compareDialog.close();
+      renderShop();
+    });
+    if (compareTable) compareTable.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-compare-remove]");
+      if (!button) return;
+      compareIds = compareIds.filter(function (id) { return id !== button.getAttribute("data-compare-remove"); });
+      renderCompareControls();
+      renderShop();
+    });
+    if (compareDialog) compareDialog.addEventListener("click", function (event) {
+      if (event.target === compareDialog) compareDialog.close();
+    });
     if (categoryNav) categoryNav.addEventListener("click", function (event) {
       var button = event.target.closest("[data-shop-category]");
       if (!button) return;
