@@ -10,8 +10,8 @@ process.env.ADMIN_PASSWORD = 'cms-workflow-test-password-not-for-production';
 process.env.CONTENT_STORE_PATH = path.join(tmpdir(), `heerlen-cms-test-${process.pid}.json`);
 const originalPublicOrigin = process.env.PUBLIC_ORIGIN;
 
-const [{ default: admin }, { default: content }, { default: avatar }, { makeSession, permissionsForRoleIds, sessionCookie, verifyOrigin }] = await Promise.all([
-  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../server/security.mjs')
+const [{ default: admin }, { default: content }, { default: avatar }, { default: donations }, { makeSession, permissionsForRoleIds, sessionCookie, verifyOrigin }] = await Promise.all([
+  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../api/donations.mjs'), import('../server/security.mjs')
 ]);
 const base = 'http://127.0.0.1:8765';
 const origin = { origin: base, 'content-type': 'application/json' };
@@ -185,7 +185,49 @@ try {
     globalThis.fetch = originalAvatarFetch;
   }
 
-  console.log('CMS and shop checks passed: origin guard, login, current Discord roles, authorization, news publish, staff permissions, shared shop product settings, Tebex package mapping and active sales, schedule validation, immutable APV versions.');
+  const originalDonationsFetch = globalThis.fetch;
+  const oldTebexCheckoutKey = process.env.TEBEX_CHECKOUT_API_KEY;
+  try {
+    process.env.TEBEX_CHECKOUT_API_KEY = 'test-checkout-api-key';
+    globalThis.fetch = async (url, options) => {
+      const requestUrl = String(url);
+      if (requestUrl.endsWith('/sidebar')) {
+        return new Response(JSON.stringify({ data: [
+          { type: 'recent_payments', data: { payments: [
+            { username: 'GlobalBuyer', package: { name: '500 Coins' }, created_at: '2026-11-09T12:00:00Z', price: 25, currency: 'EUR' }
+          ] } },
+          { type: 'top_customer', data: null }
+        ] }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (requestUrl.endsWith('/api/accounts/public-token-test')) {
+        return new Response(JSON.stringify({ data: { id: 98765 } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      if (requestUrl.endsWith('/top-customers?period=none')) {
+        assert.equal(options.headers.Authorization, 'Basic ' + Buffer.from('98765:test-checkout-api-key').toString('base64'), 'the checkout API key stays in server-side basic auth');
+        return new Response(JSON.stringify({ data: { username: 'AllTimeTop', total: 240, currency: 'EUR' } }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      throw new Error('Unexpected donations request: ' + requestUrl);
+    };
+    const donationResponse = await donations(new Request(base + '/api/donations'));
+    assert.equal(donationResponse.status, 200, 'global donations endpoint returns Tebex data');
+    const donationBody = await donationResponse.json();
+    assert.equal(donationBody.topDonor.username, 'AllTimeTop', 'all-time top donor comes from Tebex');
+    assert.equal(donationBody.recentPayments[0].username, 'GlobalBuyer', 'recent payments are global Tebex payments');
+    assert.equal(donationBody.recentPayments[0].item, '500 Coins', 'recent payment package names are returned');
+    assert.equal(JSON.stringify(donationBody).includes('test-checkout-api-key'), false, 'the Tebex checkout API key is never returned to visitors');
+
+    delete process.env.TEBEX_CHECKOUT_API_KEY;
+    const recentOnlyResponse = await donations(new Request(base + '/api/donations'));
+    const recentOnlyBody = await recentOnlyResponse.json();
+    assert.equal(recentOnlyBody.topDonor, null, 'the all-time top donor is omitted when its private API key is not configured');
+    assert.equal(recentOnlyBody.recentPayments[0].username, 'GlobalBuyer', 'global recent payments still work without the private API key');
+  } finally {
+    globalThis.fetch = originalDonationsFetch;
+    if (oldTebexCheckoutKey === undefined) delete process.env.TEBEX_CHECKOUT_API_KEY;
+    else process.env.TEBEX_CHECKOUT_API_KEY = oldTebexCheckoutKey;
+  }
+
+  console.log('CMS and shop checks passed: origin guard, login, current Discord roles, authorization, global Tebex donations, staff permissions, shared shop product settings, Tebex package mapping and active sales, schedule validation, immutable APV versions.');
 } finally {
   await unlink(process.env.CONTENT_STORE_PATH).catch(() => {});
 }

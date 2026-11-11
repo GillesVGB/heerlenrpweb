@@ -1,29 +1,15 @@
 (function (root) {
   var KEY = "heerlenrp_cart";
-  var PAY_KEY = "heerlenrp_pays_v2";
   var NAME_KEY = "heerlenrp_name";
   var cat = root.HeerlenCatalog;
   if (!cat) return;
 
   var timer;
+  var feedPromise = null;
 
   function cart() {
     try { return JSON.parse(localStorage.getItem(KEY)) || {}; }
     catch (e) { return {}; }
-  }
-
-  function pays() {
-    try {
-      var saved = JSON.parse(localStorage.getItem(PAY_KEY));
-      if (Array.isArray(saved)) return saved;
-    } catch (e) {}
-    return [];
-  }
-
-  function when(iso) {
-    var d = new Date(iso);
-    var months = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
-    return d.getDate() + " " + months[d.getMonth()];
   }
 
   function els() {
@@ -89,38 +75,61 @@
     });
   }
 
-  function renderFeed() {
+  function paymentDate(value) {
+    if (!value) return "";
+    var date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return "";
+    var months = ["jan", "feb", "mrt", "apr", "mei", "jun", "jul", "aug", "sep", "okt", "nov", "dec"];
+    return date.getDate() + " " + months[date.getMonth()];
+  }
+
+  function globalMoney(amount, currency) {
+    if (!Number.isFinite(Number(amount)) || !/^[A-Z]{3}$/.test(String(currency || ""))) return "";
+    try {
+      return new Intl.NumberFormat("nl-NL", { style: "currency", currency: currency }).format(Number(amount));
+    } catch (e) {
+      return cat.money(amount);
+    }
+  }
+
+  function renderFeed(force) {
     var e = els();
-    var list = pays().slice().sort(function (a, b) { return new Date(b.at) - new Date(a.at); });
-    var now = new Date();
-    var totals = {};
-    list.forEach(function (p) {
-      var d = new Date(p.at);
-      if (d.getMonth() !== now.getMonth() || d.getFullYear() !== now.getFullYear()) return;
-      totals[p.name] = (totals[p.name] || 0) + Number(p.amount || 0);
-    });
-    var topName = "";
-    var topAmount = 0;
-    Object.keys(totals).forEach(function (name) {
-      if (totals[name] > topAmount) {
-        topAmount = totals[name];
-        topName = name;
+    if (!e.donor && !e.paysEl) return;
+    if (e.donor) e.donor.innerHTML = '<div><strong>Topdonateur laden…</strong></div>';
+    if (e.paysEl) e.paysEl.innerHTML = '<li class="pays-empty">Recente betalingen laden…</li>';
+    if (feedPromise && !force) return feedPromise;
+    feedPromise = fetch("/api/donations", { cache: "no-store" }).then(function (response) {
+      return response.json().then(function (data) {
+        if (!response.ok) throw new Error(data.error || "Betalingsgegevens zijn niet beschikbaar.");
+        return data;
+      });
+    }).then(function (data) {
+      var top = data.topDonor;
+      if (e.donor) {
+        e.donor.innerHTML = top
+          ? avatarMarkup(top.username) + '<div><strong>' + cat.esc(top.username) + '</strong><small>' + cat.esc(globalMoney(top.total, top.currency)) + ' totaal besteed</small></div>'
+          : '<span class="avatar"></span><div><strong>Niet beschikbaar</strong><small>De algemene topdonateur is nog niet ingesteld.</small></div>';
+        removeBrokenAvatars(e.donor);
       }
-    });
-    if (e.donor) {
-      e.donor.innerHTML = topName
-        ? avatarMarkup(topName) + '<div><strong>' + cat.esc(topName) + '</strong><small>' + cat.money(topAmount) + ' besteed</small></div>'
-        : '<span class="avatar"></span><div><strong>Nog niemand</strong><small>Deze maand is er nog niks gedoneerd.</small></div>';
-      removeBrokenAvatars(e.donor);
-    }
-    if (e.paysEl) {
-      e.paysEl.innerHTML = list.length
-        ? list.slice(0, 5).map(function (p) {
-            return '<li>' + avatarMarkup(p.name, p.avatar) + '<div><strong>' + cat.esc(p.name) + '</strong><small>' + cat.esc(p.item) + '</small></div><time datetime="' + cat.esc(p.at) + '">' + when(p.at) + '</time></li>';
+      if (e.paysEl) {
+        var payments = Array.isArray(data.recentPayments) ? data.recentPayments : [];
+        e.paysEl.innerHTML = payments.length
+          ? payments.map(function (payment) {
+            var date = paymentDate(payment.createdAt);
+            return '<li>' + avatarMarkup(payment.username) + '<div><strong>' + cat.esc(payment.username) + '</strong><small>' + cat.esc(payment.item) + '</small></div>' +
+              (date ? '<time datetime="' + cat.esc(payment.createdAt) + '">' + date + '</time>' : "") + '</li>';
           }).join("")
-        : '<li class="pays-empty"><div><strong>Nog geen betalingen</strong><small>Zodra iemand doneert, zie je het hier.</small></div></li>';
-      removeBrokenAvatars(e.paysEl);
-    }
+          : '<li class="pays-empty"><div><strong>Geen recente betalingen</strong><small>Er zijn geen openbare betalingen beschikbaar.</small></div></li>';
+        removeBrokenAvatars(e.paysEl);
+      }
+    }).catch(function (error) {
+      console.error("[store] Algemene Tebex-betalingen konden niet worden geladen.", error);
+      if (e.donor) e.donor.innerHTML = '<div><strong>Topdonateur niet beschikbaar</strong></div>';
+      if (e.paysEl) e.paysEl.innerHTML = '<li class="pays-empty"><div><strong>Betalingen tijdelijk niet beschikbaar</strong></div></li>';
+    }).finally(function () {
+      feedPromise = null;
+    });
+    return feedPromise;
   }
 
   function renderWho() {
@@ -216,26 +225,15 @@
   }
 
   function recordLocalPayment(name, items, discordId, savedAvatar) {
-    var list = pays();
-    var now = new Date().toISOString();
     var first = "";
     var avatar = savedAvatar || cfxAvatar(name);
     items.forEach(function (it) {
       var p = cat.pack(it.id);
       if (!p) return;
       if (!first) first = p.name;
-      list.push({
-        name: name,
-        avatar: avatar,
-        discordId: discordId || "",
-        item: p.name,
-        amount: cat.priceInfo(p).price * it.quantity,
-        at: now
-      });
     });
-    localStorage.setItem(PAY_KEY, JSON.stringify(list));
     save({});
-    renderFeed();
+    renderFeed(true);
     if (first) {
       root.dispatchEvent(new CustomEvent("heerlen:purchase", { detail: { name: name, item: first, avatar: avatar, discordId: discordId || "" } }));
     }
