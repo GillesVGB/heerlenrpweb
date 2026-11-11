@@ -159,7 +159,7 @@ function tpl(slug, name) {
 </aside>
 
 <script src="../scripts/settings.js"></script>
-<script src="../scripts/catalog.js?v=20261111-4"></script>
+<script src="../scripts/catalog.js?v=20261112-1"></script>
 <script src="../scripts/tebex.js?v=20261111-1"></script>
 <script src="../scripts/auth.js?v=20261109-4"></script>
 <script src="../scripts/cart.js?v=20261111-2"></script>

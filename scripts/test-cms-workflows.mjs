@@ -58,7 +58,10 @@ try {
     tebexToken: 'public-token-test', tebexPackages: { 'coins-100': '12345' },
     shopProducts: { 'coins-100': { name: 'Test Coins', blurb: 'Aangepaste producttekst', amount: 150, bonus: 12, featured: true } },
     shopCategories: [{ id: 'cat-vehicles-a1b2c', name: 'Voertuigen' }],
-    customShopProducts: [{ id: 'custom-test-car', name: 'Test Auto', blurb: 'Een testpakket uit Tebex met een premium voertuig, aangepaste uitvoering en extra opties om je ervaring in Heerlen uit te breiden.', category: 'cat-vehicles-a1b2c', tebexId: '67890', featured: true }]
+    customShopProducts: [
+      { id: 'custom-test-car', name: 'Test Auto', blurb: 'Een testpakket uit Tebex met een premium voertuig, aangepaste uitvoering en extra opties om je ervaring in Heerlen uit te breiden.', category: 'cat-vehicles-a1b2c', tebexId: '67890', featured: true, visible: true },
+      { id: 'custom-hidden-car', name: 'Verborgen Auto', blurb: 'Niet zichtbaar voor bezoekers.', category: 'cat-vehicles-a1b2c', tebexId: '67891', featured: true, visible: false }
+    ]
   };
   const savedTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: themeSettings }, cookie);
   assert.equal(savedTheme.status, 200, 'site managers can publish seasonal theme settings');
@@ -79,6 +82,8 @@ try {
   assert.equal(themeBody.storeSettings.shopCategories[0].name, 'Voertuigen', 'custom shop categories are published');
   assert.equal(themeBody.storeSettings.customShopProducts[0].tebexId, '67890', 'custom shop products retain their Tebex package ID');
   assert.equal(themeBody.storeSettings.customShopProducts[0].featured, true, 'featured custom packages are published');
+  assert.equal(themeBody.storeSettings.customShopProducts[0].visible, true, 'custom products can remain visible');
+  assert.equal(themeBody.storeSettings.customShopProducts[1].visible, false, 'hidden custom products retain their visibility state');
   const badTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: { seasonTheme: 'unknown' } }, cookie);
   assert.equal(badTheme.status, 400, 'unknown seasonal themes are rejected server-side');
   const badPackage = await run(admin, 'POST', { action: 'save-site-settings', settings: { tebexPackages: { 'coins-100': 'not-an-id' } } }, cookie);
@@ -87,6 +92,8 @@ try {
   assert.equal(badShopProduct.status, 400, 'invalid shop product values are rejected server-side');
   const badCustomProduct = await run(admin, 'POST', { action: 'save-site-settings', settings: { customShopProducts: [{ id: 'custom-bad', name: 'Fout pakket', category: 'coins', tebexId: 'not-an-id', blurb: '' }] } }, cookie);
   assert.equal(badCustomProduct.status, 400, 'invalid custom Tebex package IDs are rejected server-side');
+  const badVisibility = await run(admin, 'POST', { action: 'save-site-settings', settings: { customShopProducts: [{ id: 'custom-bad', name: 'Fout pakket', category: 'coins', tebexId: '67890', visible: 'false' }] } }, cookie);
+  assert.equal(badVisibility.status, 400, 'invalid custom product visibility is rejected server-side');
   const badSchedule = await run(admin, 'POST', { action: 'save-site-settings', settings: { seasonStart: '2028-01-02T00:00', seasonEnd: '2028-01-01T00:00' } }, cookie);
   assert.equal(badSchedule.status, 400, 'invalid theme date ranges are rejected server-side');
 
@@ -185,6 +192,8 @@ try {
   const customShopProduct = browser.HeerlenCatalog.pack('custom-test-car');
   assert.equal(customShopProduct.name, 'Test Auto', 'custom Tebex products load into the catalog');
   assert.equal(browser.HeerlenCatalog.popular().some(product => product.id === 'custom-test-car'), true, 'featured custom packages appear in the homepage selection');
+  assert.equal(browser.HeerlenCatalog.pack('custom-hidden-car'), null, 'hidden custom packages are excluded from the public catalog');
+  assert.equal(browser.HeerlenCatalog.popular().some(product => product.id === 'custom-hidden-car'), false, 'hidden custom packages do not appear in featured products');
   assert.equal(browser.HeerlenCatalog.popular().some(product => product.id === 'coins-100'), true, 'featured standard packages can be selected for the homepage');
   assert.equal(browser.HeerlenTebex.packageIdFor('custom-test-car'), '67890', 'custom product checkout uses its linked Tebex package ID');
   assert.equal(browser.HeerlenCatalog.productUrl(customShopProduct), '../winkel/pakket.html?id=custom-test-car', 'custom products link to their generated detail page');

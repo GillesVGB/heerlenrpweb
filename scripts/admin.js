@@ -181,6 +181,7 @@
           '<label><span>Omschrijving</span><textarea data-custom-field="blurb" maxlength="240" rows="2">' + esc(product.blurb || "") + '</textarea></label>' +
           '<label><span>Categorie</span><select data-custom-field="category">' + options + '</select></label>' +
           '<label><span>Tebex package-ID</span><input data-custom-field="tebexId" inputmode="numeric" pattern="[0-9]+" maxlength="32" value="' + esc(product.tebexId) + '"></label>' +
+          '<label class="check"><input data-custom-field="visible" type="checkbox"' + (product.visible !== false ? " checked" : "") + '><span>Zichtbaar in de webshop</span></label>' +
           '<label class="check"><input data-custom-field="featured" type="checkbox"' + (product.featured === true ? " checked" : "") + '><span>Uitgelicht op de homepage</span></label>' +
           '</div></fieldset>';
     }).join("") || '<p class="hint">Nog geen extra Tebex-pakketten gekoppeld.</p>';
@@ -396,7 +397,7 @@
     }
     state = readForms();
     var id = "custom-" + cfg.uid().replace(/[^a-z0-9-]/g, "");
-    state.customShopProducts.push({ id: id, name: name, blurb: blurb, category: category, tebexId: tebexId, featured: false });
+    state.customShopProducts.push({ id: id, name: name, blurb: blurb, category: category, tebexId: tebexId, visible: true, featured: false });
     form.reset();
     renderShopManager();
     siteSettingsDirty = true;
