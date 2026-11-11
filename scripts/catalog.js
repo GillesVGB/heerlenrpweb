@@ -33,8 +33,9 @@
   }
 
   function products() {
-    var saved = root.HeerlenSettings ? root.HeerlenSettings.load().shopProducts : {};
-    return PACKS.map(function (pack) {
+    var settings = root.HeerlenSettings ? root.HeerlenSettings.load() : {};
+    var saved = settings.shopProducts || {};
+    var builtIn = PACKS.map(function (pack) {
       var overrides = saved && saved[pack.id];
       if (!overrides || typeof overrides !== "object") return pack;
       var item = Object.assign({}, pack);
@@ -44,10 +45,37 @@
       if (Number.isInteger(Number(overrides.bonus)) && Number(overrides.bonus) >= 0 && Number(overrides.bonus) <= 10000) item.bonus = Number(overrides.bonus);
       return item;
     });
+    var custom = (Array.isArray(settings.customShopProducts) ? settings.customShopProducts : []).filter(function (product) {
+      return product && typeof product.id === "string" && typeof product.name === "string" && typeof product.category === "string" && /^\d+$/.test(String(product.tebexId || ""));
+    }).map(function (product) {
+      return {
+        id: product.id,
+        slug: product.id,
+        cat: product.category,
+        name: product.name,
+        amount: 0,
+        price: 0,
+        bonus: 0,
+        blurb: product.blurb || "",
+        tebexId: String(product.tebexId),
+        custom: true
+      };
+    });
+    return builtIn.concat(custom);
   }
 
   function byCat(cat) {
     return products().filter(function (p) { return p.cat === cat; });
+  }
+
+  function categories() {
+    var saved = root.HeerlenSettings ? root.HeerlenSettings.load().shopCategories : [];
+    var result = [{ id: "coins", name: "Coins" }];
+    (Array.isArray(saved) ? saved : []).forEach(function (category) {
+      if (!category || typeof category.id !== "string" || typeof category.name !== "string" || !category.id || !category.name) return;
+      if (!result.some(function (item) { return item.id === category.id; })) result.push(category);
+    });
+    return result;
   }
 
   function popular() {
@@ -64,7 +92,7 @@
     var original = Number(product && product.price);
     if (!Number.isFinite(original) || original < 0) return 0;
     var settings = root.HeerlenSettings ? root.HeerlenSettings.load() : {};
-    var packageId = String((settings.tebexPackages || {})[product.id] || "");
+    var packageId = String((settings.tebexPackages || {})[product.id] || product.tebexId || "");
     if (!packageId) return original;
     var packageInfo = tebexPackages.find(function (item) { return String(item.id) === packageId; });
     if (packageInfo && packageInfo.currency && String(packageInfo.currency).toUpperCase() !== "EUR") return original;
@@ -80,7 +108,7 @@
       var sale = activeSales[i];
       var applies = sale.applies_to || {};
       var settings = root.HeerlenSettings ? root.HeerlenSettings.load() : {};
-      var packageId = String((settings.tebexPackages || {})[product.id] || "");
+      var packageId = String((settings.tebexPackages || {})[product.id] || product.tebexId || "");
       var packageInfo = tebexPackages.find(function (item) { return String(item.id) === packageId; });
       if (!packageId || !packageInfo || !Array.isArray(sale.requirements)) continue;
       var appliesToPackage = applies.type === "package" && (applies.packages || []).some(function (item) { return String(item.id) === packageId; });
@@ -137,6 +165,7 @@
   root.HeerlenCatalog = {
     PACKS: PACKS,
     products: products,
+    categories: categories,
     money: money,
     esc: esc,
     pack: pack,

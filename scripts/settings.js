@@ -31,6 +31,8 @@
     notifications: [],
     tebexToken: "",
     shopProducts: {},
+    shopCategories: [],
+    customShopProducts: [],
     tebexPackages: {
       "coins-100": "",
       "coins-200": "",
@@ -68,6 +70,8 @@
         if (saved[k] !== undefined) out[k] = saved[k];
       });
       if (!Array.isArray(out.notifications)) out.notifications = [];
+      if (!Array.isArray(out.shopCategories)) out.shopCategories = [];
+      if (!Array.isArray(out.customShopProducts)) out.customShopProducts = [];
       // oude demo-toasts weg: alleen echte/admin-meldingen tonen
       out.notifications = out.notifications.filter(function (n) {
         return n && n.name && !DEMO_TOAST_NAMES[n.name];

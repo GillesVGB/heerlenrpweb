@@ -72,6 +72,7 @@
     document.querySelectorAll('#siteForm [name="seasonPages"]').forEach(function (el) { el.checked = pages.indexOf(el.value) >= 0; });
     renderTebexPackages();
     renderShopProducts();
+    renderShopManager();
     updateSeasonPreview();
   }
 
@@ -144,6 +145,44 @@
     }).join("");
   }
 
+  function customCategories() {
+    return [{ id: "coins", name: "Coins" }].concat(Array.isArray(state.shopCategories) ? state.shopCategories : []);
+  }
+
+  function renderShopManager() {
+    var categories = customCategories();
+    var categoryList = document.getElementById("shopCategoryList");
+    if (categoryList) {
+        categoryList.innerHTML = categories.map(function (category) {
+          return '<span class="shop-category-chip">' + esc(category.name) + '</span>';
+        }).join("");
+    }
+
+    var categorySelect = document.getElementById("newShopProductCategory");
+    if (categorySelect) {
+        categorySelect.innerHTML = categories.map(function (category) {
+          return '<option value="' + esc(category.id) + '">' + esc(category.name) + '</option>';
+        }).join("");
+    }
+
+    var productBox = document.getElementById("customShopProducts");
+    if (!productBox) return;
+    productBox.innerHTML = (Array.isArray(state.customShopProducts) ? state.customShopProducts : []).map(function (product) {
+        var options = categories.map(function (category) {
+          return '<option value="' + esc(category.id) + '"' + (product.category === category.id ? " selected" : "") + '>' + esc(category.name) + '</option>';
+        }).join("");
+        return '<fieldset class="custom-shop-product" data-custom-shop-product="' + esc(product.id) + '">' +
+          '<legend>' + esc(product.name) + '</legend>' +
+          '<button type="button" class="btn btn-ghost" data-remove-custom-product="' + esc(product.id) + '">Verwijderen</button>' +
+          '<div class="custom-shop-product-fields">' +
+          '<label><span>Productnaam</span><input data-custom-field="name" maxlength="60" value="' + esc(product.name) + '"></label>' +
+          '<label><span>Omschrijving</span><textarea data-custom-field="blurb" maxlength="240" rows="2">' + esc(product.blurb || "") + '</textarea></label>' +
+          '<label><span>Categorie</span><select data-custom-field="category">' + options + '</select></label>' +
+          '<label><span>Tebex package-ID</span><input data-custom-field="tebexId" inputmode="numeric" pattern="[0-9]+" maxlength="32" value="' + esc(product.tebexId) + '"></label>' +
+          '</div></fieldset>';
+    }).join("") || '<p class="hint">Nog geen extra Tebex-pakketten gekoppeld.</p>';
+  }
+
   function readForms() {
     var next = cfg.clone(state);
     document.querySelectorAll("#siteForm [name], #playersForm [name], #toastForm [name], #tebexForm [name], #shopPromoForm [name]").forEach(function (el) {
@@ -168,6 +207,14 @@
         product[key] = field.type === "number" ? Number(field.value) : field.value.trim();
       });
       next.shopProducts[id] = product;
+    });
+    next.shopCategories = Array.isArray(state.shopCategories) ? state.shopCategories : [];
+    next.customShopProducts = Array.prototype.map.call(document.querySelectorAll("[data-custom-shop-product]"), function (row) {
+      var product = { id: row.getAttribute("data-custom-shop-product") };
+      row.querySelectorAll("[data-custom-field]").forEach(function (field) {
+        product[field.getAttribute("data-custom-field")] = field.value.trim();
+      });
+      return product;
     });
     return next;
   }
@@ -212,6 +259,8 @@
     settings.tebexToken = state.tebexToken;
     settings.tebexPackages = state.tebexPackages;
     settings.shopProducts = state.shopProducts;
+    settings.shopCategories = state.shopCategories;
+    settings.customShopProducts = state.customShopProducts;
     api({ action: "save-site-settings", settings: settings }).then(function (result) {
       if (result.ok) { siteSettingsDirty = false; show("Website- en winkelinstellingen gepubliceerd voor alle bezoekers"); }
       else show(result.error || "De website- en winkelinstellingen konden niet gedeeld worden.");
@@ -240,13 +289,13 @@
     root.dataset.autosave = "1";
     root.addEventListener("input", function (e) {
       if (!e.target.closest("input, textarea, select")) return;
-      if (e.target.closest("#siteForm, #tebexForm, #shopPromoForm, #shopProducts")) siteSettingsDirty = true;
+      if (e.target.closest("#siteForm, #tebexForm, #shopPromoForm, #shopProducts, #customShopProducts")) siteSettingsDirty = true;
       if (e.target.closest("#siteForm")) updateSeasonPreview();
       scheduleSave();
     });
     root.addEventListener("change", function (e) {
       if (!e.target.closest("input, textarea, select")) return;
-      if (e.target.closest("#siteForm, #tebexForm, #shopPromoForm, #shopProducts")) siteSettingsDirty = true;
+      if (e.target.closest("#siteForm, #tebexForm, #shopPromoForm, #shopProducts, #customShopProducts")) siteSettingsDirty = true;
       if (e.target.closest("#siteForm")) updateSeasonPreview();
       scheduleSave();
     });
@@ -308,6 +357,54 @@
     });
   });
   document.getElementById("saveNotes").addEventListener("click", function () { persist("Meldingen opgeslagen"); });
+
+  document.getElementById("addShopCategory").addEventListener("click", function () {
+    var input = document.getElementById("newShopCategory");
+    var name = input.value.trim();
+    if (!name || name.length > 40) { show("Vul een categorienaam van maximaal 40 tekens in."); return; }
+    state = readForms();
+    if (customCategories().some(function (category) { return category.name.toLocaleLowerCase("nl-NL") === name.toLocaleLowerCase("nl-NL"); })) {
+      show("Deze categorie bestaat al.");
+      return;
+    }
+    var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24) || "categorie";
+    state.shopCategories.push({ id: "cat-" + slug + "-" + cfg.uid().slice(-5), name: name });
+    input.value = "";
+    renderShopManager();
+    siteSettingsDirty = true;
+    scheduleSave();
+  });
+
+  document.getElementById("addTebexProductForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var form = event.currentTarget;
+    var name = form.elements.name.value.trim();
+    var blurb = form.elements.blurb.value.trim();
+    var category = form.elements.category.value;
+    var tebexId = form.elements.tebexId.value.trim();
+    if (!name || name.length > 60 || blurb.length > 240 || !/^\d{1,32}$/.test(tebexId)) {
+      show("Controleer de productnaam, omschrijving en het Tebex package-ID.");
+      return;
+    }
+    state = readForms();
+    var id = "custom-" + cfg.uid().replace(/[^a-z0-9-]/g, "");
+    state.customShopProducts.push({ id: id, name: name, blurb: blurb, category: category, tebexId: tebexId });
+    form.reset();
+    renderShopManager();
+    siteSettingsDirty = true;
+    scheduleSave();
+  });
+
+  document.getElementById("customShopProducts").addEventListener("click", function (event) {
+    var button = event.target.closest("[data-remove-custom-product]");
+    if (!button) return;
+    state = readForms();
+    var id = button.getAttribute("data-remove-custom-product");
+    state.customShopProducts = state.customShopProducts.filter(function (product) { return product.id !== id; });
+    renderShopManager();
+    siteSettingsDirty = true;
+    scheduleSave();
+  });
 
   document.getElementById("addNote").addEventListener("click", function () {
     state.notifications = readNotes();

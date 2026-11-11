@@ -167,8 +167,9 @@
         var p = cat.pack(id);
         var qty = bag[id];
         var price = cat.priceInfo(p, subtotal).price;
+        var thumb = '<img src="' + cat.esc(thumbFor(p)) + '" alt="" width="72" height="40" loading="lazy">';
         return '<li class="cart-item">' +
-          '<a class="cart-thumb" href="' + cat.productUrl(p) + '"><img src="' + cat.esc(thumbFor(p)) + '" alt="" width="72" height="40" loading="lazy"></a>' +
+          (p.custom ? '<span class="cart-thumb">' + thumb + '</span>' : '<a class="cart-thumb" href="' + cat.productUrl(p) + '">' + thumb + '</a>') +
           '<div class="cart-info"><strong>' + cat.esc(p.name) + '</strong><span class="cart-unit">' + cat.money(price) + ' · eenmalig</span></div>' +
           '<div class="cart-row"><span class="cart-price">' + cat.money(price * qty) + '</span>' +
           '<span class="qty"><button type="button" data-dec="' + id + '" aria-label="Minder">−</button>' +

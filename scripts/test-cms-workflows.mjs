@@ -56,7 +56,9 @@ try {
     seasonIntensity: 1.4, seasonSpeed: 1.2, seasonDensity: 22, seasonFrequency: 1.6,
     seasonPages: ['home', 'rules'], seasonStart: '2027-12-31T18:00', seasonEnd: '2028-01-01T23:59',
     tebexToken: 'public-token-test', tebexPackages: { 'coins-100': '12345' },
-    shopProducts: { 'coins-100': { name: 'Test Coins', blurb: 'Aangepaste producttekst', amount: 150, bonus: 12 } }
+    shopProducts: { 'coins-100': { name: 'Test Coins', blurb: 'Aangepaste producttekst', amount: 150, bonus: 12 } },
+    shopCategories: [{ id: 'cat-vehicles-a1b2c', name: 'Voertuigen' }],
+    customShopProducts: [{ id: 'custom-test-car', name: 'Test Auto', blurb: 'Een testpakket uit Tebex.', category: 'cat-vehicles-a1b2c', tebexId: '67890' }]
   };
   const savedTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: themeSettings }, cookie);
   assert.equal(savedTheme.status, 200, 'site managers can publish seasonal theme settings');
@@ -73,12 +75,16 @@ try {
   assert.equal(themeBody.storeSettings.tebexPackages['coins-100'], '12345', 'Tebex package IDs persist in shared storage');
   assert.equal(themeBody.storeSettings.shopProducts['coins-100'].name, 'Test Coins', 'shop product edits persist in shared storage');
   assert.equal(themeBody.storeSettings.shopProducts['coins-100'].amount, 150, 'edited package coin amounts are published');
+  assert.equal(themeBody.storeSettings.shopCategories[0].name, 'Voertuigen', 'custom shop categories are published');
+  assert.equal(themeBody.storeSettings.customShopProducts[0].tebexId, '67890', 'custom shop products retain their Tebex package ID');
   const badTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: { seasonTheme: 'unknown' } }, cookie);
   assert.equal(badTheme.status, 400, 'unknown seasonal themes are rejected server-side');
   const badPackage = await run(admin, 'POST', { action: 'save-site-settings', settings: { tebexPackages: { 'coins-100': 'not-an-id' } } }, cookie);
   assert.equal(badPackage.status, 400, 'invalid Tebex package IDs are rejected server-side');
   const badShopProduct = await run(admin, 'POST', { action: 'save-site-settings', settings: { shopProducts: { 'coins-100': { amount: 0 } } } }, cookie);
   assert.equal(badShopProduct.status, 400, 'invalid shop product values are rejected server-side');
+  const badCustomProduct = await run(admin, 'POST', { action: 'save-site-settings', settings: { customShopProducts: [{ id: 'custom-bad', name: 'Fout pakket', category: 'coins', tebexId: 'not-an-id', blurb: '' }] } }, cookie);
+  assert.equal(badCustomProduct.status, 400, 'invalid custom Tebex package IDs are rejected server-side');
   const badSchedule = await run(admin, 'POST', { action: 'save-site-settings', settings: { seasonStart: '2028-01-02T00:00', seasonEnd: '2028-01-01T00:00' } }, cookie);
   assert.equal(badSchedule.status, 400, 'invalid theme date ranges are rejected server-side');
 
@@ -138,7 +144,11 @@ try {
     constructor(type, options) { this.type = type; this.detail = options && options.detail; }
   }
   const catalogScript = await readFile(new URL('./catalog.js', import.meta.url), 'utf8');
-  const browserContext = { window: browser, CustomEvent: BrowserCustomEvent };
+  const browserContext = {
+    window: browser,
+    CustomEvent: BrowserCustomEvent,
+    document: { body: { getAttribute: () => './' } }
+  };
   runInNewContext(catalogScript, browserContext);
   const tebexScript = await readFile(new URL('./tebex.js', import.meta.url), 'utf8');
   runInNewContext(tebexScript, {
@@ -150,7 +160,10 @@ try {
         name: 'Test Sale', requirements: [{ type: 'minimum_basket_value', amount: 10, currency: 'EUR' }], discount: { type: 'percentage', percentage: 10 },
         applies_to: { type: 'package', packages: [{ id: 12345 }], categories: [], excluded_packages: [], variable_options: [] }
       }] }) };
-      if (url.endsWith('/packages')) return { ok: true, json: async () => ({ data: [{ id: 12345, category: { id: 7 }, base_price: 8, currency: 'EUR' }] }) };
+      if (url.endsWith('/packages')) return { ok: true, json: async () => ({ data: [
+        { id: 12345, category: { id: 7 }, base_price: 8, currency: 'EUR' },
+        { id: 67890, category: { id: 8 }, base_price: 29.95, currency: 'EUR' }
+      ] }) };
       throw new Error('Unexpected request: ' + url);
     }
   });
@@ -158,6 +171,10 @@ try {
   assert.equal(browserSettings.tebexToken, 'public-token-test', 'shop login loads the shared Tebex token for visitors');
   assert.equal(browser.HeerlenTebex.packageIdFor('coins-100'), '12345', 'checkout loads shared package IDs for visitors');
   assert.equal(browserSettings.shopProducts['coins-100'].name, 'Test Coins', 'shop product edits load for every visitor');
+  assert.equal(browser.HeerlenCatalog.categories().some(category => category.id === 'cat-vehicles-a1b2c'), true, 'custom shop categories load for visitors');
+  const customShopProduct = browser.HeerlenCatalog.pack('custom-test-car');
+  assert.equal(customShopProduct.name, 'Test Auto', 'custom Tebex products load into the catalog');
+  assert.equal(browser.HeerlenTebex.packageIdFor('custom-test-car'), '67890', 'custom product checkout uses its linked Tebex package ID');
   const sales = await browser.HeerlenTebex.loadActiveSales();
   assert.equal(sales[0].name, 'Test Sale', 'active Tebex sales are loaded from the public Headless API');
   const editedPack = browser.HeerlenCatalog.pack('coins-100');
@@ -167,6 +184,38 @@ try {
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.minimumBasketValue, 10, 'the minimum basket threshold is published with the active sale');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.label, '10%', 'percentage sale badge contains only the percentage');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack, 10).price, 7.2, 'active package sales lower prices once the minimum basket is reached');
+  assert.equal(browser.HeerlenCatalog.priceInfo(customShopProduct).price, 29.95, 'custom product price is synchronized from Tebex');
+
+  const storeElements = {
+    grid: { innerHTML: '', hidden: false },
+    empty: { hidden: true },
+    count: { textContent: '' },
+    search: { value: '', addEventListener: () => {} },
+    sort: { value: 'asc', addEventListener: () => {} },
+    shopCategory: { value: '', innerHTML: '', addEventListener: () => {} },
+    toolbar: { hidden: true },
+    storeTitle: { textContent: '' }
+  };
+  const storeDocument = {
+    body: { getAttribute: name => name === 'data-page' ? 'winkel' : './' },
+    getElementById: id => storeElements[id] || null
+  };
+  browser.HeerlenCart = { cart: () => ({}) };
+  browser.addEventListener = () => {};
+  const storeScript = await readFile(new URL('./store.js', import.meta.url), 'utf8');
+  runInNewContext(storeScript, {
+    window: browser,
+    document: storeDocument,
+    URL,
+    URLSearchParams,
+    location: { href: 'https://heerlenrp.nl/winkel/?cat=cat-vehicles-a1b2c', search: '?cat=cat-vehicles-a1b2c' },
+    history: { replaceState: () => {} },
+    console
+  });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.equal(storeElements.storeTitle.textContent, 'Voertuigen', 'the shop category selector opens the requested custom category');
+  assert.ok(storeElements.grid.innerHTML.includes('Test Auto'), 'custom Tebex products render in the storefront');
+  assert.ok(storeElements.grid.innerHTML.includes('€29.95'), 'custom product cards display the live Tebex price');
 
   const originalAvatarFetch = globalThis.fetch;
   try {

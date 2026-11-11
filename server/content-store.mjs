@@ -192,6 +192,23 @@ export function publicContent(state) {
       ...(Number.isInteger(product.amount) && product.amount >= 1 && product.amount <= 100000 ? { amount: product.amount } : {}),
       ...(Number.isInteger(product.bonus) && product.bonus >= 0 && product.bonus <= 10000 ? { bonus: product.bonus } : {})
     }]));
+  const savedCategories = Array.isArray(savedStore.shopCategories) ? savedStore.shopCategories : [];
+  const shopCategories = savedCategories
+    .filter(category => category && typeof category.id === 'string' && /^[a-z0-9][a-z0-9-]{0,39}$/.test(category.id) && category.id !== 'coins' && typeof category.name === 'string' && category.name.trim())
+    .slice(0, 30)
+    .map(category => ({ id: category.id, name: category.name.trim().slice(0, 40) }));
+  const categoryIds = new Set(['coins', ...shopCategories.map(category => category.id)]);
+  const savedCustomProducts = Array.isArray(savedStore.customShopProducts) ? savedStore.customShopProducts : [];
+  const customShopProducts = savedCustomProducts
+    .filter(product => product && typeof product.id === 'string' && /^custom-[a-z0-9-]{1,50}$/.test(product.id) && typeof product.name === 'string' && product.name.trim() && typeof product.blurb === 'string' && typeof product.category === 'string' && categoryIds.has(product.category) && typeof product.tebexId === 'string' && /^\d{1,32}$/.test(product.tebexId))
+    .slice(0, 100)
+    .map(product => ({
+      id: product.id,
+      name: product.name.trim().slice(0, 60),
+      blurb: product.blurb.slice(0, 240),
+      category: product.category,
+      tebexId: product.tebexId
+    }));
   const themes = ['standard', 'halloween', 'christmas', 'newyear', 'easter'];
   const allowedSeasonPages = ['home', 'news', 'updates', 'staff', 'rules', 'shop'];
   const siteSettings = {
@@ -225,7 +242,9 @@ export function publicContent(state) {
     storeSettings: {
       tebexToken: typeof savedStore.tebexToken === 'string' ? savedStore.tebexToken.slice(0, 120) : '',
       tebexPackages,
-      shopProducts
+      shopProducts,
+      shopCategories,
+      customShopProducts
     }
   };
 }

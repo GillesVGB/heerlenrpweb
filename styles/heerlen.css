@@ -692,6 +692,7 @@ html[data-theme="light"] .theme-btn { color: var(--ink); }
   background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
 }
+.shop-category-filter select { max-width: 180px; }
 .sort select:focus {
   border-color: var(--blue);
 }

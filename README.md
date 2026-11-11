@@ -32,7 +32,7 @@ Stel de variabelen uit `.env.example` in als geheime Vercel Environment Variable
 
 Open `/admin.html`. Beheer kan via Discord met rol `1568033014384951366` of via het sterk ingestelde `ADMIN_PASSWORD`. De rol `1567581357004038184` geeft alleen toegang tot `/staff/`; deze rol krijgt geen beheerrechten. Discord-rollen worden server-side opnieuw opgehaald bij elk beschermd verzoek, zodat gewijzigde rollen meteen gelden. Nieuws, updates, profielen, regelconcepten, gepubliceerde regelversies en het logboek gaan naar de gedeelde opslag.
 
-De overige shop- en FiveM-velden blijven lokale browserinstellingen. De publieke Tebex-token en pakket-ID's worden gedeeld opgeslagen zodat de winkel op de apparaten van bezoekers dezelfde instellingen gebruikt.
+De shopinstellingen worden gedeeld opgeslagen zodat categorieën, productnamen en Tebex-package-ID's op de apparaten van bezoekers gelijk zijn. De overige FiveM-velden blijven lokale browserinstellingen.
 
 Voor live serverstatus gebruiken de homepage en `/server-statistieken/` dezelfde statusroute. Standaard gebruikt die de CFX-joincode `j48ry5k`. Een eerder ingestelde legacy-waarde `CFX_JOIN_CODE=5oayqbr` wordt genegeerd; andere expliciete `CFX_JOIN_CODE`-waarden blijven ondersteund. Voor directe status via FiveM `dynamic.json`, vul in Vercel `FIVEM_SERVER_HOST` in met de actuele publieke serverhost en optioneel `FIVEM_SERVER_PORT` (standaard `30120`). De statusroute accepteert geen host uit een browserverzoek; zonder directe host probeert hij alleen de ingestelde CFX-joincode. Als geen statusbron bereikbaar is, toont de site een onbekende status in plaats van een verzonnen spelersaantal. De grafiek op de statistiekenpagina tekent echte metingen die lokaal in de browser zijn verzameld terwijl de pagina openstaat; die gegevens worden maximaal 24 uur lokaal bewaard en zijn geen gedeelde serverhistorie.
 
@@ -40,7 +40,7 @@ De FAQ staat op `/faq/`. Whitelist-aanmeldvoorwaarden kunnen wijzigen en zijn da
 
 ## Shop-login en checkout
 
-Log eerst in op `/admin.html`, vul bij **Tebex + hl-tebexwrapper** de publieke Headless API-token/webstore-ID in en klik op **Opslaan**. Daarna kan iedere bezoeker in de winkel via **Inloggen** met Cfx.re aanmelden. Voor aankopen moeten ook de Tebex package-ID's van de producten in dezelfde adminsectie worden ingevuld en gepubliceerd. Gebruik voor productie de gedeelde PostgreSQL- of private Blob-opslag; zonder die opslag kan de hosting de instellingen niet blijvend publiceren.
+Log eerst in op `/admin.html`, vul bij **Tebex + hl-tebexwrapper** de publieke Headless API-token/webstore-ID in en klik op **Opslaan**. Daarna kan iedere bezoeker in de winkel via **Inloggen** met Cfx.re aanmelden. Maak extra Tebex-pakketten eerst in Tebex Creator aan; voeg daarna in het Shop-tabblad een categorie toe en koppel het pakket met het Tebex package-ID. De prijs wordt uit Tebex gelezen. Publiceer de wijzigingen met **Opslaan**. Gebruik voor productie de gedeelde PostgreSQL- of private Blob-opslag; zonder die opslag kan de hosting de instellingen niet blijvend publiceren.
 
 ## Controles
 

@@ -218,24 +218,59 @@ async function handler(request) {
         }
         clean.shopProducts = products;
       }
+      if (input.shopCategories !== undefined) {
+        if (!Array.isArray(input.shopCategories) || input.shopCategories.length > 30) return json({ error: 'Ongeldige shopcategorieën.' }, 400);
+        const ids = new Set();
+        const names = new Set();
+        clean.shopCategories = [];
+        for (const category of input.shopCategories) {
+          if (!category || typeof category !== 'object' || Array.isArray(category) || typeof category.id !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(category.id) || category.id === 'coins' || ids.has(category.id)) return json({ error: 'Ongeldige shopcategorie.' }, 400);
+          const name = cleanText(category.name, 40, 'Categorienaam', false);
+          const normalizedName = name.toLocaleLowerCase('nl-NL');
+          if (names.has(normalizedName)) return json({ error: 'Deze shopcategorie bestaat al.' }, 400);
+          ids.add(category.id);
+          names.add(normalizedName);
+          clean.shopCategories.push({ id: category.id, name });
+        }
+      }
+      if (input.customShopProducts !== undefined) {
+        if (!Array.isArray(input.customShopProducts) || input.customShopProducts.length > 100) return json({ error: 'Ongeldige extra Tebex-pakketten.' }, 400);
+        const ids = new Set();
+        clean.customShopProducts = [];
+        for (const product of input.customShopProducts) {
+          if (!product || typeof product !== 'object' || Array.isArray(product) || typeof product.id !== 'string' || !/^custom-[a-z0-9-]{1,50}$/.test(product.id) || ids.has(product.id)) return json({ error: 'Ongeldig extra Tebex-pakket.' }, 400);
+          if (typeof product.category !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(product.category)) return json({ error: 'Kies een geldige productcategorie.' }, 400);
+          if (typeof product.tebexId !== 'string' || product.tebexId.length > 32 || !/^\d+$/.test(product.tebexId)) return json({ error: 'Vul een geldig Tebex package-ID in.' }, 400);
+          ids.add(product.id);
+          clean.customShopProducts.push({
+            id: product.id,
+            name: cleanText(product.name, 60, 'Productnaam', false),
+            blurb: cleanText(product.blurb, 240, 'Productomschrijving', true),
+            category: product.category,
+            tebexId: product.tebexId
+          });
+        }
+      }
       for (const key of ['promoEnabled', 'seasonEnabled', 'seasonAccentEnabled', 'seasonEffects', 'maintenanceEnabled', 'promoMode', 'seasonTheme', 'seasonStart', 'seasonEnd', 'seasonAccent']) {
         if (input[key] !== undefined) clean[key] = input[key];
       }
       for (const key of Object.keys(numericSettings)) if (input[key] !== undefined) clean[key] = Number(input[key]);
       if (input.seasonPages !== undefined) clean.seasonPages = [...new Set(input.seasonPages)];
       const result = await updateContent(state => {
-        const { tebexToken, tebexPackages, ...siteSettings } = clean;
+        const { tebexToken, tebexPackages, shopCategories, customShopProducts, ...siteSettings } = clean;
         state.siteSettings = { ...(state.siteSettings || {}), ...siteSettings, updatedAt: new Date().toISOString(), updatedBy: user.username };
-        if (clean.tebexToken !== undefined || clean.tebexPackages !== undefined || clean.shopProducts !== undefined) {
+        if (clean.tebexToken !== undefined || clean.tebexPackages !== undefined || clean.shopProducts !== undefined || shopCategories !== undefined || customShopProducts !== undefined) {
           state.storeSettings = {
             ...(state.storeSettings || {}),
             ...(tebexToken !== undefined ? { tebexToken } : {}),
             ...(tebexPackages !== undefined ? { tebexPackages } : {}),
             ...(clean.shopProducts !== undefined ? { shopProducts: clean.shopProducts } : {}),
+            ...(shopCategories !== undefined ? { shopCategories } : {}),
+            ...(customShopProducts !== undefined ? { customShopProducts } : {}),
             updatedAt: new Date().toISOString(),
             updatedBy: user.username
           };
-          appendAudit(state, user, 'aangepast', 'winkelinstellingen', 'Tebex-token, producten en pakket-ID’s');
+          appendAudit(state, user, 'aangepast', 'winkelinstellingen', 'Tebex-token, categorieën en producten');
         }
         appendAudit(state, user, 'aangepast', 'site-instellingen', 'Homepage, thema en onderhoud');
         return { ok: true };

@@ -10,6 +10,7 @@
   var count = document.getElementById("count");
   var search = document.getElementById("search");
   var sort = document.getElementById("sort");
+  var categorySelect = document.getElementById("shopCategory");
   var toolbar = document.getElementById("toolbar");
   var storeTitle = document.getElementById("storeTitle");
   var storeNote = document.getElementById("storeNote");
@@ -56,6 +57,7 @@
 
   function shopCard(p, opts) {
     opts = opts || {};
+    var hasDetailPage = !p.custom;
     var qty = bagQty(p.id);
     var round = opts.roundCart
       ? '<button type="button" class="cart-round" data-add="' + p.id + '" aria-label="' + cat.esc(p.name) + ' in winkelmand">' +
@@ -64,11 +66,11 @@
         (qty ? "In mand · " + qty : "In mand") + "</button>";
     return (
       '<article class="card shop-card">' +
-      artHtml(p, true) +
+      artHtml(p, hasDetailPage) +
       '<div class="card-body">' +
-      '<h3><a href="' + cat.productUrl(p) + '">' + cat.esc(p.name) + "</a></h3>" +
+      '<h3>' + (hasDetailPage ? '<a href="' + cat.productUrl(p) + '">' + cat.esc(p.name) + "</a>" : cat.esc(p.name)) + "</h3>" +
       "<p>" + cat.esc(p.blurb) + "</p>" +
-      (opts.readMore !== false
+      (hasDetailPage && opts.readMore !== false
         ? '<a class="read-more" href="' + cat.productUrl(p) + '">Lees meer</a>'
         : "") +
       '<div class="card-row">' +
@@ -106,7 +108,7 @@
     if (!grid) return;
     var q = (search && search.value.trim().toLowerCase()) || "";
     var list = cat.byCat(currentCat).filter(function (p) {
-      return !q || p.name.toLowerCase().indexOf(q) !== -1 || String(p.amount).indexOf(q) !== -1;
+      return !q || p.name.toLowerCase().indexOf(q) !== -1 || String(p.amount || "").indexOf(q) !== -1 || String(p.blurb || "").toLowerCase().indexOf(q) !== -1;
     });
     if (sort) list.sort(function (a, b) {
       var first = cat.priceInfo(a).price;
@@ -121,10 +123,20 @@
   }
 
   function setCat(catName) {
-    currentCat = "coins";
-    if (storeTitle) storeTitle.textContent = "Coins";
+    var categories = cat.categories();
+    var selected = categories.find(function (category) { return category.id === catName; }) || categories[0];
+    currentCat = selected.id;
+    if (storeTitle) storeTitle.textContent = selected.name;
     if (storeNote) storeNote.textContent = "";
+    if (categorySelect) categorySelect.value = selected.id;
     renderShop();
+  }
+
+  function renderCategories() {
+    if (!categorySelect) return;
+    categorySelect.innerHTML = cat.categories().map(function (category) {
+      return '<option value="' + cat.esc(category.id) + '">' + cat.esc(category.name) + '</option>';
+    }).join("");
   }
 
   function renderProduct() {
@@ -164,7 +176,19 @@
   function bootShop() {
     if (search) search.addEventListener("input", renderShop);
     if (sort) sort.addEventListener("change", renderShop);
-    loadStoreData().then(function () { setCat("coins"); }).catch(function (error) {
+    if (categorySelect) categorySelect.addEventListener("change", function () {
+      setCat(categorySelect.value);
+      var url = new URL(location.href);
+      if (currentCat === "coins") url.searchParams.delete("cat");
+      else url.searchParams.set("cat", currentCat);
+      history.replaceState(null, "", url.pathname + url.search + url.hash);
+    });
+    loadStoreData().then(function () {
+      renderCategories();
+      var requestedCategory = new URLSearchParams(location.search).get("cat") || "coins";
+      setCat(requestedCategory);
+    }).catch(function (error) {
+      renderCategories();
       setCat("coins");
       showSalesError(error);
     });

@@ -162,6 +162,26 @@
         <header class="cms-panel-head"><div><h2>Producten</h2><p class="hint">Pas de namen, omschrijvingen en coin-aantallen van bestaande Tebex-pakketten aan.</p></div></header>
         <div id="shopProducts" class="shop-products"></div>
       </section>
+      <section class="admin-card shop-products-card">
+        <header class="cms-panel-head"><div><h2>Extra categorieën en Tebex-pakketten</h2><p class="hint">Maak eerst een pakket aan in Tebex. Voeg daarna de categorie en het package-ID hier toe; de prijs komt uit Tebex.</p></div></header>
+        <div class="shop-manager-grid">
+          <div class="shop-manager-pane">
+            <h3>Categorie toevoegen</h3>
+            <label><span>Naam</span><input id="newShopCategory" maxlength="40" placeholder="Bijv. Voertuigen"></label>
+            <button type="button" class="btn btn-ghost" id="addShopCategory">Categorie toevoegen</button>
+            <div class="shop-category-list" id="shopCategoryList"></div>
+          </div>
+          <form class="shop-manager-pane" id="addTebexProductForm">
+            <h3>Tebex-pakket aan de shop toevoegen</h3>
+            <label><span>Productnaam</span><input name="name" maxlength="60" required></label>
+            <label><span>Omschrijving</span><textarea name="blurb" maxlength="240" rows="2"></textarea></label>
+            <label><span>Categorie</span><select name="category" id="newShopProductCategory"></select></label>
+            <label><span>Tebex package-ID</span><input name="tebexId" inputmode="numeric" pattern="[0-9]+" maxlength="32" required></label>
+            <button type="submit" class="btn btn-blue">Pakket toevoegen</button>
+          </form>
+        </div>
+        <div id="customShopProducts" class="custom-shop-products"></div>
+      </section>
       <section class="admin-card shop-sales-card">
         <div class="cms-panel-head"><div><h2>Tebex-kortingen</h2><p class="hint">Actieve, algemene kortingen worden automatisch uit Tebex ingelezen. Kortingen met extra voorwaarden kunnen per klant verschillen en worden daarom niet als vaste prijs getoond.</p></div><button type="button" class="btn btn-ghost" id="refreshTebexSales">Sales vernieuwen</button></div>
         <p class="hint" id="tebexSalesStatus" role="status">Kortingen worden geladen zodra de winkelpagina is geopend.</p>
@@ -207,10 +227,10 @@
   <iframe id="seasonPreviewFrame" title="Voorbeeld van de gekozen seizoensstijl" loading="lazy"></iframe>
 </dialog>
 <script src="/scripts/settings.js"></script>
-<script src="/scripts/catalog.js"></script>
-<script src="/scripts/tebex.js?v=20261110-5"></script>
+<script src="/scripts/catalog.js?v=20261111-1"></script>
+<script src="/scripts/tebex.js?v=20261111-1"></script>
 <script src="/scripts/nav.js?v=20261110-1"></script>
-<script src="/scripts/admin.js?v=20261109-4"></script>
+<script src="/scripts/admin.js?v=20261111-1"></script>
 <script src="/scripts/admin/content-manager.js"></script>
 </body>
 </html>

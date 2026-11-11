@@ -39,6 +39,8 @@
       current.tebexToken = typeof data.storeSettings.tebexToken === "string" ? data.storeSettings.tebexToken : "";
       current.tebexPackages = Object.assign({}, current.tebexPackages || {}, data.storeSettings.tebexPackages || {});
       current.shopProducts = Object.assign({}, current.shopProducts || {}, data.storeSettings.shopProducts || {});
+      current.shopCategories = Array.isArray(data.storeSettings.shopCategories) ? data.storeSettings.shopCategories : [];
+      current.customShopProducts = Array.isArray(data.storeSettings.customShopProducts) ? data.storeSettings.customShopProducts : [];
       root.HeerlenSettings.save(current);
       return current;
     }).catch(function (error) {

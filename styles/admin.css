@@ -276,9 +276,23 @@
 .shop-product-row label{display:flex;flex-direction:column;gap:6px;margin:6px 0}
 .shop-product-row input,.shop-product-row textarea{width:100%;max-width:100%}
 .shop-product-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.shop-manager-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:14px 0}
+.shop-manager-pane{min-width:0;display:grid;align-content:start;gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px}
+.shop-manager-pane h3{margin:0 0 4px}
+.shop-manager-pane label{display:flex;flex-direction:column;gap:6px}
+.shop-manager-pane input,.shop-manager-pane textarea,.shop-manager-pane select{width:100%;max-width:100%}
+.shop-category-list{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+.shop-category-chip{padding:6px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:.82rem}
+.custom-shop-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.custom-shop-product{min-width:0;display:grid;grid-template-columns:1fr auto;gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px}
+.custom-shop-product-fields{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.custom-shop-product-fields label{display:flex;flex-direction:column;gap:6px}
+.custom-shop-product-fields label:first-child,.custom-shop-product-fields label:nth-child(2){grid-column:1/-1}
+.custom-shop-product-fields input,.custom-shop-product-fields textarea,.custom-shop-product-fields select{width:100%;max-width:100%}
+.custom-shop-product .btn{align-self:start}
 .shop-sales-card .cms-panel-head{align-items:center}
 .shop-sales-card .cms-panel-head .btn{flex:none}
-@media(max-width:640px){.shop-products{grid-template-columns:1fr}.shop-product-fields{gap:8px}.shop-sales-card .cms-panel-head{align-items:stretch}.shop-sales-card .cms-panel-head .btn{width:100%}}
+@media(max-width:640px){.shop-products,.shop-manager-grid,.custom-shop-products{grid-template-columns:1fr}.shop-product-fields,.custom-shop-product-fields{gap:8px}.shop-sales-card .cms-panel-head{align-items:stretch}.shop-sales-card .cms-panel-head .btn{width:100%}}
 @media(max-width:600px){.season-controls label{grid-template-columns:1fr 38px}.season-controls input[type="range"]{grid-column:1}.season-controls output{grid-column:2;grid-row:1/3}.season-pages{grid-template-columns:repeat(2,minmax(0,1fr))}.season-schedule{grid-template-columns:1fr}}
 @media(prefers-reduced-motion:reduce){.season-preview-decoration{animation:none!important;display:none!important}}
 .season-preview.is-static .season-preview-scene *{animation-play-state:paused!important}
