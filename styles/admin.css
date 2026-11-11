@@ -275,6 +275,7 @@
 .shop-product-row legend{padding:0 6px;font-weight:800}
 .shop-product-row label{display:flex;flex-direction:column;gap:6px;margin:6px 0}
 .shop-product-row input,.shop-product-row textarea{width:100%;max-width:100%}
+.shop-product-row .check input,.custom-shop-product-fields .check input{padding:0}
 .shop-product-fields{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .shop-manager-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin:14px 0}
 .shop-manager-pane{min-width:0;display:grid;align-content:start;gap:10px;padding:14px;border:1px solid var(--line);border-radius:12px}
@@ -288,6 +289,7 @@
 .custom-shop-product-fields{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .custom-shop-product-fields label{display:flex;flex-direction:column;gap:6px}
 .custom-shop-product-fields label:first-child,.custom-shop-product-fields label:nth-child(2){grid-column:1/-1}
+.custom-shop-product-fields .check{grid-column:1/-1}
 .custom-shop-product-fields input,.custom-shop-product-fields textarea,.custom-shop-product-fields select{width:100%;max-width:100%}
 .custom-shop-product .btn{align-self:start}
 .shop-sales-card .cms-panel-head{align-items:center}
