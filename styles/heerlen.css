@@ -746,7 +746,8 @@ html[data-theme="light"] .sort select option {
 .art {
   position: relative;
   display: block;
-  height: 210px;
+  height: auto;
+  aspect-ratio: 1377 / 768;
   background: #e8ecef;
   overflow: hidden;
   color: #0c1220;
@@ -1360,7 +1361,7 @@ body.nav-open .nav-links {
 }
 .popular-card .art,
 .shop-card .art {
-  height: 220px;
+  height: auto;
 }
 
 /* store page */
@@ -1399,7 +1400,8 @@ body.nav-open .nav-links {
   align-items: start;
 }
 .product-media .art {
-  height: min(420px, 52vw);
+  height: auto;
+  aspect-ratio: 1377 / 768;
   border-radius: 20px;
   overflow: hidden;
 }
@@ -2092,7 +2094,7 @@ body.cart-open .shade { z-index: 85; }
   .toolbar { gap: 8px; }
 
   /* Compacte productkaarten (2 per rij) */
-  .shop-card .art, .popular-card .art { height: auto; aspect-ratio: 4 / 3; }
+  .shop-card .art, .popular-card .art { height: auto; aspect-ratio: 1377 / 768; }
   .shop-card .art .bonus, .popular-card .art .bonus { top: 8px; left: 8px; padding: 3px 7px; font-size: .64rem; }
   .shop-card .card-body, .popular-card .card-body { padding: 10px 10px 12px; }
   .shop-card h3, .popular-card h3 { font-size: .98rem; margin-bottom: 2px; }
