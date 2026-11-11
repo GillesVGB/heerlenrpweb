@@ -18,12 +18,12 @@ function cleanPayment(payment) {
   if (!payment || typeof payment !== 'object') return null;
   const username = typeof payment.username === 'string' ? payment.username.trim().slice(0, 80) : '';
   const item = payment.package && typeof payment.package.name === 'string' ? payment.package.name.trim().slice(0, 120) : '';
-  if (!username || !item) return null;
+  if (!username) return null;
   const createdAt = typeof payment.created_at === 'string' && Number.isFinite(Date.parse(payment.created_at)) ? payment.created_at : '';
   const price = Number(payment.price);
   return {
     username,
-    item,
+    item: item || 'Betaling via Tebex',
     ...(createdAt ? { createdAt } : {}),
     ...(Number.isFinite(price) && price >= 0 ? { amount: price } : {}),
     currency: typeof payment.currency === 'string' ? payment.currency.slice(0, 3) : ''
