@@ -563,6 +563,27 @@ html[data-theme="light"] .theme-btn { color: var(--ink); }
   max-height: calc(100vh - 116px);
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.24) transparent;
+}
+.store-layout .side::-webkit-scrollbar {
+  width: 6px;
+}
+.store-layout .side::-webkit-scrollbar-track {
+  background: transparent;
+}
+.store-layout .side::-webkit-scrollbar-thumb {
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.24);
+  background-clip: padding-box;
+}
+.store-layout .side::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.42);
+  background-clip: padding-box;
+}
+.store-layout .side::-webkit-scrollbar-button {
+  display: none;
 }
 
 .panel {
@@ -1304,9 +1325,8 @@ body.nav-open .nav-links {
   }
   .side, .maincol, .soon, .search, .sort, .sort select { width: 100%; }
   .store-layout .side {
-    position: static;
-    max-height: none;
-    overflow: visible;
+    top: 82px;
+    max-height: calc(100dvh - 94px);
   }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nav { padding-left: 10px; padding-right: 10px; }
@@ -2125,9 +2145,13 @@ body.cart-open .shade { z-index: 85; }
   /* Winkelmand: minder ruis op kleine schermen */
   .payer:has(#payerName), .drawer .pay-note { display: none; }
   .drawer > footer { gap: 8px; }
-  /* Betalingsoverzicht onder de producten i.p.v. ervoor */
-  .store-layout .side { order: 2; margin-top: 8px; }
-  .store-layout .maincol { order: 1; }
+  .store-layout .side {
+    top: 76px;
+    max-height: calc(100dvh - 88px);
+    order: 1;
+    margin-top: 8px;
+  }
+  .store-layout .maincol { order: 2; }
   .store-hero p { max-width: 32ch; }
 }
 .pay-status.is-info { border-color: rgba(90, 174, 253, 0.55); background: rgba(90, 174, 253, 0.12); }
