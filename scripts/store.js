@@ -55,20 +55,14 @@
     return '<div class="art">' + inner + "</div>";
   }
 
-  function readMoreMarkup(p, opts, hasDetailPage) {
-    if (p.custom) {
-      var description = String(p.blurb || "");
-      return '<details class="package-read-more"><summary class="read-more">Lees meer</summary><p>' +
-        cat.esc(description || "Dit pakket wordt direct via Tebex afgerekend.") + "</p></details>";
-    }
-    return hasDetailPage && opts.readMore !== false
+  function readMoreMarkup(p, opts) {
+    return opts.readMore !== false
       ? '<a class="read-more" href="' + cat.productUrl(p) + '">Lees meer</a>'
       : "";
   }
 
   function shopCard(p, opts) {
     opts = opts || {};
-    var hasDetailPage = !p.custom;
     var qty = bagQty(p.id);
     var description = String(p.blurb || "");
     var preview = p.custom && description.length > 120
@@ -81,11 +75,11 @@
         (qty ? "In mand · " + qty : "In mand") + "</button>";
     return (
       '<article class="card shop-card">' +
-      artHtml(p, hasDetailPage) +
+      artHtml(p, true) +
       '<div class="card-body">' +
-      '<h3>' + (hasDetailPage ? '<a href="' + cat.productUrl(p) + '">' + cat.esc(p.name) + "</a>" : cat.esc(p.name)) + "</h3>" +
+      '<h3><a href="' + cat.productUrl(p) + '">' + cat.esc(p.name) + "</a></h3>" +
       "<p>" + cat.esc(preview) + "</p>" +
-      readMoreMarkup(p, opts, hasDetailPage) +
+      readMoreMarkup(p, opts) +
       '<div class="card-row">' +
       '<div class="price-wrap">' + priceMarkup(p) +
       (p.bonus ? '<span class="bonus-inline">+' + p.bonus + "% bonus</span>" : "") +
@@ -155,17 +149,21 @@
   function renderProduct() {
     if (!productRoot) return;
     var slug = document.body.getAttribute("data-product");
+    if (slug === "custom-package") slug = new URLSearchParams(location.search).get("id") || "";
     var p = cat.pack(slug);
     if (!p) {
       productRoot.innerHTML = '<p class="empty">Product niet gevonden. <a href="' + cat.storeUrl() + '">Terug naar de store</a></p>';
       return;
     }
+    document.title = p.name + " | Heerlen Roleplay Store";
+    var category = cat.categories().find(function (item) { return item.id === p.cat; });
+    var categoryName = category ? category.name : "Shop";
     var related = cat.byCat(p.cat).filter(function (x) { return x.id !== p.id; }).slice(0, 4);
     productRoot.innerHTML =
       '<div class="product-layout">' +
       '<div class="product-media">' + artHtml(p, false) + "</div>" +
       '<div class="product-copy">' +
-      '<p class="kicker"><a href="' + cat.storeUrl(p.cat) + '">Coins</a></p>' +
+      '<p class="kicker"><a href="' + cat.storeUrl(p.cat) + '">' + cat.esc(categoryName) + "</a></p>" +
       "<h1>" + cat.esc(p.name) + "</h1>" +
       "<p class=\"product-lead\">" + cat.esc(p.blurb) + "</p>" +
       '<div class="product-buy">' +
@@ -178,10 +176,10 @@
       "</div></div>" +
       '<section class="product-extra">' +
       "<h2>Omschrijving</h2>" +
-      "<p>" + cat.esc(p.blurb) + " Coins geef je uit in-game met <code>/store</code>.</p>" +
+      (p.custom ? "<p>" + cat.esc(p.blurb || "Dit pakket wordt direct via Tebex afgerekend.") + "</p>" : "<p>" + cat.esc(p.blurb) + " Coins geef je uit in-game met <code>/store</code>.</p>") +
       "</section>" +
       (related.length
-        ? '<section class="product-more"><h2>Meer coins</h2>' +
+        ? '<section class="product-more"><h2>Meer in ' + cat.esc(categoryName) + "</h2>" +
           '<div class="grid popular-grid">' + related.map(function (x) { return shopCard(x, { roundCart: true, readMore: true }); }).join("") + "</div></section>"
         : "");
   }

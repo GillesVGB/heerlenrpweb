@@ -182,6 +182,7 @@
   }
 
   function productUrl(p) {
+    if (p.custom) return asset("winkel/pakket.html?id=" + encodeURIComponent(p.id));
     return asset("winkel/" + p.slug + ".html");
   }
 

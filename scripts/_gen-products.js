@@ -164,7 +164,7 @@ function tpl(slug, name) {
 <script src="../scripts/auth.js?v=20261109-4"></script>
 <script src="../scripts/cart.js?v=20261111-2"></script>
 <script src="../scripts/nav.js?v=20261110-1"></script>
-<script src="../scripts/store.js?v=20261111-3"></script>
+<script src="../scripts/store.js?v=20261111-4"></script>
 <script src="../scripts/live.js?v=20261110-1"></script>
 <script src="/scripts/site-footer.js?v=20261109-2" defer></script>
 </body>
@@ -175,4 +175,5 @@ function tpl(slug, name) {
 for (const [slug, name] of all) {
   fs.writeFileSync(path.join(outDir, slug + ".html"), tpl(slug, name));
 }
-console.log("wrote", all.length, "product pages");
+fs.writeFileSync(path.join(outDir, "pakket.html"), tpl("custom-package", "Pakket"));
+console.log("wrote", all.length, "product pages and the dynamic package page");

@@ -147,7 +147,7 @@ try {
   const browserContext = {
     window: browser,
     CustomEvent: BrowserCustomEvent,
-    document: { body: { getAttribute: () => './' } },
+    document: { body: { getAttribute: name => name === 'data-base' ? '../' : '' } },
     URL
   };
   runInNewContext(catalogScript, browserContext);
@@ -176,6 +176,7 @@ try {
   const customShopProduct = browser.HeerlenCatalog.pack('custom-test-car');
   assert.equal(customShopProduct.name, 'Test Auto', 'custom Tebex products load into the catalog');
   assert.equal(browser.HeerlenTebex.packageIdFor('custom-test-car'), '67890', 'custom product checkout uses its linked Tebex package ID');
+  assert.equal(browser.HeerlenCatalog.productUrl(customShopProduct), '../winkel/pakket.html?id=custom-test-car', 'custom products link to their generated detail page');
   const sales = await browser.HeerlenTebex.loadActiveSales();
   assert.equal(sales[0].name, 'Test Sale', 'active Tebex sales are loaded from the public Headless API');
   const editedPack = browser.HeerlenCatalog.pack('coins-100');
@@ -220,8 +221,33 @@ try {
   assert.ok(storeElements.grid.innerHTML.includes('Test Auto'), 'custom Tebex products render in the storefront');
   assert.ok(storeElements.grid.innerHTML.includes('€29.95'), 'custom product cards display the live Tebex price');
   assert.ok(storeElements.grid.innerHTML.includes('https://cdn.tebex.io/test-auto.jpg'), 'custom product cards display the package image from Tebex');
-  assert.ok(storeElements.grid.innerHTML.includes('<summary class="read-more">Lees meer</summary>'), 'custom product cards have an expandable read-more control');
-  assert.ok(storeElements.grid.innerHTML.includes('<details class="package-read-more">'), 'the full custom product description is hidden until read more is opened');
+  assert.ok(storeElements.grid.innerHTML.includes('href="../winkel/pakket.html?id=custom-test-car"'), 'custom product cards have a working read-more link');
+
+  const productElements = { productRoot: { innerHTML: '' } };
+  const productDocument = {
+    title: '',
+    body: {
+      getAttribute: name => name === 'data-page' ? 'product' : name === 'data-product' ? 'custom-package' : '../'
+    },
+    getElementById: id => productElements[id] || null
+  };
+  runInNewContext(storeScript, {
+    window: browser,
+    document: productDocument,
+    URL,
+    URLSearchParams,
+    location: { href: 'https://heerlenrp.nl/winkel/pakket.html?id=custom-test-car', search: '?id=custom-test-car' },
+    history: { replaceState: () => {} },
+    console
+  });
+  await new Promise(resolve => setTimeout(resolve, 0));
+  assert.ok(productElements.productRoot.innerHTML.includes('Test Auto'), 'the generated package page displays the selected product');
+  assert.ok(productElements.productRoot.innerHTML.includes('Voertuigen'), 'the package page displays its assigned category');
+  assert.ok(productElements.productRoot.innerHTML.includes('€29.95'), 'the package page displays its Tebex price');
+  assert.ok(productElements.productRoot.innerHTML.includes('https://cdn.tebex.io/test-auto.jpg'), 'the package page displays its Tebex image');
+  assert.equal(productDocument.title, 'Test Auto | Heerlen Roleplay Store', 'the package page sets its product-specific title');
+  const packageTemplate = await readFile(new URL('../winkel/pakket.html', import.meta.url), 'utf8');
+  assert.ok(packageTemplate.includes('data-product="custom-package"'), 'the generator emits the dynamic package detail page');
 
   const originalAvatarFetch = globalThis.fetch;
   try {
