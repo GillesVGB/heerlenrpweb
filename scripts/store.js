@@ -134,6 +134,7 @@
     var selected = categories.find(function (category) { return category.id === catName; }) || categories[0];
     currentCat = selected.id;
     if (storeTitle) storeTitle.textContent = selected.name;
+    document.title = selected.name + " | Heerlen Roleplay Store";
     if (storeNote) storeNote.textContent = "";
     if (categorySelect) categorySelect.value = selected.id;
     renderShop();

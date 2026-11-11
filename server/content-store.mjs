@@ -189,6 +189,7 @@ export function publicContent(state) {
     .map(([id, product]) => [id, {
       ...(typeof product.name === 'string' ? { name: product.name.slice(0, 60) } : {}),
       ...(typeof product.blurb === 'string' ? { blurb: product.blurb.slice(0, 240) } : {}),
+      ...(typeof product.featured === 'boolean' ? { featured: product.featured } : {}),
       ...(Number.isInteger(product.amount) && product.amount >= 1 && product.amount <= 100000 ? { amount: product.amount } : {}),
       ...(Number.isInteger(product.bonus) && product.bonus >= 0 && product.bonus <= 10000 ? { bonus: product.bonus } : {})
     }]));
@@ -207,7 +208,8 @@ export function publicContent(state) {
       name: product.name.trim().slice(0, 60),
       blurb: product.blurb.slice(0, 240),
       category: product.category,
-      tebexId: product.tebexId
+      tebexId: product.tebexId,
+      featured: product.featured === true
     }));
   const themes = ['standard', 'halloween', 'christmas', 'newyear', 'easter'];
   const allowedSeasonPages = ['home', 'news', 'updates', 'staff', 'rules', 'shop'];

@@ -206,6 +206,10 @@ async function handler(request) {
           const item = {};
           if (product.name !== undefined) item.name = cleanText(product.name, 60, 'Productnaam', false);
           if (product.blurb !== undefined) item.blurb = cleanText(product.blurb, 240, 'Productomschrijving', false);
+          if (product.featured !== undefined) {
+            if (typeof product.featured !== 'boolean') return json({ error: 'Ongeldige uitgelicht-instelling.' }, 400);
+            item.featured = product.featured;
+          }
           if (product.amount !== undefined) {
             if (!Number.isInteger(Number(product.amount)) || Number(product.amount) < 1 || Number(product.amount) > 100000) return json({ error: 'Ongeldig coin-aantal.' }, 400);
             item.amount = Number(product.amount);
@@ -241,13 +245,15 @@ async function handler(request) {
           if (!product || typeof product !== 'object' || Array.isArray(product) || typeof product.id !== 'string' || !/^custom-[a-z0-9-]{1,50}$/.test(product.id) || ids.has(product.id)) return json({ error: 'Ongeldig extra Tebex-pakket.' }, 400);
           if (typeof product.category !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(product.category)) return json({ error: 'Kies een geldige productcategorie.' }, 400);
           if (typeof product.tebexId !== 'string' || product.tebexId.length > 32 || !/^\d+$/.test(product.tebexId)) return json({ error: 'Vul een geldig Tebex package-ID in.' }, 400);
+          if (product.featured !== undefined && typeof product.featured !== 'boolean') return json({ error: 'Ongeldige uitgelicht-instelling.' }, 400);
           ids.add(product.id);
           clean.customShopProducts.push({
             id: product.id,
             name: cleanText(product.name, 60, 'Productnaam', false),
             blurb: cleanText(product.blurb, 240, 'Productomschrijving', true),
             category: product.category,
-            tebexId: product.tebexId
+            tebexId: product.tebexId,
+            featured: product.featured === true
           });
         }
       }

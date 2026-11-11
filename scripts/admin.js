@@ -135,12 +135,14 @@
     var overrides = state.shopProducts || {};
     box.innerHTML = catalog.PACKS.map(function (pack) {
       var item = overrides[pack.id] || {};
+      var featured = typeof item.featured === "boolean" ? item.featured : pack.featured;
       return '<fieldset class="shop-product-row" data-shop-product="' + esc(pack.id) + '">' +
         '<legend>' + esc(pack.name) + '</legend>' +
         '<label><span>Productnaam</span><input data-shop-field="name" maxlength="60" value="' + esc(item.name || pack.name) + '"></label>' +
         '<label><span>Omschrijving</span><textarea data-shop-field="blurb" rows="2" maxlength="240">' + esc(item.blurb || pack.blurb) + '</textarea></label>' +
         '<div class="shop-product-fields"><label><span>Coins</span><input data-shop-field="amount" type="number" min="1" max="100000" value="' + esc(item.amount || pack.amount) + '"></label>' +
         '<label><span>Bonus (%)</span><input data-shop-field="bonus" type="number" min="0" max="10000" value="' + esc(item.bonus == null ? pack.bonus : item.bonus) + '"></label></div>' +
+        '<label class="check"><input data-shop-field="featured" type="checkbox"' + (featured ? " checked" : "") + '><span>Uitgelicht op de homepage</span></label>' +
         '</fieldset>';
     }).join("");
   }
@@ -179,6 +181,7 @@
           '<label><span>Omschrijving</span><textarea data-custom-field="blurb" maxlength="240" rows="2">' + esc(product.blurb || "") + '</textarea></label>' +
           '<label><span>Categorie</span><select data-custom-field="category">' + options + '</select></label>' +
           '<label><span>Tebex package-ID</span><input data-custom-field="tebexId" inputmode="numeric" pattern="[0-9]+" maxlength="32" value="' + esc(product.tebexId) + '"></label>' +
+          '<label class="check"><input data-custom-field="featured" type="checkbox"' + (product.featured === true ? " checked" : "") + '><span>Uitgelicht op de homepage</span></label>' +
           '</div></fieldset>';
     }).join("") || '<p class="hint">Nog geen extra Tebex-pakketten gekoppeld.</p>';
   }
@@ -204,7 +207,7 @@
       var product = {};
       row.querySelectorAll("[data-shop-field]").forEach(function (field) {
         var key = field.getAttribute("data-shop-field");
-        product[key] = field.type === "number" ? Number(field.value) : field.value.trim();
+        product[key] = field.type === "checkbox" ? field.checked : field.type === "number" ? Number(field.value) : field.value.trim();
       });
       next.shopProducts[id] = product;
     });
@@ -212,7 +215,8 @@
     next.customShopProducts = Array.prototype.map.call(document.querySelectorAll("[data-custom-shop-product]"), function (row) {
       var product = { id: row.getAttribute("data-custom-shop-product") };
       row.querySelectorAll("[data-custom-field]").forEach(function (field) {
-        product[field.getAttribute("data-custom-field")] = field.value.trim();
+        var key = field.getAttribute("data-custom-field");
+        product[key] = field.type === "checkbox" ? field.checked : field.value.trim();
       });
       return product;
     });
@@ -367,8 +371,12 @@
       show("Deze categorie bestaat al.");
       return;
     }
-    var slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 24) || "categorie";
-    state.shopCategories.push({ id: "cat-" + slug + "-" + cfg.uid().slice(-5), name: name });
+    var slug = name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 32) || "categorie";
+    var baseId = "cat-" + slug;
+    var id = baseId;
+    var suffix = 2;
+    while (customCategories().some(function (category) { return category.id === id; })) id = baseId + "-" + suffix++;
+    state.shopCategories.push({ id: id, name: name });
     input.value = "";
     renderShopManager();
     siteSettingsDirty = true;
@@ -388,7 +396,7 @@
     }
     state = readForms();
     var id = "custom-" + cfg.uid().replace(/[^a-z0-9-]/g, "");
-    state.customShopProducts.push({ id: id, name: name, blurb: blurb, category: category, tebexId: tebexId });
+    state.customShopProducts.push({ id: id, name: name, blurb: blurb, category: category, tebexId: tebexId, featured: false });
     form.reset();
     renderShopManager();
     siteSettingsDirty = true;

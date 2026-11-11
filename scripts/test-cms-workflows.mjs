@@ -56,9 +56,9 @@ try {
     seasonIntensity: 1.4, seasonSpeed: 1.2, seasonDensity: 22, seasonFrequency: 1.6,
     seasonPages: ['home', 'rules'], seasonStart: '2027-12-31T18:00', seasonEnd: '2028-01-01T23:59',
     tebexToken: 'public-token-test', tebexPackages: { 'coins-100': '12345' },
-    shopProducts: { 'coins-100': { name: 'Test Coins', blurb: 'Aangepaste producttekst', amount: 150, bonus: 12 } },
+    shopProducts: { 'coins-100': { name: 'Test Coins', blurb: 'Aangepaste producttekst', amount: 150, bonus: 12, featured: true } },
     shopCategories: [{ id: 'cat-vehicles-a1b2c', name: 'Voertuigen' }],
-    customShopProducts: [{ id: 'custom-test-car', name: 'Test Auto', blurb: 'Een testpakket uit Tebex met een premium voertuig, aangepaste uitvoering en extra opties om je ervaring in Heerlen uit te breiden.', category: 'cat-vehicles-a1b2c', tebexId: '67890' }]
+    customShopProducts: [{ id: 'custom-test-car', name: 'Test Auto', blurb: 'Een testpakket uit Tebex met een premium voertuig, aangepaste uitvoering en extra opties om je ervaring in Heerlen uit te breiden.', category: 'cat-vehicles-a1b2c', tebexId: '67890', featured: true }]
   };
   const savedTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: themeSettings }, cookie);
   assert.equal(savedTheme.status, 200, 'site managers can publish seasonal theme settings');
@@ -75,8 +75,10 @@ try {
   assert.equal(themeBody.storeSettings.tebexPackages['coins-100'], '12345', 'Tebex package IDs persist in shared storage');
   assert.equal(themeBody.storeSettings.shopProducts['coins-100'].name, 'Test Coins', 'shop product edits persist in shared storage');
   assert.equal(themeBody.storeSettings.shopProducts['coins-100'].amount, 150, 'edited package coin amounts are published');
+  assert.equal(themeBody.storeSettings.shopProducts['coins-100'].featured, true, 'featured coin packages are published');
   assert.equal(themeBody.storeSettings.shopCategories[0].name, 'Voertuigen', 'custom shop categories are published');
   assert.equal(themeBody.storeSettings.customShopProducts[0].tebexId, '67890', 'custom shop products retain their Tebex package ID');
+  assert.equal(themeBody.storeSettings.customShopProducts[0].featured, true, 'featured custom packages are published');
   const badTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: { seasonTheme: 'unknown' } }, cookie);
   assert.equal(badTheme.status, 400, 'unknown seasonal themes are rejected server-side');
   const badPackage = await run(admin, 'POST', { action: 'save-site-settings', settings: { tebexPackages: { 'coins-100': 'not-an-id' } } }, cookie);
@@ -172,9 +174,12 @@ try {
   assert.equal(browserSettings.tebexToken, 'public-token-test', 'shop login loads the shared Tebex token for visitors');
   assert.equal(browser.HeerlenTebex.packageIdFor('coins-100'), '12345', 'checkout loads shared package IDs for visitors');
   assert.equal(browserSettings.shopProducts['coins-100'].name, 'Test Coins', 'shop product edits load for every visitor');
+  assert.equal(browserSettings.shopProducts['coins-100'].featured, true, 'featured coin packages load for every visitor');
   assert.equal(browser.HeerlenCatalog.categories().some(category => category.id === 'cat-vehicles-a1b2c'), true, 'custom shop categories load for visitors');
   const customShopProduct = browser.HeerlenCatalog.pack('custom-test-car');
   assert.equal(customShopProduct.name, 'Test Auto', 'custom Tebex products load into the catalog');
+  assert.equal(browser.HeerlenCatalog.popular().some(product => product.id === 'custom-test-car'), true, 'featured custom packages appear in the homepage selection');
+  assert.equal(browser.HeerlenCatalog.popular().some(product => product.id === 'coins-100'), true, 'featured standard packages can be selected for the homepage');
   assert.equal(browser.HeerlenTebex.packageIdFor('custom-test-car'), '67890', 'custom product checkout uses its linked Tebex package ID');
   assert.equal(browser.HeerlenCatalog.productUrl(customShopProduct), '../winkel/pakket.html?id=custom-test-car', 'custom products link to their generated detail page');
   const sales = await browser.HeerlenTebex.loadActiveSales();
