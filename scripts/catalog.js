@@ -47,7 +47,7 @@
       return item;
     });
     var custom = (Array.isArray(settings.customShopProducts) ? settings.customShopProducts : []).filter(function (product) {
-      return product && typeof product.id === "string" && typeof product.name === "string" && typeof product.category === "string" && /^\d+$/.test(String(product.tebexId || ""));
+      return product && product.visible !== false && typeof product.id === "string" && typeof product.name === "string" && typeof product.category === "string" && /^\d+$/.test(String(product.tebexId || ""));
     }).map(function (product) {
       return {
         id: product.id,

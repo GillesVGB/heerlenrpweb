@@ -209,7 +209,8 @@ export function publicContent(state) {
       blurb: product.blurb.slice(0, 240),
       category: product.category,
       tebexId: product.tebexId,
-      featured: product.featured === true
+      featured: product.featured === true,
+      visible: product.visible !== false
     }));
   const themes = ['standard', 'halloween', 'christmas', 'newyear', 'easter'];
   const allowedSeasonPages = ['home', 'news', 'updates', 'staff', 'rules', 'shop'];
