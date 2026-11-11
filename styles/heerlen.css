@@ -556,7 +556,7 @@ html[data-theme="light"] .theme-btn { color: var(--ink); }
   align-items: start;
 }
 
-.side { display: flex; flex-direction: column; gap: 14px; position: sticky; top: calc(var(--nav) + 16px); }
+.side { display: flex; flex-direction: column; gap: 14px; }
 
 .panel {
   background: var(--card);
