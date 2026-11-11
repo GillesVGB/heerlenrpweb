@@ -692,8 +692,6 @@ html[data-theme="light"] .theme-btn { color: var(--ink); }
   background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
 }
-.shop-category-filter { margin-left: auto; }
-.shop-category-filter select { max-width: 180px; }
 .sort select:focus {
   border-color: var(--blue);
 }
@@ -1297,7 +1295,6 @@ body.nav-open .nav-links {
     flex-wrap: wrap;
   }
   .side, .maincol, .soon, .search, .sort, .sort select { width: 100%; }
-  .shop-category-filter { margin-left: 0; justify-content: space-between; }
   .side { position: static; }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nav { padding-left: 10px; padding-right: 10px; }

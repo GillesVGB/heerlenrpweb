@@ -10,7 +10,7 @@
   var count = document.getElementById("count");
   var search = document.getElementById("search");
   var sort = document.getElementById("sort");
-  var categorySelect = document.getElementById("shopCategory");
+  var categoryNav = document.getElementById("shopCategories");
   var toolbar = document.getElementById("toolbar");
   var storeTitle = document.getElementById("storeTitle");
   var storeNote = document.getElementById("storeNote");
@@ -33,10 +33,13 @@
   function priceMarkup(product) {
     var info = cat.priceInfo(product, currentBasketSubtotal());
     if (!info.sale) return '<span class="price">' + cat.money(info.price) + "</span>";
-    if (!info.sale.eligible) {
-      return '<span class="price-sale"><span class="price">' + cat.money(info.original) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label) + " KORTING</small></span>";
-    }
-    return '<span class="price-sale"><del class="price-old">' + cat.money(info.original) + '</del><span class="price">' + cat.money(info.price) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label) + " KORTING</small></span>";
+    var discountedPrice = info.sale.eligible ? info.price : info.discountedPrice;
+    var condition = info.sale.eligible
+      ? ""
+      : info.sale.minimumBasketValue
+        ? " vanaf " + cat.money(info.sale.minimumBasketValue) + " winkelmand"
+        : " na voorwaarden";
+    return '<span class="price-sale"><del class="price-old">' + cat.money(info.original) + '</del><span class="price">' + cat.money(discountedPrice) + '</span><small class="price-sale-label">' + cat.esc(info.sale.label + " KORTING" + condition) + "</small></span>";
   }
 
   function artHtml(p, link) {
@@ -136,14 +139,17 @@
     if (storeTitle) storeTitle.textContent = selected.name;
     document.title = selected.name + " | Heerlen Roleplay Store";
     if (storeNote) storeNote.textContent = "";
-    if (categorySelect) categorySelect.value = selected.id;
+    renderCategories();
     renderShop();
   }
 
   function renderCategories() {
-    if (!categorySelect) return;
-    categorySelect.innerHTML = cat.categories().map(function (category) {
-      return '<option value="' + cat.esc(category.id) + '">' + cat.esc(category.name) + '</option>';
+    if (!categoryNav) return;
+    categoryNav.innerHTML = cat.categories().map(function (category) {
+      var selected = category.id === currentCat;
+      var productCount = cat.byCat(category.id).length;
+      return '<button type="button" class="cat' + (selected ? " is-on" : "") + '" data-shop-category="' + cat.esc(category.id) + '" aria-pressed="' + selected + '">' +
+        "<span>" + cat.esc(category.name) + "</span><em>" + productCount + "</em></button>";
     }).join("");
   }
 
@@ -188,19 +194,19 @@
   function bootShop() {
     if (search) search.addEventListener("input", renderShop);
     if (sort) sort.addEventListener("change", renderShop);
-    if (categorySelect) categorySelect.addEventListener("change", function () {
-      setCat(categorySelect.value);
+    if (categoryNav) categoryNav.addEventListener("click", function (event) {
+      var button = event.target.closest("[data-shop-category]");
+      if (!button) return;
+      setCat(button.getAttribute("data-shop-category"));
       var url = new URL(location.href);
       if (currentCat === "coins") url.searchParams.delete("cat");
       else url.searchParams.set("cat", currentCat);
       history.replaceState(null, "", url.pathname + url.search + url.hash);
     });
     loadStoreData().then(function () {
-      renderCategories();
       var requestedCategory = new URLSearchParams(location.search).get("cat") || "coins";
       setCat(requestedCategory);
     }).catch(function (error) {
-      renderCategories();
       setCat("coins");
       showSalesError(error);
     });

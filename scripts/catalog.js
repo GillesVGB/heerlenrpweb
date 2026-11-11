@@ -165,6 +165,7 @@
       if (amount >= original) continue;
       return {
         price: eligible ? amount : original,
+        discountedPrice: amount,
         original: original,
         sale: {
           name: String(sale.name || "Tebex-aanbieding"),

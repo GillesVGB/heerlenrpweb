@@ -159,10 +159,16 @@ try {
     window: browser,
     fetch: async url => {
       if (url === '/api/content') return { ok: true, json: async () => ({ storeSettings: themeBody.storeSettings }) };
-      if (url.endsWith('/sales')) return { ok: true, json: async () => ({ data: [{
-        name: 'Test Sale', requirements: [{ type: 'minimum_basket_value', amount: 10, currency: 'EUR' }], discount: { type: 'percentage', percentage: 10 },
-        applies_to: { type: 'package', packages: [{ id: 12345 }], categories: [], excluded_packages: [], variable_options: [] }
-      }] }) };
+      if (url.endsWith('/sales')) return { ok: true, json: async () => ({ data: [
+        {
+          name: 'Test Sale', requirements: [{ type: 'minimum_basket_value', amount: 10, currency: 'EUR' }], discount: { type: 'percentage', percentage: 10 },
+          applies_to: { type: 'package', packages: [{ id: 12345 }], categories: [], excluded_packages: [], variable_options: [] }
+        },
+        {
+          name: 'Custom Sale', requirements: [], discount: { type: 'percentage', percentage: 20 },
+          applies_to: { type: 'package', packages: [{ id: 67890 }], categories: [], excluded_packages: [], variable_options: [] }
+        }
+      ] }) };
       if (url.endsWith('/packages')) return { ok: true, json: async () => ({ data: [
         { id: 12345, category: { id: 7 }, base_price: 8, currency: 'EUR', image: 'javascript:alert(1)', media: [{ type: 'image', url: 'https://cdn.tebex.io/coins-100.jpg', primary: true }] },
         { id: 67890, category: { id: 8 }, base_price: 29.95, currency: 'EUR', image: 'https://cdn.tebex.io/test-auto.jpg' }
@@ -188,10 +194,12 @@ try {
   assert.equal(editedPack.name, 'Test Coins', 'product overrides are used by the store catalog');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).original, 8, 'the current base price is synchronized from Tebex');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).price, 8, 'conditional sales do not lower prices before the basket qualifies');
+  assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).discountedPrice, 7.2, 'the conditional discounted price is available to storefronts as a preview');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.minimumBasketValue, 10, 'the minimum basket threshold is published with the active sale');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.label, '10%', 'percentage sale badge contains only the percentage');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack, 10).price, 7.2, 'active package sales lower prices once the minimum basket is reached');
-  assert.equal(browser.HeerlenCatalog.priceInfo(customShopProduct).price, 29.95, 'custom product price is synchronized from Tebex');
+  assert.equal(browser.HeerlenCatalog.priceInfo(customShopProduct).original, 29.95, 'custom product original price is synchronized from Tebex');
+  assert.equal(browser.HeerlenCatalog.priceInfo(customShopProduct).price, 23.96, 'custom product price reflects its Tebex discount');
   assert.equal(browser.HeerlenCatalog.imageFor(editedPack), 'https://cdn.tebex.io/coins-100.jpg', 'unsafe package image URLs are ignored in favor of Tebex primary media');
   assert.equal(browser.HeerlenCatalog.imageFor(customShopProduct), 'https://cdn.tebex.io/test-auto.jpg', 'custom product images are synchronized from Tebex');
 
@@ -201,12 +209,13 @@ try {
     count: { textContent: '' },
     search: { value: '', addEventListener: () => {} },
     sort: { value: 'asc', addEventListener: () => {} },
-    shopCategory: { value: '', innerHTML: '', addEventListener: () => {} },
+    shopCategories: { innerHTML: '', addEventListener: (type, callback) => { storeElements.shopCategoryClick = callback; } },
     toolbar: { hidden: true },
     storeTitle: { textContent: '' }
   };
   const storeDocument = {
     body: { getAttribute: name => name === 'data-page' ? 'winkel' : './' },
+    title: '',
     getElementById: id => storeElements[id] || null
   };
   browser.HeerlenCart = { cart: () => ({}) };
@@ -218,15 +227,21 @@ try {
     URL,
     URLSearchParams,
     location: { href: 'https://heerlenrp.nl/winkel/?cat=cat-vehicles-a1b2c', search: '?cat=cat-vehicles-a1b2c' },
-    history: { replaceState: () => {} },
+    history: { replaceState: (state, title, url) => { storeElements.url = url; } },
     console
   });
   await new Promise(resolve => setTimeout(resolve, 0));
   assert.equal(storeElements.storeTitle.textContent, 'Voertuigen', 'the shop category selector opens the requested custom category');
+  assert.ok(storeElements.shopCategories.innerHTML.includes('data-shop-category="cat-vehicles-a1b2c"'), 'shop categories render in the sidebar navigation');
+  assert.ok(storeElements.shopCategories.innerHTML.includes('aria-pressed="true"'), 'the selected sidebar category is announced');
   assert.ok(storeElements.grid.innerHTML.includes('Test Auto'), 'custom Tebex products render in the storefront');
   assert.ok(storeElements.grid.innerHTML.includes('€29.95'), 'custom product cards display the live Tebex price');
+  assert.ok(storeElements.grid.innerHTML.includes('<del class="price-old">€29.95</del><span class="price">€23.96</span>'), 'discounted product cards show old and updated prices together');
   assert.ok(storeElements.grid.innerHTML.includes('https://cdn.tebex.io/test-auto.jpg'), 'custom product cards display the package image from Tebex');
   assert.ok(storeElements.grid.innerHTML.includes('href="../winkel/pakket.html?id=custom-test-car"'), 'custom product cards have a working read-more link');
+  storeElements.shopCategoryClick({ target: { closest: () => ({ getAttribute: () => 'coins' }) } });
+  assert.equal(storeElements.storeTitle.textContent, 'Coins', 'clicking a sidebar category changes the selected category');
+  assert.equal(storeElements.url, '/winkel/', 'sidebar category selection updates the category URL');
 
   const productElements = { productRoot: { innerHTML: '' } };
   const productDocument = {
