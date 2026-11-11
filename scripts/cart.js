@@ -64,8 +64,7 @@
 
   function avatarMarkup(name, savedAvatar) {
     var initial = cat.esc(String(name || "S").charAt(0).toUpperCase());
-    var avatar = savedAvatar && /^https:\/\/forum\.cfx\.re\/user_avatar\//i.test(savedAvatar) ? cfxAvatar(name) : savedAvatar;
-    var src = cat.esc(avatar || cfxAvatar(name));
+    var src = cat.esc(savedAvatar || cfxAvatar(name));
     return '<span class="avatar"><img src="' + src + '" alt="" loading="lazy" decoding="async"><span aria-hidden="true">' + initial + '</span></span>';
   }
 
@@ -116,7 +115,7 @@
         e.paysEl.innerHTML = payments.length
           ? payments.map(function (payment) {
             var date = paymentDate(payment.createdAt);
-            return '<li>' + avatarMarkup(payment.username) + '<div><strong>' + cat.esc(payment.username) + '</strong><small>' + cat.esc(payment.item) + '</small></div>' +
+            return '<li>' + avatarMarkup(payment.username, payment.avatar) + '<div><strong>' + cat.esc(payment.username) + '</strong><small>' + cat.esc(payment.item) + '</small></div>' +
               (date ? '<time datetime="' + cat.esc(payment.createdAt) + '">' + date + '</time>' : "") + '</li>';
           }).join("")
           : '<li class="pays-empty"><div><strong>Geen recente betalingen</strong><small>Er zijn geen openbare betalingen beschikbaar.</small></div></li>';

@@ -19,11 +19,20 @@ function cleanPayment(payment) {
   const username = typeof payment.username === 'string' ? payment.username.trim().slice(0, 80) : '';
   const item = payment.package && typeof payment.package.name === 'string' ? payment.package.name.trim().slice(0, 120) : '';
   if (!username) return null;
+  const avatarUrl = typeof payment.avatar_url === 'string' ? payment.avatar_url.trim() : '';
+  let avatar = '';
+  try {
+    const url = new URL(avatarUrl);
+    if (url.protocol === 'https:' && url.hostname === 'forum.cfx.re' && url.pathname.startsWith('/user_avatar/')) {
+      avatar = url.toString();
+    }
+  } catch {}
   const createdAt = typeof payment.created_at === 'string' && Number.isFinite(Date.parse(payment.created_at)) ? payment.created_at : '';
   const price = Number(payment.price);
   return {
     username,
     item: item || 'Betaling via Tebex',
+    ...(avatar ? { avatar } : {}),
     ...(createdAt ? { createdAt } : {}),
     ...(Number.isFinite(price) && price >= 0 ? { amount: price } : {}),
     currency: typeof payment.currency === 'string' ? payment.currency.slice(0, 3) : ''

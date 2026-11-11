@@ -194,7 +194,7 @@ try {
       if (requestUrl.endsWith('/sidebar')) {
         return new Response(JSON.stringify({ data: [
           { type: 'recent_payments', data: { payments: [
-            { username: 'GlobalBuyer', package: { name: '500 Coins' }, created_at: '2026-11-09T12:00:00Z', price: 25, currency: 'EUR' },
+            { username: 'GlobalBuyer', package: { name: '500 Coins' }, avatar_url: 'https://forum.cfx.re/user_avatar/forum.cfx.re/globalbuyer/96/1.png', created_at: '2026-11-09T12:00:00Z', price: 25, currency: 'EUR' },
             { username: 'ProfileOnlyBuyer', avatar_url: 'https://forum.cfx.re/user_avatar/example/96/1.png' }
           ] } },
           { type: 'top_customer', data: null }
@@ -215,6 +215,7 @@ try {
     assert.equal(donationBody.topDonor.username, 'AllTimeTop', 'all-time top donor comes from Tebex');
     assert.equal(donationBody.recentPayments[0].username, 'GlobalBuyer', 'recent payments are global Tebex payments');
     assert.equal(donationBody.recentPayments[0].item, '500 Coins', 'recent payment package names are returned');
+    assert.equal(donationBody.recentPayments[0].avatar, 'https://forum.cfx.re/user_avatar/forum.cfx.re/globalbuyer/96/1.png', 'CFX avatars from Tebex are retained');
     assert.equal(donationBody.recentPayments[1].username, 'ProfileOnlyBuyer', 'Tebex payments without package details are retained');
     assert.equal(donationBody.recentPayments[1].item, 'Betaling via Tebex', 'minimal public payment records get a safe generic label');
     assert.equal(JSON.stringify(donationBody).includes('test-checkout-api-key'), false, 'the Tebex checkout API key is never returned to visitors');
