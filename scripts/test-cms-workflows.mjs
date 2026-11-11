@@ -58,7 +58,7 @@ try {
     tebexToken: 'public-token-test', tebexPackages: { 'coins-100': '12345' },
     shopProducts: { 'coins-100': { name: 'Test Coins', blurb: 'Aangepaste producttekst', amount: 150, bonus: 12 } },
     shopCategories: [{ id: 'cat-vehicles-a1b2c', name: 'Voertuigen' }],
-    customShopProducts: [{ id: 'custom-test-car', name: 'Test Auto', blurb: 'Een testpakket uit Tebex.', category: 'cat-vehicles-a1b2c', tebexId: '67890' }]
+    customShopProducts: [{ id: 'custom-test-car', name: 'Test Auto', blurb: 'Een testpakket uit Tebex met een premium voertuig, aangepaste uitvoering en extra opties om je ervaring in Heerlen uit te breiden.', category: 'cat-vehicles-a1b2c', tebexId: '67890' }]
   };
   const savedTheme = await run(admin, 'POST', { action: 'save-site-settings', settings: themeSettings }, cookie);
   assert.equal(savedTheme.status, 200, 'site managers can publish seasonal theme settings');
@@ -220,6 +220,8 @@ try {
   assert.ok(storeElements.grid.innerHTML.includes('Test Auto'), 'custom Tebex products render in the storefront');
   assert.ok(storeElements.grid.innerHTML.includes('€29.95'), 'custom product cards display the live Tebex price');
   assert.ok(storeElements.grid.innerHTML.includes('https://cdn.tebex.io/test-auto.jpg'), 'custom product cards display the package image from Tebex');
+  assert.ok(storeElements.grid.innerHTML.includes('<summary class="read-more">Lees meer</summary>'), 'custom product cards have an expandable read-more control');
+  assert.ok(storeElements.grid.innerHTML.includes('<details class="package-read-more">'), 'the full custom product description is hidden until read more is opened');
 
   const originalAvatarFetch = globalThis.fetch;
   try {

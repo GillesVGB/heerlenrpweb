@@ -55,10 +55,25 @@
     return '<div class="art">' + inner + "</div>";
   }
 
+  function readMoreMarkup(p, opts, hasDetailPage) {
+    if (p.custom) {
+      var description = String(p.blurb || "");
+      return '<details class="package-read-more"><summary class="read-more">Lees meer</summary><p>' +
+        cat.esc(description || "Dit pakket wordt direct via Tebex afgerekend.") + "</p></details>";
+    }
+    return hasDetailPage && opts.readMore !== false
+      ? '<a class="read-more" href="' + cat.productUrl(p) + '">Lees meer</a>'
+      : "";
+  }
+
   function shopCard(p, opts) {
     opts = opts || {};
     var hasDetailPage = !p.custom;
     var qty = bagQty(p.id);
+    var description = String(p.blurb || "");
+    var preview = p.custom && description.length > 120
+      ? description.slice(0, 117).trimEnd() + "…"
+      : description;
     var round = opts.roundCart
       ? '<button type="button" class="cart-round" data-add="' + p.id + '" aria-label="' + cat.esc(p.name) + ' in winkelmand">' +
         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg></button>'
@@ -69,10 +84,8 @@
       artHtml(p, hasDetailPage) +
       '<div class="card-body">' +
       '<h3>' + (hasDetailPage ? '<a href="' + cat.productUrl(p) + '">' + cat.esc(p.name) + "</a>" : cat.esc(p.name)) + "</h3>" +
-      "<p>" + cat.esc(p.blurb) + "</p>" +
-      (hasDetailPage && opts.readMore !== false
-        ? '<a class="read-more" href="' + cat.productUrl(p) + '">Lees meer</a>'
-        : "") +
+      "<p>" + cat.esc(preview) + "</p>" +
+      readMoreMarkup(p, opts, hasDetailPage) +
       '<div class="card-row">' +
       '<div class="price-wrap">' + priceMarkup(p) +
       (p.bonus ? '<span class="bonus-inline">+' + p.bonus + "% bonus</span>" : "") +

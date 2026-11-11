@@ -834,6 +834,9 @@ html[data-theme="light"] .sort select option {
   font-size: 0.9rem;
 }
 .read-more:hover { text-decoration: underline; }
+.package-read-more > summary { cursor: pointer; list-style: none; }
+.package-read-more > summary::-webkit-details-marker { display: none; }
+.package-read-more > p { margin-top: 6px; white-space: pre-line; }
 
 .card-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
 .price-wrap { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
