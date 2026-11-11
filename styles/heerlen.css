@@ -557,6 +557,13 @@ html[data-theme="light"] .theme-btn { color: var(--ink); }
 }
 
 .side { display: flex; flex-direction: column; gap: 14px; }
+.store-layout .side {
+  position: sticky;
+  top: 100px;
+  max-height: calc(100vh - 116px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
 
 .panel {
   background: var(--card);
@@ -1296,7 +1303,11 @@ body.nav-open .nav-links {
     flex-wrap: wrap;
   }
   .side, .maincol, .soon, .search, .sort, .sort select { width: 100%; }
-  .side { position: static; }
+  .store-layout .side {
+    position: static;
+    max-height: none;
+    overflow: visible;
+  }
   .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nav { padding-left: 10px; padding-right: 10px; }
   .nav.is-scrolled { padding-top: 12px; }
