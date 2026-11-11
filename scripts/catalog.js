@@ -88,6 +88,34 @@
     tebexPackages = Array.isArray(packages) ? packages : [];
   }
 
+  function imageFor(product) {
+    var settings = root.HeerlenSettings ? root.HeerlenSettings.load() : {};
+    var packageId = String((settings.tebexPackages || {})[product.id] || product.tebexId || "");
+    var packageInfo = tebexPackages.find(function (item) { return String(item.id) === packageId; });
+    if (!packageInfo) return "";
+
+    var candidates = [];
+    if (typeof packageInfo.image === "string") candidates.push(packageInfo.image);
+    var media = Array.isArray(packageInfo.media) ? packageInfo.media : [];
+    media.forEach(function (item) {
+      if (item && item.type === "image" && item.primary) candidates.push(item.url);
+    });
+    media.forEach(function (item) {
+      if (item && item.type === "image" && !item.primary) candidates.push(item.url);
+    });
+
+    for (var i = 0; i < candidates.length; i++) {
+      if (typeof candidates[i] !== "string") continue;
+      try {
+        var imageUrl = new URL(candidates[i]);
+        if (imageUrl.protocol === "https:" && !imageUrl.username && !imageUrl.password) return imageUrl.href;
+      } catch (error) {
+        // Ignore invalid Tebex media and use the site's local fallback image.
+      }
+    }
+    return "";
+  }
+
   function basePrice(product) {
     var original = Number(product && product.price);
     if (!Number.isFinite(original) || original < 0) return 0;
@@ -172,6 +200,7 @@
     byCat: byCat,
     popular: popular,
     basePrice: basePrice,
+    imageFor: imageFor,
     setActiveSales: setActiveSales,
     priceInfo: priceInfo,
     asset: asset,

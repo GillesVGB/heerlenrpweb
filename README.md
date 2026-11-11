@@ -40,7 +40,7 @@ De FAQ staat op `/faq/`. Whitelist-aanmeldvoorwaarden kunnen wijzigen en zijn da
 
 ## Shop-login en checkout
 
-Log eerst in op `/admin.html`, vul bij **Tebex + hl-tebexwrapper** de publieke Headless API-token/webstore-ID in en klik op **Opslaan**. Daarna kan iedere bezoeker in de winkel via **Inloggen** met Cfx.re aanmelden. Maak extra Tebex-pakketten eerst in Tebex Creator aan; voeg daarna in het Shop-tabblad een categorie toe en koppel het pakket met het Tebex package-ID. De prijs wordt uit Tebex gelezen. Publiceer de wijzigingen met **Opslaan**. Gebruik voor productie de gedeelde PostgreSQL- of private Blob-opslag; zonder die opslag kan de hosting de instellingen niet blijvend publiceren.
+Log eerst in op `/admin.html`, vul bij **Tebex + hl-tebexwrapper** de publieke Headless API-token/webstore-ID in en klik op **Opslaan**. Daarna kan iedere bezoeker in de winkel via **Inloggen** met Cfx.re aanmelden. Maak extra Tebex-pakketten eerst in Tebex Creator aan; voeg daarna in het Shop-tabblad een categorie toe en koppel het pakket met het Tebex package-ID. De prijs en pakketafbeelding worden uit Tebex gelezen. Publiceer de wijzigingen met **Opslaan**. Gebruik voor productie de gedeelde PostgreSQL- of private Blob-opslag; zonder die opslag kan de hosting de instellingen niet blijvend publiceren.
 
 ## Controles
 

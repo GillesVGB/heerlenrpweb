@@ -31,7 +31,7 @@ If `/api/content` or admin saves return HTTP 503, check the selected provider's 
 
 Site administrators can edit product names, descriptions, coin amounts, and the shop promo from the admin panel's **Shop** tab. Product package IDs and the public Headless API token are managed there as well. The storefront synchronizes mapped package base prices and reads active sales and package/category data from Tebex's public Headless API; only unconditional percentage or fixed-amount sales are shown as fixed discounted prices. Sales with customer or basket requirements remain controlled by Tebex at checkout. Use the public Headless API token from Tebex Integrations; never put a Tebex secret key in the site settings.
 
-To add extra storefront categories and products, first create the category/package in Tebex Creator. In the admin panel's **Shop** tab, add a category, then add the package using its Tebex package ID and choose that category. Its price and eligible Tebex sales are read from the public Headless API. Publish the shop changes with **Opslaan**.
+To add extra storefront categories and products, first create the category/package in Tebex Creator. In the admin panel's **Shop** tab, add a category, then add the package using its Tebex package ID and choose that category. Its price, image, and eligible Tebex sales are read from the public Headless API. Publish the shop changes with **Opslaan**.
 
 The shop shows recent payments for all visitors using Tebex's public sidebar data. To show the all-time top donor, add the Tebex **Private Key** from Creator → Developers → API Keys to Vercel as `TEBEX_CHECKOUT_API_KEY`, then redeploy. Keep it server-side; it is never sent to the browser.
 

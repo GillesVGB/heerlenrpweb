@@ -49,6 +49,8 @@
   }
 
   function thumbFor(p) {
+    var tebexImage = cat.imageFor(p);
+    if (tebexImage) return tebexImage;
     if (p.image) return cat.asset(p.image);
     if (p.amount) return cat.asset("images/" + p.amount + ".jpg");
     return cat.asset("images/heerlen-mark.png");

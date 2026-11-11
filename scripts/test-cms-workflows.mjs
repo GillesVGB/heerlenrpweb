@@ -147,7 +147,8 @@ try {
   const browserContext = {
     window: browser,
     CustomEvent: BrowserCustomEvent,
-    document: { body: { getAttribute: () => './' } }
+    document: { body: { getAttribute: () => './' } },
+    URL
   };
   runInNewContext(catalogScript, browserContext);
   const tebexScript = await readFile(new URL('./tebex.js', import.meta.url), 'utf8');
@@ -161,8 +162,8 @@ try {
         applies_to: { type: 'package', packages: [{ id: 12345 }], categories: [], excluded_packages: [], variable_options: [] }
       }] }) };
       if (url.endsWith('/packages')) return { ok: true, json: async () => ({ data: [
-        { id: 12345, category: { id: 7 }, base_price: 8, currency: 'EUR' },
-        { id: 67890, category: { id: 8 }, base_price: 29.95, currency: 'EUR' }
+        { id: 12345, category: { id: 7 }, base_price: 8, currency: 'EUR', image: 'javascript:alert(1)', media: [{ type: 'image', url: 'https://cdn.tebex.io/coins-100.jpg', primary: true }] },
+        { id: 67890, category: { id: 8 }, base_price: 29.95, currency: 'EUR', image: 'https://cdn.tebex.io/test-auto.jpg' }
       ] }) };
       throw new Error('Unexpected request: ' + url);
     }
@@ -185,6 +186,8 @@ try {
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack).sale.label, '10%', 'percentage sale badge contains only the percentage');
   assert.equal(browser.HeerlenCatalog.priceInfo(editedPack, 10).price, 7.2, 'active package sales lower prices once the minimum basket is reached');
   assert.equal(browser.HeerlenCatalog.priceInfo(customShopProduct).price, 29.95, 'custom product price is synchronized from Tebex');
+  assert.equal(browser.HeerlenCatalog.imageFor(editedPack), 'https://cdn.tebex.io/coins-100.jpg', 'unsafe package image URLs are ignored in favor of Tebex primary media');
+  assert.equal(browser.HeerlenCatalog.imageFor(customShopProduct), 'https://cdn.tebex.io/test-auto.jpg', 'custom product images are synchronized from Tebex');
 
   const storeElements = {
     grid: { innerHTML: '', hidden: false },
@@ -216,6 +219,7 @@ try {
   assert.equal(storeElements.storeTitle.textContent, 'Voertuigen', 'the shop category selector opens the requested custom category');
   assert.ok(storeElements.grid.innerHTML.includes('Test Auto'), 'custom Tebex products render in the storefront');
   assert.ok(storeElements.grid.innerHTML.includes('€29.95'), 'custom product cards display the live Tebex price');
+  assert.ok(storeElements.grid.innerHTML.includes('https://cdn.tebex.io/test-auto.jpg'), 'custom product cards display the package image from Tebex');
 
   const originalAvatarFetch = globalThis.fetch;
   try {

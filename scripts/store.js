@@ -40,13 +40,13 @@
   }
 
   function artHtml(p, link) {
-    var img = p.image
+    var img = cat.imageFor(p) || (p.image
       ? cat.asset(p.image)
       : p.amount
         ? cat.asset("images/" + p.amount + ".jpg")
-        : cat.asset("images/heerlen-mark.png");
+        : cat.asset("images/heerlen-mark.png"));
     var faceClass = "art-face has-photo";
-    var faceInner = '<img src="' + img + '" alt="' + cat.esc(p.name) + '" loading="lazy" decoding="async">';
+    var faceInner = '<img src="' + cat.esc(img) + '" alt="' + cat.esc(p.name) + '" loading="lazy" decoding="async">';
     var inner =
       (p.badge ? '<span class="badge-pop">' + cat.esc(p.badge) + "</span>" : "") +
       (p.bonus ? '<span class="bonus">+' + p.bonus + "% bonus</span>" : "") +
