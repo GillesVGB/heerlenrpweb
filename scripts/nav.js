@@ -400,6 +400,17 @@
     document.head.appendChild(script);
   }
 
+  function startVercelAnalytics() {
+    if (!document.body || document.body.classList.contains("admin-body")) return;
+    window.va = window.va || function () {
+      (window.vaq = window.vaq || []).push(arguments);
+    };
+    var script = document.createElement("script");
+    script.src = "/_vercel/insights/script.js";
+    script.defer = true;
+    document.head.appendChild(script);
+  }
+
   applyTheme(currentTheme());
   ensureThemeBtn();
   ensureDiscordLink();
@@ -410,6 +421,7 @@
   ensureMenuBehavior();
   ensureSiteEffects();
   arrangeNavActions();
+  startVercelAnalytics();
   startPlayerHistoryCollection();
 
   if (!nav) return;

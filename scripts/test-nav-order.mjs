@@ -32,6 +32,10 @@ assert.ok(checked >= 10, 'expected to check all pages with a navigation bar');
 const navJs = await readFile(path.join(root, 'scripts/nav.js'), 'utf8');
 assert.doesNotMatch(navJs, /\["Staff",\s*"\/staff\/"\]/, 'shared nav.js must not add Staff');
 assert.doesNotMatch(navJs, /<a href="\/staff\/">/, 'shared footer must not link to Staff');
+assert.match(navJs, /window\.vaq\s*=\s*window\.vaq\s*\|\|\s*\[\]/, 'Vercel Analytics should queue calls before its script loads');
+assert.match(navJs, /script\.src\s*=\s*"\/_vercel\/insights\/script\.js"/, 'Public pages should load the Vercel Analytics script');
+assert.match(navJs, /function startVercelAnalytics\(\)\s*\{\s*if \(!document\.body \|\| document\.body\.classList\.contains\("admin-body"\)\) return;/, 'Admin pages should not be tracked');
+assert.match(navJs, /arrangeNavActions\(\);\s*startVercelAnalytics\(\);/, 'Vercel Analytics should start from the shared site navigation');
 
 const home = await readFile(path.join(root, 'index.html'), 'utf8');
 const status = home.match(/<a class="hero-statusline[\s\S]*?<\/a>/)?.[0] || '';
