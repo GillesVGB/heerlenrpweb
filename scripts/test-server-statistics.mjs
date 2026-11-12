@@ -54,6 +54,7 @@ function fakeElement() {
     setAttribute(name, value) { attributes.set(name, String(value)); },
     removeAttribute(name) { attributes.delete(name); },
     getAttribute(name) { return attributes.get(name) || null; },
+    hasAttribute(name) { return attributes.has(name); },
     addEventListener(name, callback) { this['on' + name] = callback; }
   };
 }
@@ -67,6 +68,7 @@ async function verifyClientState(initialResponse, options = {}) {
     'statsChartEmpty', 'statsChartNote'
   ];
   const elements = Object.fromEntries(ids.map((id) => [id, fakeElement()]));
+  elements.statsChart.setAttribute('hidden', '');
   const documentEvents = {};
   const storage = new Map(options.storage || []);
   let response = initialResponse;
@@ -127,6 +129,7 @@ assert.equal(result.elements.statsSource.textContent, 'CFX-serverlijst');
 assert.notEqual(result.elements.statsCheckedAt.textContent, 'Nog niet gecontroleerd');
 assert.equal(result.elements.statsStatusCard.getAttribute('aria-busy'), 'false');
 assert.equal(result.elements.statsChart.hidden, false, 'A first sample should be shown without implying a trend');
+assert.equal(result.elements.statsChart.hasAttribute('hidden'), false, 'The SVG hidden attribute must be removed for its first sample');
 assert.match(result.elements.statsChartEmpty.textContent, /Eerste meting opgeslagen/);
 assert.equal(JSON.parse(result.storage.get('heerlenrp_player_history_v1')).length, 1);
 result.advanceTime(60000);
@@ -137,6 +140,7 @@ result.setResponse({
 result.elements.statsRefresh.onclick();
 await new Promise((resolve) => setImmediate(resolve));
 assert.equal(result.elements.statsChart.hidden, false);
+assert.equal(result.elements.statsChart.hasAttribute('hidden'), false, 'The SVG graph remains visible when a trend is drawn');
 assert.match(result.elements.statsChartLine.getAttribute('d'), /^M.* L/);
 assert.match(result.elements.statsChartLine.getAttribute('d'), /^M54\.00 .* L788\.00 /, 'Recent samples are spread across the chart so short trends remain visible');
 assert.equal(result.elements.statsChartPoints.children.length, 2);
