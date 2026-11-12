@@ -6,10 +6,14 @@ async function handler(request) {
   if (request.method !== 'GET') return new Response('Method Not Allowed', { status: 405, headers: { Allow: 'GET' } });
   const { DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, DISCORD_REDIRECT_URI, DISCORD_GUILD_ID, DISCORD_BOT_TOKEN } = process.env;
   if (!DISCORD_CLIENT_ID || !DISCORD_CLIENT_SECRET || !DISCORD_REDIRECT_URI || !DISCORD_GUILD_ID || !DISCORD_BOT_TOKEN || !process.env.SESSION_SECRET) {
-    return new Response(null, { status: 302, headers: { Location: new URL('/admin.html?login=setup', request.url).toString(), 'Cache-Control': 'no-store' } });
+    const requestedTarget = new URL(request.url).searchParams.get('next');
+    const returnTo = requestedTarget === '/dashboard/' || requestedTarget === '/staff/' ? requestedTarget : '/admin.html';
+    return new Response(null, { status: 302, headers: { Location: new URL(`${returnTo}?login=setup`, request.url).toString(), 'Cache-Control': 'no-store' } });
   }
   try {
-    const { nonce, cookie } = setOAuthState(request);
+    const requestedTarget = new URL(request.url).searchParams.get('next');
+    const returnTo = requestedTarget === '/dashboard/' || requestedTarget === '/staff/' ? requestedTarget : '/admin.html';
+    const { nonce, cookie } = setOAuthState(request, returnTo);
     const authorize = new URL('https://discord.com/oauth2/authorize');
     authorize.searchParams.set('client_id', DISCORD_CLIENT_ID);
     authorize.searchParams.set('response_type', 'code');

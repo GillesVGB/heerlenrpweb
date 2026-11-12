@@ -34,7 +34,12 @@ async function databaseRequest(request) {
 }
 
 async function initialState() {
-  return structuredClone(initialContent);
+  const state = structuredClone(initialContent);
+  state.residentProfiles ||= [];
+  state.achievements ||= [];
+  state.achievementAwards ||= [];
+  state.residentNotices ||= [];
+  return state;
 }
 
 function parseStored(value) {
@@ -237,9 +242,25 @@ export function publicContent(state) {
     maintenanceEnabled: saved.maintenanceEnabled === true,
     maintenanceMessage: String(saved.maintenanceMessage || 'We zijn snel weer terug. Probeer het later opnieuw.').slice(0, 240)
   };
+  const staff = (state.staff || [])
+    .filter(person => person && person.active !== false)
+    .map(person => ({
+      id: String(person.id || '').slice(0, 80),
+      name: String(person.name || '').slice(0, 80),
+      username: String(person.username || '').slice(0, 80),
+      category: String(person.category || 'Staff').slice(0, 60),
+      role: String(person.role || '').slice(0, 80),
+      bio: String(person.bio || '').slice(0, 600),
+      avatar: typeof person.avatar === 'string' && (/^https:\/\//i.test(person.avatar) || /^data:image\/(?:png|jpeg|webp);base64,/i.test(person.avatar)) ? person.avatar.slice(0, 2000) : '',
+      order: Number.isFinite(Number(person.order)) ? Math.max(0, Math.min(9999, Number(person.order))) : 0,
+      joinedAt: typeof person.joinedAt === 'string' ? person.joinedAt.slice(0, 32) : ''
+    }))
+    .filter(person => person.id && person.name && person.role)
+    .sort((a, b) => a.order - b.order || a.category.localeCompare(b.category, 'nl') || a.name.localeCompare(b.name, 'nl'));
   return {
     news: visible(state.news).sort((a, b) => Date.parse(b.publishAt || b.updatedAt || 0) - Date.parse(a.publishAt || a.updatedAt || 0)),
     changelog: visible(state.changelog).sort((a, b) => Date.parse(b.publishAt || b.updatedAt || 0) - Date.parse(a.publishAt || a.updatedAt || 0)),
+    staff,
     rulesVersions: (state.rulesVersions || []).filter(version => version.status === 'published').sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt)),
     siteSettings,
     storeSettings: {

@@ -40,6 +40,10 @@ The shop shows recent payments for all visitors using Tebex's public sidebar dat
 
 The homepage and `/server-statistieken/` read status from `/api/players`. The route uses the CFX join code `j48ry5k` by default and never accepts a server host from a browser request. A stale legacy `CFX_JOIN_CODE=5oayqbr` value is ignored; other explicit `CFX_JOIN_CODE` values remain supported. For direct `dynamic.json` status, set `FIVEM_SERVER_HOST` to the current public FiveM server host in Vercel Environment Variables. `FIVEM_SERVER_PORT` is optional and defaults to `30120`. The optional direct host should be verified by the server owner before deployment. If it is unset or unreachable, the route falls back to the CFX listing/join-code lookup. If all status sources fail, the site displays an unavailable status rather than a fabricated online state or player count. The statistics chart records measured values locally in the visitor's browser while the page is open and retains them there for up to 24 hours; it is not shared server history or uptime data. Redeploy after changing these values.
 
+## Inwonersdashboard and staff directory
+
+`/dashboard/` uses the existing Discord OAuth app and requires membership in the configured Discord guild. The signed, HttpOnly dashboard session is separate from the Cfx.re/Tebex shop login. An authenticated resident can save an optional in-game name; admins can manage dashboard distinctions, grant them by Discord ID, publish community notices, and inspect saved profile IDs in the **Inwoners** admin tab. These private profile fields and award assignments are returned only from authenticated APIs. The public `/staff/` directory uses active profiles managed in the existing **Staff** admin tab and does not expose their Discord IDs. No additional polling service or database table is introduced; resident data uses the existing shared content store.
+
 The searchable player FAQ is available at `/faq/`. Whitelist details are kept linked to the current Discord instructions because the repository does not contain authoritative application requirements.
 
 ## Generate a SESSION_SECRET in Windows PowerShell
@@ -56,7 +60,7 @@ Add this exact OAuth2 Redirect URL in the Discord Developer Portal:
 
 https://www.heerlenrp.nl/api/auth/callback
 
-Register the redirect URL above both in the Discord Developer Portal and as `DISCORD_REDIRECT_URI` in Vercel. The canonical site domain is `www.heerlenrp.nl`; the apex domain redirects there. The configured admin role 1568033014384951366 grants site management. The configured staff role 1567581357004038184 grants staff-page access only. Ensure the bot is in the configured Discord server and can read member roles. Verify the guild and role IDs belong to the Heerlen server.
+Register the redirect URL above both in the Discord Developer Portal and as `DISCORD_REDIRECT_URI` in Vercel. The canonical site domain is `www.heerlenrp.nl`; the apex domain redirects there. The configured admin role 1568033014384951366 grants site management. The configured staff role 1567581357004038184 grants read access to protected staff APIs; the public staff directory itself is available to all visitors. Ensure the bot is in the configured Discord server and can read member roles. Verify the guild and role IDs belong to the Heerlen server.
 
 ## Domain and deploy
 

@@ -1,0 +1,54 @@
+warning: in the working copy of 'data/initial-content.json', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-100.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-1000.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-1100.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-1200.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-200.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-300.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-400.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-500.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-600.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-700.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-800.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/coins-900.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'winkel/pakket.html', LF will be replaced by CRLF the next time Git touches it
+ README-VERCEL.md                  |  6 [32m++[m[31m-[m
+ admin.html                        | 41 [32m+++++++++++++++[m[31m-[m
+ api/admin.mjs                     | 90 [32m++++++++++++++++++++++++++++++++++[m[31m-[m
+ api/auth/callback.mjs             | 21 [32m++++++[m[31m---[m
+ api/auth/discord.mjs              |  8 [32m+++[m[31m-[m
+ data/initial-content.json         |  4 [32m+[m[31m-[m
+ faq/index.html                    |  2 [32m+[m[31m-[m
+ index.html                        |  6 [32m+[m[31m--[m
+ nieuws/index.html                 |  2 [32m+[m[31m-[m
+ regels.html                       |  4 [32m+[m[31m-[m
+ regels/index.html                 |  2 [32m+[m[31m-[m
+ scripts/_gen-products.js          |  4 [32m+[m[31m-[m
+ scripts/_serve.js                 |  1 [32m+[m
+ scripts/admin/content-manager.js  | 91 [32m+++++++++++++++++++++++++++++++++[m[31m--[m
+ scripts/auth.js                   |  3 [32m++[m
+ scripts/build-vercel.mjs          |  1 [32m+[m
+ scripts/content/public-content.js | 93 [32m+++++++++++++++++++[m[31m-----------------[m
+ scripts/site-footer.js            |  2 [32m+[m[31m-[m
+ scripts/test-404-page.mjs         |  6 [32m++[m[31m-[m
+ scripts/test-cms-workflows.mjs    | 99 [32m+++++++++++++++++++++++++++++++++++++[m[31m--[m
+ server-statistieken/index.html    |  2 [32m+[m[31m-[m
+ server/content-store.mjs          | 23 [32m++++++++[m[31m-[m
+ server/security.mjs               | 23 [32m++++++[m[31m---[m
+ staff/index.html                  |  8 [32m++[m[31m--[m
+ updates/index.html                |  2 [32m+[m[31m-[m
+ winkel/coins-100.html             |  4 [32m+[m[31m-[m
+ winkel/coins-1000.html            |  4 [32m+[m[31m-[m
+ winkel/coins-1100.html            |  4 [32m+[m[31m-[m
+ winkel/coins-1200.html            |  4 [32m+[m[31m-[m
+ winkel/coins-200.html             |  4 [32m+[m[31m-[m
+ winkel/coins-300.html             |  4 [32m+[m[31m-[m
+ winkel/coins-400.html             |  4 [32m+[m[31m-[m
+ winkel/coins-500.html             |  4 [32m+[m[31m-[m
+ winkel/coins-600.html             |  4 [32m+[m[31m-[m
+ winkel/coins-700.html             |  4 [32m+[m[31m-[m
+ winkel/coins-800.html             |  4 [32m+[m[31m-[m
+ winkel/coins-900.html             |  4 [32m+[m[31m-[m
+ winkel/index.html                 |  4 [32m+[m[31m-[m
+ winkel/pakket.html                |  4 [32m+[m[31m-[m
+ 39 files changed, 482 insertions(+), 118 deletions(-)

@@ -144,6 +144,9 @@
       '<img class="auth-avatar lg" src="' + av + '" alt="" width="44" height="44" onerror="this.src=\'' + esc((document.body.getAttribute("data-base") || "./") + "images/heerlen-mark.png") + '\'">' +
       "<div><strong>" + esc(s.name) + "</strong><small>" + esc(sub) + "</small></div></div>" +
       '<div class="auth-menu-links">' +
+      '<a class="auth-link" href="/dashboard/" role="menuitem">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"></circle><path d="M4 21a8 8 0 0 1 16 0"></path></svg>' +
+      "Inwonersdashboard</a>" +
       '<button type="button" class="auth-link" id="authPurchases" role="menuitem">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
       "Mijn aankopen</button>" +

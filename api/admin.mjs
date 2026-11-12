@@ -52,6 +52,7 @@ function cleanStaff(raw) {
     bio: cleanText(raw.bio || '', 600, 'Beschrijving', true),
     avatar: cleanImage(raw.avatar),
     discordId: cleanText(raw.discordId || '', 40, 'Discord-ID', true),
+    joinedAt: cleanDate(raw.joinedAt),
     order: Math.max(0, Math.min(9999, Number(raw.order) || 0)),
     active: raw.active !== false,
     updatedAt: new Date().toISOString()
@@ -124,6 +125,10 @@ async function handler(request) {
         rulesDraft: hasPermission(session, 'rules:write') ? content.rulesDraft : undefined,
         rulesVersions: hasPermission(session, 'audit:read') ? content.rulesVersions : undefined,
         auditLog: hasPermission(session, 'audit:read') ? content.auditLog : undefined,
+        achievements: hasPermission(session, 'users:manage') ? (content.achievements || []) : undefined,
+        achievementAwards: hasPermission(session, 'users:manage') ? (content.achievementAwards || []) : undefined,
+        residentProfiles: hasPermission(session, 'users:manage') ? (content.residentProfiles || []) : undefined,
+        residentNotices: hasPermission(session, 'users:manage') ? (content.residentNotices || []) : undefined,
         siteSettings: hasPermission(session, 'admin:site') ? (content.siteSettings || {}) : undefined,
         storeSettings: hasPermission(session, 'admin:site') ? (content.storeSettings || {}) : undefined
       };
@@ -146,7 +151,7 @@ async function handler(request) {
     if (!constantTimeEqual(body.password, expected)) return json({ error: 'Inloggen is niet gelukt.' }, 401);
     try {
       attempts.delete(limiterKey(request));
-      const permissions = ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read'];
+      const permissions = ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read', 'users:manage'];
       const session = makeSession({ id: 'password-admin', username: 'Beheerder', roles: ['password-admin'], permissions, provider: 'password' });
       return json({ ok: true, user: { id: 'password-admin', username: 'Beheerder', permissions } }, 200, { 'Set-Cookie': sessionCookie(session, request) });
     } catch (error) { return json({ error: error.message }, 503); }
@@ -282,6 +287,89 @@ async function handler(request) {
         }
         appendAudit(state, user, 'aangepast', 'site-instellingen', 'Homepage, thema en onderhoud');
         return { ok: true };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'save-achievement') {
+      if (!hasPermission(user, 'users:manage')) return json({ error: 'Je mag onderscheidingen niet beheren.' }, 403);
+      const item = body.item;
+      if (!item || typeof item !== 'object' || Array.isArray(item)) return json({ error: 'Ongeldige onderscheiding.' }, 400);
+      if (typeof item.id !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(item.id)) return json({ error: 'Gebruik een geldige onderscheiding-ID.' }, 400);
+      const achievement = {
+        id: item.id,
+        title: cleanText(item.title, 60, 'Naam'),
+        description: cleanText(item.description, 240, 'Beschrijving', true),
+        icon: cleanText(item.icon || '✦', 8, 'Icoon'),
+        updatedAt: new Date().toISOString()
+      };
+      const result = await updateContent(state => {
+        state.achievements ||= [];
+        const index = state.achievements.findIndex(entry => entry.id === achievement.id);
+        if (index >= 0) state.achievements[index] = achievement;
+        else {
+          if (state.achievements.length >= 50) throw new Error('Je kunt maximaal 50 onderscheidingen beheren.');
+          state.achievements.push(achievement);
+        }
+        appendAudit(state, user, index >= 0 ? 'aangepast' : 'aangemaakt', 'onderscheiding', achievement.title);
+        return { ok: true, achievement };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'award-achievement') {
+      if (!hasPermission(user, 'users:manage')) return json({ error: 'Je mag onderscheidingen niet toekennen.' }, 403);
+      if (typeof body.discordId !== 'string' || !/^\d{17,22}$/.test(body.discordId)) return json({ error: 'Vul een geldig Discord-ID in.' }, 400);
+      if (typeof body.achievementId !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(body.achievementId)) return json({ error: 'Kies een geldige onderscheiding.' }, 400);
+      if (body.revoke !== undefined && typeof body.revoke !== 'boolean') return json({ error: 'Ongeldige actie.' }, 400);
+      const result = await updateContent(state => {
+        const achievement = (state.achievements || []).find(item => item.id === body.achievementId);
+        if (!achievement) throw new Error('Deze onderscheiding bestaat niet.');
+        state.achievementAwards ||= [];
+        const index = state.achievementAwards.findIndex(award => award.discordId === body.discordId && award.achievementId === body.achievementId);
+        if (body.revoke === true) {
+          if (index >= 0) state.achievementAwards.splice(index, 1);
+          appendAudit(state, user, 'ingetrokken', 'onderscheiding', `${achievement.title} · ${body.discordId}`);
+          return { ok: true, awarded: false };
+        }
+        if (index >= 0) return { ok: true, awarded: true };
+        if (state.achievementAwards.length >= 10000) throw new Error('Het aantal onderscheidingen heeft de beheerlimiet bereikt.');
+        state.achievementAwards.push({
+          discordId: body.discordId,
+          achievementId: body.achievementId,
+          awardedAt: new Date().toISOString(),
+          awardedBy: user.id
+        });
+        appendAudit(state, user, 'toegekend', 'onderscheiding', `${achievement.title} · ${body.discordId}`);
+        return { ok: true, awarded: true };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'save-resident-notice') {
+      if (!hasPermission(user, 'users:manage')) return json({ error: 'Je mag inwonersmeldingen niet beheren.' }, 403);
+      const notice = body.notice;
+      if (!notice || typeof notice !== 'object' || Array.isArray(notice)) return json({ error: 'Ongeldige inwonersmelding.' }, 400);
+      if (notice.id !== undefined && (typeof notice.id !== 'string' || (notice.id && !/^[a-z0-9][a-z0-9-]{0,39}$/.test(notice.id)))) return json({ error: 'Ongeldige melding-ID.' }, 400);
+      const id = notice.id || randomUUID();
+      const cleanNotice = {
+        id,
+        title: cleanText(notice.title, 80, 'Titel'),
+        message: cleanText(notice.message, 300, 'Melding'),
+        active: notice.active !== false,
+        updatedAt: new Date().toISOString()
+      };
+      if (notice.active !== undefined && typeof notice.active !== 'boolean') return json({ error: 'Ongeldige zichtbaarheidsinstelling.' }, 400);
+      const result = await updateContent(state => {
+        state.residentNotices ||= [];
+        const index = state.residentNotices.findIndex(item => item.id === id);
+        if (index >= 0) state.residentNotices[index] = cleanNotice;
+        else {
+          if (state.residentNotices.length >= 50) throw new Error('Je kunt maximaal 50 inwonersmeldingen beheren.');
+          state.residentNotices.push(cleanNotice);
+        }
+        appendAudit(state, user, index >= 0 ? 'aangepast' : 'aangemaakt', 'inwonersmelding', cleanNotice.title);
+        return { ok: true, notice: cleanNotice };
       });
       return json(result);
     }

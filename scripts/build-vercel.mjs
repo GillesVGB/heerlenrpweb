@@ -25,6 +25,7 @@ const staticEntries = [
   'updates',
   'faq',
   'server-statistieken',
+  'dashboard',
   'winkel'
 ];
 

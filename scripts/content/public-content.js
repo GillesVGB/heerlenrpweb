@@ -197,52 +197,59 @@
     showVersion();
     window.dispatchEvent(new Event("heerlen:rules-updated"));
   }
-  function showStaff() {
-    var lock = document.getElementById("staffLock");
-    var workspace = document.getElementById("staffWorkspace");
-    var message = document.getElementById("staffLoginMessage");
-    fetch("/api/admin", { credentials: "same-origin", cache: "no-store" }).then(function (response) { return response.json().then(function (body) { return { response: response, body: body }; }); }).then(function (result) {
-      if (!result.response.ok || !result.body.ok || !(result.body.user.permissions || []).includes("staff:read")) {
-        if (message && new URLSearchParams(location.search).get("login") === "denied") message.textContent = "Je Discord-account heeft niet de staff- of beheerrol.";
-        else if (message && result.response.status === 503) message.textContent = result.body.error || "De gedeelde opslag is nog niet beschikbaar.";
-        else if (message && result.response.status === 401) message.textContent = "Log in met het Discord-account waaraan je staffrol is gekoppeld.";
-        return;
-      }
-      lock.hidden = true;
-      workspace.hidden = false;
-      var staff = (result.body.content.staff || []).filter(function (person) { return person.active !== false; }).sort(function (a, b) { return a.order - b.order || a.name.localeCompare(b.name); });
-      var search = document.getElementById("staffSearch");
-      var cards = document.getElementById("staffCards");
-      function render() {
-        var query = (search.value || "").toLowerCase().trim();
-        var filtered = staff.filter(function (person) { return [person.name, person.username, person.role, person.category, person.bio].join(" ").toLowerCase().includes(query); });
-        cards.replaceChildren();
-        var groups = Array.from(new Set(filtered.map(function (person) { return person.category || "Staff"; })));
-        groups.forEach(function (category) {
-          var section = element("section", "staff-group");
-          section.appendChild(element("h2", "", category));
-          var grid = element("div", "staff-grid");
-          filtered.filter(function (person) { return (person.category || "Staff") === category; }).forEach(function (person) {
-            var cardNode = element("article", "staff-card");
-            if (person.avatar) { var img = element("img", "staff-avatar"); img.src = person.avatar; img.alt = ""; img.loading = "lazy"; cardNode.appendChild(img); }
-            else cardNode.appendChild(element("div", "staff-avatar staff-avatar-fallback", (person.name || "S").slice(0, 1).toUpperCase()));
-            cardNode.appendChild(element("h3", "", person.name));
-            if (person.username) cardNode.appendChild(element("p", "staff-username", "@" + person.username));
-            cardNode.appendChild(element("span", "content-chip", person.role));
-            if (person.bio) cardNode.appendChild(element("p", "staff-bio", person.bio));
-            grid.appendChild(cardNode);
-          });
-          section.appendChild(grid);
-          cards.appendChild(section);
+  function showStaff(data) {
+    var status = document.getElementById("staffLoadState");
+    var message = document.getElementById("staffLoadMessage");
+    var search = document.getElementById("staffSearch");
+    var cards = document.getElementById("staffCards");
+    var staff = Array.isArray(data.staff) ? data.staff : [];
+    function render() {
+      var query = (search.value || "").toLowerCase().trim();
+      var filtered = staff.filter(function (person) {
+        return [person.name, person.username, person.role, person.category, person.bio].join(" ").toLowerCase().includes(query);
+      });
+      cards.replaceChildren();
+      var groups = Array.from(new Set(filtered.map(function (person) { return person.category || "Staff"; })));
+      groups.forEach(function (category) {
+        var section = element("section", "staff-group");
+        section.appendChild(element("h2", "", category));
+        var grid = element("div", "staff-grid");
+        filtered.filter(function (person) { return (person.category || "Staff") === category; }).forEach(function (person) {
+          var cardNode = element("article", "staff-card");
+          if (person.avatar) {
+            var img = element("img", "staff-avatar");
+            img.src = person.avatar;
+            img.alt = "";
+            img.loading = "lazy";
+            cardNode.appendChild(img);
+          } else cardNode.appendChild(element("div", "staff-avatar staff-avatar-fallback", (person.name || "S").slice(0, 1).toUpperCase()));
+          cardNode.appendChild(element("h3", "", person.name));
+          if (person.username) cardNode.appendChild(element("p", "staff-username", "@" + person.username));
+          cardNode.appendChild(element("span", "content-chip", person.role));
+          if (person.joinedAt) cardNode.appendChild(element("p", "staff-username", "Sinds " + formatDate(person.joinedAt)));
+          if (person.bio) cardNode.appendChild(element("p", "staff-bio", person.bio));
+          grid.appendChild(cardNode);
         });
-        if (!filtered.length) cards.appendChild(element("p", "content-empty", query ? "Geen medewerkers gevonden." : "Er zijn nog geen staffprofielen toegevoegd."));
-      }
-      search.addEventListener("input", render);
-      render();
-    }).catch(function () { if (message) message.textContent = "De stafflijst kan nu niet worden geladen."; });
+        section.appendChild(grid);
+        cards.appendChild(section);
+      });
+      if (!filtered.length) cards.appendChild(element("p", "content-empty", query ? "Geen medewerkers gevonden." : "Er zijn nog geen staffprofielen toegevoegd."));
+    }
+    if (!data) {
+      if (status) status.hidden = false;
+      if (message) message.textContent = "De openbare stafflijst kan momenteel niet worden geladen.";
+      cards.replaceChildren();
+      return;
+    }
+    if (status) status.hidden = true;
+    search.addEventListener("input", render);
+    render();
   }
   document.querySelectorAll("[data-year]").forEach(function (node) { node.textContent = String(new Date().getFullYear()); });
-  if (page === "staff") { showStaff(); return; }
+  if (page === "staff") {
+    loadPublicContent().then(function (data) { showStaff(data); }).catch(function () { showStaff(null); });
+    return;
+  }
   if (!page && !document.getElementById("ruleHistory") && !document.getElementById("homeNewsCards")) return;
   loadPublicContent().then(function (data) {
     window.HeerlenPublicContent = data;
