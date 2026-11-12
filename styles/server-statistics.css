@@ -51,7 +51,7 @@
 .stats-chart-header h2 { margin-top:7px; font-size:1.55rem; }
 .stats-chart-badge { padding:7px 10px; border:1px solid var(--line); border-radius:99px; color:var(--muted); font-size:.75rem; font-weight:600; white-space:nowrap; }
 .stats-chart-description { margin-top:10px; color:var(--muted); font-size:.9rem; }
-.stats-chart-wrap { position:relative; min-height:235px; margin-top:16px; }
+.stats-chart-wrap { position:relative; display:grid; min-height:235px; margin-top:16px; }
 .stats-chart-wrap svg { display:block; width:100%; height:auto; overflow:visible; }
 .stats-chart-wrap svg[hidden] { display:none; }
 .stats-chart-grid-line { stroke:var(--line); stroke-width:1; }
@@ -59,7 +59,7 @@
 .stats-chart-area { fill:url(#statsChartGradient); }
 .stats-chart-line { fill:none; stroke:#5aaefd; stroke-width:3; stroke-linecap:round; stroke-linejoin:round; vector-effect:non-scaling-stroke; }
 .stats-chart-point { fill:var(--bg); stroke:#75bdff; stroke-width:2.5; vector-effect:non-scaling-stroke; }
-.stats-chart-empty { position:absolute; inset:50% auto auto 50%; width:min(90%, 420px); transform:translate(-50%,-50%); color:var(--muted); font-size:.9rem; line-height:1.6; text-align:center; }
+.stats-chart-empty { position:relative; inset:auto; align-self:center; width:min(90%, 420px); margin:0 auto; color:var(--muted); font-size:.9rem; line-height:1.6; text-align:center; }
 .stats-chart-footnote { margin-top:8px; color:var(--muted); font-size:.78rem; line-height:1.55; }
 
 .stats-details { display:flex; align-items:center; gap:30px; margin-top:22px; padding:18px 2px; border-bottom:1px solid var(--line); }

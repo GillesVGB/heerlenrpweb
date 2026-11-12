@@ -138,6 +138,7 @@ result.elements.statsRefresh.onclick();
 await new Promise((resolve) => setImmediate(resolve));
 assert.equal(result.elements.statsChart.hidden, false);
 assert.match(result.elements.statsChartLine.getAttribute('d'), /^M.* L/);
+assert.match(result.elements.statsChartLine.getAttribute('d'), /^M54\.00 .* L788\.00 /, 'Recent samples are spread across the chart so short trends remain visible');
 assert.equal(result.elements.statsChartPoints.children.length, 2);
 assert.equal(JSON.parse(result.storage.get('heerlenrp_player_history_v1')).length, 2);
 assert.equal(result.elements.statsChartEmpty.hidden, true);
