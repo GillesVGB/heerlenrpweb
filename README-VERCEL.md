@@ -10,6 +10,7 @@ This deploy folder keeps the public website separate from the server-only API an
 - Output Directory: dist (already in vercel.json).
 - Unknown routes show the branded `404.html` from the build output with HTTP 404. No catch-all rewrite is used, so existing pages and API routes keep their normal routing.
 - Install Command: leave Vercel's default.
+- Enable Web Analytics in Project → Analytics. Public pages load Vercel's HTML analytics script; the admin panel is excluded. This is a plain HTML site, so the documented HTML integration does not require the `@vercel/analytics` package or a React component.
 
 ## Required environment variables
 
