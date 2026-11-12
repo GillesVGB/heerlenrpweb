@@ -10,12 +10,18 @@ const builtPage = await readFile(new URL('../dist/server-statistieken/index.html
 const homepage = await readFile(new URL('../index.html', import.meta.url), 'utf8');
 const clientScript = await readFile(new URL('./server-statistics.js', import.meta.url), 'utf8');
 const builtScript = await readFile(new URL('../dist/scripts/server-statistics.js', import.meta.url), 'utf8');
+const playerHistoryScript = await readFile(new URL('./player-history.js', import.meta.url), 'utf8');
+const builtPlayerHistoryScript = await readFile(new URL('../dist/scripts/player-history.js', import.meta.url), 'utf8');
+const navigationScript = await readFile(new URL('./nav.js', import.meta.url), 'utf8');
 const stylesheet = await readFile(new URL('../styles/server-statistics.css', import.meta.url), 'utf8');
 const builtStylesheet = await readFile(new URL('../dist/styles/server-statistics.css', import.meta.url), 'utf8');
 
 assert.equal(builtPage, page, 'The Vercel build should include the statistics page');
 assert.equal(builtScript, clientScript, 'The Vercel build should include the statistics client script');
+assert.equal(builtPlayerHistoryScript, playerHistoryScript, 'The Vercel build should include the sitewide player-history collector');
 assert.equal(builtStylesheet, stylesheet, 'The Vercel build should include the statistics stylesheet');
+assert.match(navigationScript, /player-history\.js\?v=/, 'Public pages should load the player-history collector');
+assert.match(page, /begint bij het openen van de website met statusmetingen/, 'The page should explain when history collection starts');
 assert.match(homepage, /<a\b[^>]*id="serverStatus"[^>]*href="\/server-statistieken\/"/, 'The homepage status block should link to the statistics page');
 assert.doesNotMatch(homepage.match(/<nav class="nav-links"[\s\S]*?<\/nav>/)?.[0] || '', /server-statistieken/i, 'Server statistics should not appear in the homepage navigation');
 assert.doesNotMatch(page.match(/<nav class="nav-links"[\s\S]*?<\/nav>/)?.[0] || '', /server-statistieken/i, 'Server statistics should not appear in the page navigation');
@@ -147,6 +153,50 @@ assert.equal(result.elements.statsChartPoints.children.length, 2);
 assert.equal(JSON.parse(result.storage.get('heerlenrp_player_history_v1')).length, 2);
 assert.equal(result.elements.statsChartEmpty.hidden, true);
 
+let historyNow = 100000;
+let historyTimer;
+let historyResponse = {
+  ok: true,
+  json: async () => ({ online: true, clients: 9 })
+};
+const historyStorage = new Map();
+const historyEvents = {};
+class HistoryDate extends Date {
+  constructor(...args) { super(...(args.length ? args : [historyNow])); }
+  static now() { return historyNow; }
+}
+vm.runInNewContext(playerHistoryScript, {
+  document: {
+    hidden: false,
+    addEventListener(name, callback) { historyEvents[name] = callback; }
+  },
+  window: {
+    setTimeout(callback) { historyTimer = callback; return 1; },
+    clearTimeout() { historyTimer = undefined; }
+  },
+  fetch: async () => historyResponse,
+  localStorage: {
+    getItem(key) { return historyStorage.has(key) ? historyStorage.get(key) : null; },
+    setItem(key, value) { historyStorage.set(key, String(value)); }
+  },
+  Date: HistoryDate,
+  Number,
+  Math,
+  JSON
+});
+await new Promise((resolve) => setImmediate(resolve));
+assert.equal(JSON.parse(historyStorage.get('heerlenrp_player_history_v1')).length, 1, 'A first measurement should be collected as soon as a public page opens');
+assert.equal(typeof historyTimer, 'function', 'The sitewide collector should schedule the next measurement');
+historyNow += 60000;
+historyResponse = {
+  ok: true,
+  json: async () => ({ online: true, clients: 11 })
+};
+historyTimer();
+await new Promise((resolve) => setImmediate(resolve));
+assert.deepEqual(JSON.parse(historyStorage.get('heerlenrp_player_history_v1')).map((point) => point.players), [9, 11], 'The sitewide collector should add subsequent status measurements');
+assert.equal(typeof historyEvents.visibilitychange, 'function', 'The collector should resume when the visitor returns to the site tab');
+
 result = await verifyClientState({
   ok: true,
   json: async () => ({ online: false, clients: 0, max: 0, source: 'cfx-listing' })
@@ -205,6 +255,7 @@ try {
   for (const [route, pattern] of [
     ['/server-statistieken/', /De stad, live in beeld\./],
     ['/scripts/server-statistics.js', /statsStatusCard/],
+    ['/scripts/player-history.js', /heerlenrp_player_history_v1/],
     ['/styles/server-statistics.css', /\.stats-status-card/]
   ]) {
     const response = await fetch(`${origin}${route}`);
@@ -215,4 +266,4 @@ try {
   server.kill();
 }
 
-console.log('Server statistics checks passed: build output, homepage link, live/offline/unavailable states, refresh behavior, accessibility, and local routes.');
+console.log('Server statistics checks passed: build output, sitewide chart collection, live/offline/unavailable states, refresh behavior, accessibility, and local routes.');

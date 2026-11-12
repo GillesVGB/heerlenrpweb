@@ -391,6 +391,15 @@
     if (discord && connect) connect.insertAdjacentElement("afterend", discord);
   }
 
+  function startPlayerHistoryCollection() {
+    if (!document.body || document.body.classList.contains("admin-body") ||
+        document.body.dataset.page === "server-statistics") return;
+    var script = document.createElement("script");
+    script.src = "/scripts/player-history.js?v=20261112-1";
+    script.async = true;
+    document.head.appendChild(script);
+  }
+
   applyTheme(currentTheme());
   ensureThemeBtn();
   ensureDiscordLink();
@@ -401,6 +410,7 @@
   ensureMenuBehavior();
   ensureSiteEffects();
   arrangeNavActions();
+  startPlayerHistoryCollection();
 
   if (!nav) return;
 
