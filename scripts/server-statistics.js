@@ -122,11 +122,11 @@
         circle.appendChild(svgElement("title", {}, title));
         chartPoints.appendChild(circle);
       });
-      chart.hidden = false;
+      chart.removeAttribute("hidden");
     } else {
       chartLine.removeAttribute("d");
       chartArea.removeAttribute("d");
-      chart.hidden = true;
+      chart.setAttribute("hidden", "");
     }
 
     chartEmpty.hidden = points.length > 1;
