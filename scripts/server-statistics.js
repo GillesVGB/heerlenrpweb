@@ -35,7 +35,7 @@
       return stored.filter(function (point) {
         return point && Number.isSafeInteger(point.time) && point.time >= cutoff &&
           Number.isSafeInteger(point.players) && point.players >= 0 && point.players <= 1000000;
-      }).slice(-1440);
+      }).sort(function (a, b) { return a.time - b.time; }).slice(-1440);
     } catch (error) {
       storageAvailable = false;
       return [];
@@ -66,11 +66,16 @@
     var right = 788;
     var top = 16;
     var bottom = 216;
+    var firstTime = history.length ? history[0].time : cutoff;
+    var lastTime = history.length ? history[history.length - 1].time : now;
+    var measuredRange = Math.max(1, lastTime - firstTime);
     var points = history.map(function (point) {
       return {
         time: point.time,
         players: point.players,
-        x: left + (point.time - cutoff) / historyWindow * (right - left),
+        x: history.length === 1
+          ? (left + right) / 2
+          : left + (point.time - firstTime) / measuredRange * (right - left),
         y: bottom - point.players / yMax * (bottom - top)
       };
     });
@@ -86,9 +91,9 @@
       }, String(value)));
     }
 
-    [0, 0.5, 1].forEach(function (fraction) {
-      var time = cutoff + historyWindow * fraction;
-      var x = left + (right - left) * fraction;
+    (history.length > 1 ? [0, 0.5, 1] : [0.5]).forEach(function (fraction) {
+      var time = history.length ? firstTime + measuredRange * fraction : cutoff + historyWindow * fraction;
+      var x = history.length > 1 ? left + (right - left) * fraction : (left + right) / 2;
       var label = new Intl.DateTimeFormat("nl-NL", { hour: "2-digit", minute: "2-digit" })
         .format(new Date(time));
       chartLabels.appendChild(svgElement("text", {
