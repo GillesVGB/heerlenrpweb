@@ -42,7 +42,7 @@
   function accessTabs() {
     document.querySelectorAll("#cmsTabs [data-section]").forEach(function (button) {
       var section = button.getAttribute("data-section");
-      var permitted = ((section === "settings" || section === "shop") && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write"));
+      var permitted = ((section === "settings" || section === "shop") && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write")) || (section === "residents" && can("users:manage"));
       button.hidden = !permitted;
     });
     if (!can("admin:site")) document.querySelector('[data-admin-section="settings"]')?.setAttribute("hidden", "");
@@ -52,9 +52,10 @@
     if (!can("changelog:write")) document.querySelector('[data-admin-section="changelog"]')?.setAttribute("hidden", "");
     if (!can("staff:write")) document.querySelector('[data-admin-section="staff"]')?.setAttribute("hidden", "");
     if (!can("rules:write")) document.querySelector('[data-admin-section="rules"]')?.setAttribute("hidden", "");
+    if (!can("users:manage")) document.querySelector('[data-admin-section="residents"]')?.setAttribute("hidden", "");
   }
   function newItem(type) {
-    var base = { id: "", title: "", category: type === "staff" ? "Moderatie" : "Nieuwe functies", excerpt: "", content: "", image: "", publishAt: new Date().toISOString(), status: "draft", featured: false, author: currentUser.username || "Staff", version: "", name: "", username: "", role: "", bio: "", discordId: "", order: 0, active: true };
+    var base = { id: "", title: "", category: type === "staff" ? "Moderatie" : "Nieuwe functies", excerpt: "", content: "", image: "", publishAt: new Date().toISOString(), status: "draft", featured: false, author: currentUser.username || "Staff", version: "", name: "", username: "", role: "", bio: "", discordId: "", order: 0, active: true, joinedAt: "" };
     return base;
   }
   function items(type) {
@@ -75,7 +76,7 @@
   function editorMarkup(type, item) {
     var common = '<input type="hidden" name="id" value="' + esc(item.id) + '">';
     if (type === "staff") {
-      return common + '<h3>Staffprofiel</h3><label><span>Naam</span><input name="name" maxlength="80" required value="' + esc(item.name) + '"></label><label><span>Gebruikersnaam</span><input name="username" maxlength="80" value="' + esc(item.username) + '"></label><label><span>Functie / rang</span><input name="role" maxlength="80" required value="' + esc(item.role) + '"></label><label><span>Categorie</span><input name="category" maxlength="60" value="' + esc(item.category) + '"></label><label><span>Korte beschrijving</span><textarea name="bio" rows="4" maxlength="600">' + esc(item.bio) + '</textarea></label><label><span>Discord-ID (optioneel)</span><input name="discordId" maxlength="40" value="' + esc(item.discordId) + '"></label><label><span>Volgnummer</span><input name="order" type="number" min="0" max="9999" value="' + esc(item.order) + '"></label><label><span>Profielfoto (HTTPS URL)</span><input name="avatar" maxlength="2000" value="' + esc(item.avatar) + '"></label><label><span>Of kies een kleine profielfoto (max. 400 KB)</span><input type="file" accept="image/png,image/jpeg,image/webp" data-image-file></label><label class="check"><input name="active" type="checkbox"' + (item.active !== false ? " checked" : "") + '><span>Profiel tonen</span></label>';
+      return common + '<h3>Staffprofiel</h3><label><span>Naam</span><input name="name" maxlength="80" required value="' + esc(item.name) + '"></label><label><span>Gebruikersnaam</span><input name="username" maxlength="80" value="' + esc(item.username) + '"></label><label><span>Functie / rang</span><input name="role" maxlength="80" required value="' + esc(item.role) + '"></label><label><span>Categorie</span><input name="category" maxlength="60" value="' + esc(item.category) + '"></label><label><span>Korte beschrijving</span><textarea name="bio" rows="4" maxlength="600">' + esc(item.bio) + '</textarea></label><label><span>Discord-ID (optioneel)</span><input name="discordId" maxlength="40" value="' + esc(item.discordId) + '"></label><label><span>Datum toegetreden (optioneel)</span><input name="joinedAt" type="date" value="' + esc(dateInput(item.joinedAt).slice(0, 10)) + '"></label><label><span>Volgnummer</span><input name="order" type="number" min="0" max="9999" value="' + esc(item.order) + '"></label><label><span>Profielfoto (HTTPS URL)</span><input name="avatar" maxlength="2000" value="' + esc(item.avatar) + '"></label><label><span>Of kies een kleine profielfoto (max. 400 KB)</span><input type="file" accept="image/png,image/jpeg,image/webp" data-image-file></label><label class="check"><input name="active" type="checkbox"' + (item.active !== false ? " checked" : "") + '><span>Profiel tonen</span></label>';
     }
     var categoryOptions = categories.slice();
     if (item.category && categoryOptions.indexOf(item.category) < 0) categoryOptions.push(item.category);
@@ -186,6 +187,39 @@
       return '<div class="cms-list-item is-static"><strong>' + esc(entry.actor) + ' · ' + esc(entry.action) + '</strong><span>' + esc(entry.itemType) + ': ' + esc(entry.itemTitle) + '</span><small>' + esc(new Date(entry.at).toLocaleString("nl-NL")) + '</small></div>';
     }).join("") || '<p class="content-empty">Nog geen beheeracties vastgelegd.</p>';
   }
+  function renderResidents() {
+    var achievements = state.achievements || [];
+    var awards = state.achievementAwards || [];
+    var profiles = state.residentProfiles || [];
+    var notices = state.residentNotices || [];
+    var achievementList = document.getElementById("achievementList");
+    var achievementSelect = document.querySelector('#awardForm [name="achievementId"]');
+    var awardList = document.getElementById("awardList");
+    var noticeList = document.getElementById("residentNoticeList");
+    var profileList = document.getElementById("residentProfileList");
+    if (!achievementList || !achievementSelect || !awardList || !noticeList || !profileList) return;
+    achievementList.innerHTML = achievements.map(function (item) {
+      return '<button class="cms-list-item" type="button" data-achievement="' + esc(item.id) + '"><strong>' + esc(item.icon || "✦") + ' ' + esc(item.title) + '</strong><span>' + esc(item.description) + '</span><small>' + esc(item.id) + '</small></button>';
+    }).join("") || '<p class="content-empty">Nog geen onderscheidingen aangemaakt.</p>';
+    achievementSelect.innerHTML = achievements.map(function (item) {
+      return '<option value="' + esc(item.id) + '">' + esc(item.title) + '</option>';
+    }).join("");
+    awardList.innerHTML = awards.map(function (award) {
+      var achievement = achievements.find(function (item) { return item.id === award.achievementId; });
+      return '<div class="cms-list-item is-static"><strong>' + esc(achievement ? achievement.title : award.achievementId) + '</strong><span>' + esc(award.discordId) + '</span><small>' + esc(new Date(award.awardedAt).toLocaleDateString("nl-NL")) + ' <button class="btn btn-ghost" type="button" data-revoke-award="' + esc(award.discordId) + '" data-achievement-id="' + esc(award.achievementId) + '">Intrekken</button></small></div>';
+    }).join("") || '<p class="content-empty">Er zijn nog geen onderscheidingen toegekend.</p>';
+    noticeList.innerHTML = notices.map(function (notice) {
+      return '<button class="cms-list-item" type="button" data-notice="' + esc(notice.id) + '"><strong>' + esc(notice.title) + '</strong><span>' + esc(notice.message) + '</span><small>' + (notice.active === false ? "Verborgen" : "Actief") + '</small></button>';
+    }).join("") || '<p class="content-empty">Nog geen dashboardmeldingen.</p>';
+    function renderProfiles(query) {
+      var normalized = String(query || "").trim().toLowerCase();
+      var filtered = profiles.filter(function (profile) { return !normalized || (profile.discordId + " " + profile.inGameName).toLowerCase().includes(normalized); });
+      profileList.innerHTML = filtered.map(function (profile) {
+        return '<div class="cms-list-item is-static"><strong>' + esc(profile.inGameName || "Naam niet ingesteld") + '</strong><span>Discord-ID ' + esc(profile.discordId) + '</span><small>Gekoppeld ' + esc(profile.createdAt ? new Date(profile.createdAt).toLocaleDateString("nl-NL") : "onbekend") + '</small></div>';
+      }).join("") || '<p class="content-empty">Geen dashboardprofielen gevonden.</p>';
+    }
+    renderProfiles(document.getElementById("residentSearch").value);
+  }
   function load() {
     fetch("/api/admin", { credentials: "same-origin", cache: "no-store" }).then(function (response) { return response.json().then(function (body) { if (!response.ok) throw new Error(body.error || "Beheergegevens niet beschikbaar."); return body; }); }).then(function (result) {
       state = result.content; currentUser = result.user;
@@ -200,6 +234,7 @@
       if (state.staff) renderList("staff");
       if (state.rulesDraft) renderRules();
       if (state.auditLog) renderAudit();
+      if (state.achievements) renderResidents();
       var discord = document.getElementById("discordState");
       if (discord) discord.textContent = result.integration.discord ? "Discord-login, guildcontrole en Discord-rolcontrole zijn ingesteld." : "Discord-login vraagt nog Discord OAuth Client ID/Secret, server-ID en bot-token als geheime hostingvariabelen. De twee rol-ID’s staan hieronder al ingevuld.";
       if (result.integration.database) discord && (discord.textContent += " PostgreSQL-opslag is gekoppeld.");
@@ -237,6 +272,56 @@
     saveRulesDraft().then(function () { return api({ action: "publish-rules", title: title }); }).then(function (result) { document.getElementById("rulesVersionTitle").value = ""; show("Versie " + result.version.version + " gepubliceerd"); load(); }).catch(function (error) { alert(error.message); });
   });
   document.getElementById("compareRules").addEventListener("click", compareRules);
+  document.getElementById("achievementForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var form = event.currentTarget;
+    var item = Object.fromEntries(new FormData(form).entries());
+    api({ action: "save-achievement", item: item }).then(function () { show("Onderscheiding opgeslagen"); load(); }).catch(function (error) { alert(error.message); });
+  });
+  document.getElementById("awardForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var form = event.currentTarget;
+    api({ action: "award-achievement", discordId: form.elements.discordId.value.trim(), achievementId: form.elements.achievementId.value }).then(function () { show("Onderscheiding toegekend"); load(); }).catch(function (error) { alert(error.message); });
+  });
+  document.getElementById("residentNoticeForm").addEventListener("submit", function (event) {
+    event.preventDefault();
+    var form = event.currentTarget;
+    var notice = Object.fromEntries(new FormData(form).entries());
+    notice.active = form.elements.active.checked;
+    api({ action: "save-resident-notice", notice: notice }).then(function () { show("Melding opgeslagen"); form.reset(); load(); }).catch(function (error) { alert(error.message); });
+  });
+  document.getElementById("achievementList").addEventListener("click", function (event) {
+    var button = event.target.closest("[data-achievement]");
+    if (!button) return;
+    var item = (state.achievements || []).find(function (achievement) { return achievement.id === button.dataset.achievement; });
+    if (!item) return;
+    var form = document.getElementById("achievementForm");
+    ["id", "title", "description", "icon"].forEach(function (key) { form.elements[key].value = item[key] || ""; });
+  });
+  document.getElementById("awardList").addEventListener("click", function (event) {
+    var button = event.target.closest("[data-revoke-award]");
+    if (!button) return;
+    api({ action: "award-achievement", discordId: button.dataset.revokeAward, achievementId: button.dataset.achievementId, revoke: true }).then(function () { show("Onderscheiding ingetrokken"); load(); }).catch(function (error) { alert(error.message); });
+  });
+  document.getElementById("residentNoticeList").addEventListener("click", function (event) {
+    var button = event.target.closest("[data-notice]");
+    if (!button) return;
+    var notice = (state.residentNotices || []).find(function (item) { return item.id === button.dataset.notice; });
+    if (!notice) return;
+    var form = document.getElementById("residentNoticeForm");
+    form.elements.id.value = notice.id;
+    form.elements.title.value = notice.title;
+    form.elements.message.value = notice.message;
+    form.elements.active.checked = notice.active !== false;
+  });
+  document.getElementById("residentSearch").addEventListener("input", function (event) {
+    var query = event.target.value.toLowerCase().trim();
+    var profiles = state.residentProfiles || [];
+    var filtered = profiles.filter(function (profile) { return !query || (profile.discordId + " " + profile.inGameName).toLowerCase().includes(query); });
+    document.getElementById("residentProfileList").innerHTML = filtered.map(function (profile) {
+      return '<div class="cms-list-item is-static"><strong>' + esc(profile.inGameName || "Naam niet ingesteld") + '</strong><span>Discord-ID ' + esc(profile.discordId) + '</span><small>Gekoppeld ' + esc(profile.createdAt ? new Date(profile.createdAt).toLocaleDateString("nl-NL") : "onbekend") + '</small></div>';
+    }).join("") || '<p class="content-empty">Geen dashboardprofielen gevonden.</p>';
+  });
   document.querySelector('[data-section="settings"]').addEventListener("click", function () { selectSection("settings"); });
   window.addEventListener("heerlen:admin-ready", load);
   document.getElementById("logout").addEventListener("click", function () { setTimeout(function () { document.getElementById("gate").hidden = false; }, 0); });

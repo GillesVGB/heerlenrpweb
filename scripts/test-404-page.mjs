@@ -46,14 +46,18 @@ try {
   assert.equal(missing.status, 404, 'Unknown routes should keep HTTP 404 status');
   assert.match(await missing.text(), /Deze pagina is de weg kwijt\./);
 
-  for (const route of ['/', '/winkel/', '/regels/', '/images/heerlen-logo.png']) {
+  for (const route of ['/', '/winkel/', '/regels/', '/dashboard/', '/images/heerlen-logo.png']) {
     const response = await fetch(`${origin}${route}`);
     assert.notEqual(response.status, 404, `${route} should not be handled by the not-found page`);
   }
+  const dashboard = await fetch(`${origin}/dashboard/`);
+  assert.match(await dashboard.text(), /Mijn dashboard/, 'the resident dashboard page should be served');
 
   const api = await fetch(`${origin}/api/content`);
   assert.notEqual(api.status, 404, 'Known API routes should retain their API handler');
   assert.match(api.headers.get('content-type') || '', /application\/json/);
+  const portal = await fetch(`${origin}/api/portal`);
+  assert.equal(portal.status, 401, 'resident API is available but requires an authenticated Discord session');
 } finally {
   server.kill();
 }

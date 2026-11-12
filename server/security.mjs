@@ -47,10 +47,13 @@ export function clearSessionCookie(request) {
   return `${SESSION_COOKIE}=; HttpOnly; Path=/; SameSite=Lax; Max-Age=0${secure}`;
 }
 
-export function setOAuthState(request) {
+export function setOAuthState(request, returnTo = '/admin.html') {
   if (!secret()) throw new Error('SESSION_SECRET ontbreekt');
   const nonce = randomBytes(32).toString('base64url');
-  const value = `${nonce}.${sign(nonce)}`;
+  const allowedReturnPaths = new Set(['/admin.html', '/staff/', '/dashboard/']);
+  const target = allowedReturnPaths.has(returnTo) ? returnTo : '/admin.html';
+  const encodedTarget = Buffer.from(target).toString('base64url');
+  const value = `${nonce}.${encodedTarget}.${sign(`${nonce}.${encodedTarget}`)}`;
   const secure = new URL(request.url).protocol === 'https:' ? '; Secure' : '';
   return { nonce, cookie: `${OAUTH_COOKIE}=${encodeURIComponent(value)}; HttpOnly; Path=/api/auth; SameSite=Lax; Max-Age=600${secure}` };
 }
@@ -61,11 +64,17 @@ export function validateOAuthState(request, state) {
   if (!raw || !state) return false;
   let decoded;
   try { decoded = decodeURIComponent(raw); } catch { return false; }
-  const [nonce, signature] = decoded.split('.');
-  if (nonce !== state || !signature) return false;
-  const expected = Buffer.from(sign(nonce));
+  const [nonce, encodedTarget, signature] = decoded.split('.');
+  if (nonce !== state || !encodedTarget || !signature) return false;
+  const expected = Buffer.from(sign(`${nonce}.${encodedTarget}`));
   const received = Buffer.from(signature);
-  return expected.length === received.length && timingSafeEqual(expected, received);
+  if (expected.length !== received.length || !timingSafeEqual(expected, received)) return false;
+  try {
+    const target = Buffer.from(encodedTarget, 'base64url').toString('utf8');
+    return ['/admin.html', '/staff/', '/dashboard/'].includes(target) ? target : false;
+  } catch {
+    return false;
+  }
 }
 
 export function clearOAuthCookie(request) {
@@ -79,7 +88,7 @@ export function discordRoleIds() {
 
 export function permissionsForRoleIds(roleIds) {
   const roles = new Set(roleIds || []);
-  if (roles.has(ADMIN_ROLE_ID)) return ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read'];
+  if (roles.has(ADMIN_ROLE_ID)) return ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read', 'users:manage'];
   if (roles.has(STAFF_ROLE_ID)) return ['staff:read'];
   return [];
 }

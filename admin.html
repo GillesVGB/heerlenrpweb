@@ -67,6 +67,7 @@
       <button type="button" data-section="changelog">Serverupdates</button>
       <button type="button" data-section="staff">Staff</button>
       <button type="button" data-section="rules">Regels & versies</button>
+      <button type="button" data-section="residents">Inwoners</button>
       <button type="button" data-section="audit">Logboek & Discord</button>
     </nav>
 
@@ -213,10 +214,46 @@
       <div class="rules-compare"><h3>Versies vergelijken</h3><div class="rules-compare-controls"><label><span>Oudere versie</span><select id="rulesCompareFrom"></select></label><label><span>Nieuwere versie</span><select id="rulesCompareTo"></select></label><button type="button" class="btn btn-ghost" id="compareRules">Vergelijk</button></div><div id="rulesDiff" class="rules-diff" aria-live="polite"></div></div>
     </section>
 
+    <section class="admin-card cms-panel" data-admin-section="residents" hidden>
+      <header class="cms-panel-head"><div><h2>Inwonersdashboard</h2><p class="hint">Beheer onderscheidingen en persoonlijke communitymeldingen. Profielen bevatten alleen Discord-ID en een optionele in-game naam.</p></div></header>
+      <div class="admin-grid">
+        <form class="admin-card" id="achievementForm">
+          <h3>Onderscheiding aanmaken</h3>
+          <label><span>Unieke ID</span><input name="id" maxlength="40" pattern="[a-z0-9][a-z0-9-]*" placeholder="community-helper" required></label>
+          <label><span>Naam</span><input name="title" maxlength="60" required></label>
+          <label><span>Beschrijving</span><textarea name="description" rows="3" maxlength="240"></textarea></label>
+          <label><span>Icoon</span><input name="icon" maxlength="8" value="✦"></label>
+          <button type="submit" class="btn btn-blue">Onderscheiding opslaan</button>
+          <div id="achievementList" class="cms-list"></div>
+        </form>
+        <form class="admin-card" id="awardForm">
+          <h3>Onderscheiding toekennen</h3>
+          <label><span>Discord-ID van inwoner</span><input name="discordId" inputmode="numeric" pattern="[0-9]{17,22}" maxlength="22" required></label>
+          <label><span>Onderscheiding</span><select name="achievementId" required></select></label>
+          <button type="submit" class="btn btn-blue">Toekennen</button>
+          <div id="awardList" class="cms-list"></div>
+        </form>
+        <form class="admin-card" id="residentNoticeForm">
+          <h3>Communitymelding</h3>
+          <input type="hidden" name="id">
+          <label><span>Titel</span><input name="title" maxlength="80" required></label>
+          <label><span>Melding</span><textarea name="message" rows="3" maxlength="300" required></textarea></label>
+          <label class="check"><input name="active" type="checkbox" checked><span>Tonen in het inwonersdashboard</span></label>
+          <button type="submit" class="btn btn-blue">Melding opslaan</button>
+          <div id="residentNoticeList" class="cms-list"></div>
+        </form>
+      </div>
+      <section class="admin-card">
+        <h3>Gekoppelde dashboardprofielen</h3>
+        <label><span>Zoek op Discord-ID of in-game naam</span><input id="residentSearch" type="search" autocomplete="off"></label>
+        <div id="residentProfileList" class="cms-list"></div>
+      </section>
+    </section>
+
     <section class="admin-card cms-panel" data-admin-section="audit" hidden>
       <h2>Activiteitenlogboek</h2><p class="hint">Wie publiceerde, wijzigde of verwijderde inhoud.</p><div id="auditList" class="cms-list"></div>
       <h2 class="cms-subhead">Discord-toegang</h2><p class="hint" id="discordState">Integratiestatus laden…</p>
-      <div class="permission-grid"><p><strong>Beheerder</strong><br>Rol <code>1568033014384951366</code> — volledige toegang tot beheer.</p><p><strong>Staffpagina</strong><br>Rol <code>1567581357004038184</code> — toegang tot het afgeschermde staffoverzicht; geen beheerrechten.</p></div>
+      <div class="permission-grid"><p><strong>Beheerder</strong><br>Rol <code>1568033014384951366</code> — volledige toegang tot beheer.</p><p><strong>Staffrol</strong><br>Rol <code>1567581357004038184</code> — beperkte toegang tot beschermde staff-API's; de openbare staffdirectory is voor iedereen zichtbaar.</p></div>
     </section>
   </section>
 </main>
@@ -231,6 +268,6 @@
 <script src="/scripts/tebex.js?v=20261111-1"></script>
 <script src="/scripts/nav.js?v=20261112-2"></script>
 <script src="/scripts/admin.js?v=20261112-1"></script>
-<script src="/scripts/admin/content-manager.js"></script>
+<script src="/scripts/admin/content-manager.js?v=20261113-1"></script>
 </body>
 </html>

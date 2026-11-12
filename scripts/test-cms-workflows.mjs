@@ -10,8 +10,8 @@ process.env.ADMIN_PASSWORD = 'cms-workflow-test-password-not-for-production';
 process.env.CONTENT_STORE_PATH = path.join(tmpdir(), `heerlen-cms-test-${process.pid}.json`);
 const originalPublicOrigin = process.env.PUBLIC_ORIGIN;
 
-const [{ default: admin }, { default: content }, { default: avatar }, { default: donations }, { makeSession, permissionsForRoleIds, sessionCookie, verifyOrigin }] = await Promise.all([
-  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../api/donations.mjs'), import('../server/security.mjs')
+const [{ default: admin }, { default: content }, { default: avatar }, { default: donations }, { default: portal }, { default: discordCallback }, { makeSession, permissionsForRoleIds, readSession, sessionCookie, setOAuthState, validateOAuthState, verifyOrigin }] = await Promise.all([
+  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../api/donations.mjs'), import('../api/portal.mjs'), import('../api/auth/callback.mjs'), import('../server/security.mjs')
 ]);
 const base = 'http://127.0.0.1:8765';
 const origin = { origin: base, 'content-type': 'application/json' };
@@ -20,6 +20,22 @@ const run = (handler, method, payload, cookie) => handler(new Request(base + '/a
   headers: { ...origin, ...(cookie ? { cookie } : {}) },
   ...(method === 'GET' ? {} : { body: JSON.stringify(payload || {}) })
 }));
+const runPortal = (method, payload, cookie, requestOrigin = base) => portal(new Request(base + '/api/portal', {
+  method,
+  headers: { origin: requestOrigin, 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+  ...(method === 'GET' ? {} : { body: JSON.stringify(payload || {}) })
+}));
+
+const dashboardPage = await readFile(new URL('../dashboard/index.html', import.meta.url), 'utf8');
+const dashboardClient = await readFile(new URL('./resident-dashboard.js', import.meta.url), 'utf8');
+const staffPage = await readFile(new URL('../staff/index.html', import.meta.url), 'utf8');
+const publicContentScript = await readFile(new URL('./content/public-content.js', import.meta.url), 'utf8');
+assert.match(dashboardPage, /id="residentWorkspace" hidden/, 'resident dashboard details stay hidden until authentication succeeds');
+assert.match(dashboardPage, /noindex,nofollow/, 'personal dashboard pages are excluded from search indexing');
+assert.match(dashboardPage, /api\/auth\/discord\?next=%2Fdashboard%2F/, 'resident login requests a dashboard-scoped Discord session');
+assert.match(dashboardClient, /fetch\("\/api\/portal"/, 'dashboard profile data comes from its authenticated server API');
+assert.doesNotMatch(staffPage, /noindex,nofollow|Stafflogin vereist|staffLock/, 'the staff directory is public and discoverable without a staff session');
+assert.match(publicContentScript, /if \(page === "staff"\)\s*\{\s*loadPublicContent\(\)\.then\(function \(data\) \{ showStaff\(data\); \}\)/, 'the public staff directory reads the sanitized public content feed');
 
 try {
   process.env.PUBLIC_ORIGIN = 'https://heerlenrp.nl';
@@ -28,6 +44,38 @@ try {
   assert.equal(verifyOrigin(new Request('https://attacker.example/api/admin', { headers: { origin: 'https://attacker.example' } })), false, 'unrelated origins remain rejected');
   if (originalPublicOrigin === undefined) delete process.env.PUBLIC_ORIGIN;
   else process.env.PUBLIC_ORIGIN = originalPublicOrigin;
+  const oauthState = setOAuthState(new Request(base), '/dashboard/');
+  assert.equal(validateOAuthState(new Request(base, { headers: { cookie: oauthState.cookie } }), oauthState.nonce), '/dashboard/', 'Discord OAuth state preserves a signed dashboard destination');
+  const tamperedOAuthState = setOAuthState(new Request(base), '/not-allowed/');
+  assert.equal(validateOAuthState(new Request(base, { headers: { cookie: tamperedOAuthState.cookie } }), tamperedOAuthState.nonce), '/admin.html', 'unapproved OAuth destinations fall back to the admin page');
+  const callbackEnvKeys = ['DISCORD_CLIENT_ID', 'DISCORD_CLIENT_SECRET', 'DISCORD_REDIRECT_URI', 'DISCORD_GUILD_ID', 'DISCORD_BOT_TOKEN'];
+  const callbackEnv = Object.fromEntries(callbackEnvKeys.map(key => [key, process.env[key]]));
+  callbackEnvKeys.forEach((key, index) => { process.env[key] = `test-${index}`; });
+  const callbackFetch = globalThis.fetch;
+  const dashboardOAuthState = setOAuthState(new Request(base), '/dashboard/');
+  try {
+    globalThis.fetch = async (url) => {
+      if (String(url).endsWith('/oauth2/token')) return new Response(JSON.stringify({ access_token: 'resident-test-token' }), { status: 200 });
+      if (String(url).endsWith('/users/@me')) return new Response(JSON.stringify({ id: '32345678901234567', username: 'PortalTest', global_name: 'Portal Inwoner', avatar: null }), { status: 200 });
+      return new Response(JSON.stringify({ roles: [] }), { status: 200 });
+    };
+    const callbackResponse = await discordCallback(new Request(base + '/api/auth/callback?code=resident-code&state=' + encodeURIComponent(dashboardOAuthState.nonce), { headers: { cookie: dashboardOAuthState.cookie } }));
+    assert.equal(callbackResponse.status, 302, 'Discord OAuth redirects after a successful resident login');
+    assert.equal(new URL(callbackResponse.headers.get('location')).pathname, '/dashboard/', 'OAuth returns residents to the dashboard');
+    const sessionCookieValue = callbackResponse.headers.getSetCookie().find(value => value.startsWith('heerlen_admin_session='))?.split(';')[0];
+    assert.ok(sessionCookieValue, 'OAuth establishes a signed resident session');
+    const callbackSession = readSession(new Request(base, { headers: { cookie: sessionCookieValue } }));
+    assert.equal(callbackSession.id, '32345678901234567', 'the resident session is tied to the verified Discord ID');
+    assert.deepEqual(callbackSession.permissions, [], 'ordinary Discord members do not gain staff or admin permissions');
+    const residentAdminAccess = await run(admin, 'GET', undefined, sessionCookieValue);
+    assert.equal(residentAdminAccess.status, 403, 'resident sessions cannot access the staff/admin CMS');
+  } finally {
+    globalThis.fetch = callbackFetch;
+    callbackEnvKeys.forEach((key, index) => {
+      if (callbackEnv[key] === undefined) delete process.env[key];
+      else process.env[key] = callbackEnv[key];
+    });
+  }
 
   const wrongOrigin = await admin(new Request(base + '/api/admin', { method: 'POST', headers: { origin: 'https://untrusted.example', 'content-type': 'application/json' }, body: JSON.stringify({ action: 'password-login', password: process.env.ADMIN_PASSWORD }) }));
   assert.equal(wrongOrigin.status, 403, 'cross-origin state changes are rejected');
@@ -46,10 +94,55 @@ try {
 
   const created = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'test-news', title: 'Testbericht', category: 'Nieuws', excerpt: 'Intro', content: 'Eerste alinea', status: 'published', publishAt: new Date(Date.now() - 1000).toISOString() } }, cookie);
   assert.equal(created.status, 200, 'news can be created: ' + JSON.stringify(await created.clone().json()));
+  const staffProfile = await run(admin, 'POST', { action: 'save', type: 'staff', item: { id: 'test-staff', name: 'Test Staff', username: 'teststaff', category: 'Support', role: 'Support', bio: 'Helpt inwoners.', discordId: '12345678901234567', order: 1, active: true, joinedAt: '2025-01-15T00:00:00.000Z' } }, cookie);
+  assert.equal(staffProfile.status, 200, 'admins can manage a public staff profile');
   const publicData = await content(new Request(base + '/api/content'));
   const publicBody = await publicData.json();
   assert.equal(publicBody.news[0].id, 'test-news', 'published news is visible publicly');
   assert.equal('auditLog' in publicBody, false, 'private audit data is not part of the public feed');
+  assert.equal(Array.isArray(publicBody.staff), true, 'active staff profiles are available to the public staff directory');
+  assert.equal(publicBody.staff[0].id, 'test-staff', 'active profiles are returned in staff display order');
+  assert.equal(publicBody.staff[0].joinedAt, '2025-01-15T00:00:00.000Z', 'the public staff directory includes the optional join date');
+  assert.equal('discordId' in publicBody.staff[0], false, 'public staff data never exposes Discord account IDs');
+
+  const residentSession = makeSession({ id: '12345678901234567', username: 'InwonerTest', avatar: 'https://cdn.discordapp.com/avatars/12345678901234567/test.png', roles: [], permissions: [], provider: 'discord' });
+  const residentCookie = sessionCookie(residentSession, { url: base + '/api/portal' }).split(';')[0];
+  const residentBefore = await runPortal('GET', undefined, residentCookie);
+  assert.equal(residentBefore.status, 200, 'a Discord member without staff roles can open their own dashboard');
+  assert.equal((await residentBefore.json()).profile.inGameName, '', 'new resident profiles start with no optional in-game name');
+  const savedProfile = await runPortal('POST', { action: 'save-profile', inGameName: 'Test Personage' }, residentCookie);
+  assert.equal(savedProfile.status, 200, 'residents can save their own profile');
+  assert.equal((await savedProfile.json()).profile.inGameName, 'Test Personage');
+  const otherResidentCookie = sessionCookie(makeSession({ id: '22345678901234567', username: 'AndereInwoner', provider: 'discord', roles: [], permissions: [] }), { url: base + '/api/portal' }).split(';')[0];
+  const otherResident = await runPortal('GET', undefined, otherResidentCookie);
+  assert.equal((await otherResident.json()).profile.inGameName, '', 'resident profile reads are isolated by Discord account');
+  const crossOriginPortalWrite = await runPortal('POST', { action: 'save-profile', inGameName: 'Overgenomen' }, residentCookie, 'https://attacker.example');
+  assert.equal(crossOriginPortalWrite.status, 403, 'resident profile writes reject cross-origin requests');
+  const oversizedResidentName = await runPortal('POST', { action: 'save-profile', inGameName: 'x'.repeat(81) }, residentCookie);
+  assert.equal(oversizedResidentName.status, 400, 'resident profile fields are validated server-side');
+  const anonymousPortal = await runPortal('GET');
+  assert.equal(anonymousPortal.status, 401, 'resident data requires a valid Discord session');
+
+  const achievementSaved = await run(admin, 'POST', { action: 'save-achievement', item: { id: 'community-helper', title: 'Communityhelper', description: 'Helpt nieuwe inwoners op weg.', icon: '✦' } }, cookie);
+  assert.equal(achievementSaved.status, 200, 'site admins can create dashboard achievements');
+  const awardSaved = await run(admin, 'POST', { action: 'award-achievement', discordId: '12345678901234567', achievementId: 'community-helper' }, cookie);
+  assert.equal(awardSaved.status, 200, 'site admins can award achievements');
+  const restrictedUser = sessionCookie(makeSession({ id: 'limited-user', username: 'Limited', permissions: [], provider: 'test' }), { url: base + '/api/admin' }).split(';')[0];
+  const deniedAward = await run(admin, 'POST', { action: 'award-achievement', discordId: '12345678901234567', achievementId: 'community-helper' }, restrictedUser);
+  assert.equal(deniedAward.status, 403, 'achievement management checks admin permissions server-side');
+  const noticeSaved = await run(admin, 'POST', { action: 'save-resident-notice', notice: { id: 'community-update', title: 'Communityupdate', message: 'Welkom in de stad.', active: true } }, cookie);
+  assert.equal(noticeSaved.status, 200, 'site admins can publish resident dashboard notices');
+  const residentAfter = await runPortal('GET', undefined, residentCookie);
+  const residentDashboard = await residentAfter.json();
+  assert.equal(residentDashboard.achievements[0].id, 'community-helper', 'only the signed-in resident receives their own awards');
+  assert.equal(residentDashboard.notices[0].id, 'community-update', 'active resident notices appear on the dashboard');
+  const otherDashboard = await runPortal('GET', undefined, otherResidentCookie);
+  assert.deepEqual((await otherDashboard.json()).achievements, [], 'achievement data is not visible to other residents');
+  const residentList = await run(admin, 'GET', undefined, cookie);
+  assert.equal((await residentList.json()).content.residentProfiles.length, 1, 'resident management lists only saved profiles');
+  const logout = await runPortal('POST', { action: 'logout' }, residentCookie);
+  assert.equal(logout.status, 200, 'resident logout clears the secure session');
+  assert.match(logout.headers.get('set-cookie'), /Max-Age=0/);
 
   const themeSettings = {
     seasonEnabled: true, seasonTheme: 'newyear', seasonAccentEnabled: true, seasonAccent: '#f0b44f', seasonEffects: true,
@@ -338,7 +431,7 @@ try {
     else process.env.TEBEX_CHECKOUT_API_KEY = oldTebexCheckoutKey;
   }
 
-  console.log('CMS and shop checks passed: origin guard, login, current Discord roles, authorization, global Tebex donations, staff permissions, shared shop product settings, Tebex package mapping and active sales, schedule validation, immutable APV versions.');
+  console.log('CMS, portal, and shop checks passed: origin guard, resident profile privacy, dashboard achievements/notices, public staff data, authorization, current Discord roles, shared shop settings, schedule validation, and immutable APV versions.');
 } finally {
   await unlink(process.env.CONTENT_STORE_PATH).catch(() => {});
 }

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Je persoonlijke Heerlen Roleplay-inwonersdashboard.">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="theme-color" content="#141614">
+  <title>Mijn dashboard | Heerlen Roleplay</title>
+  <link rel="icon" href="/images/heerlen-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/styles/heerlen.css?v=20261111-5">
+  <link rel="stylesheet" href="/styles/portal.css?v=20261113-1">
+  <script>
+    (function () {
+      try {
+        var theme = localStorage.getItem("heerlenrp_theme");
+        if (theme === "light" || theme === "dark") document.documentElement.setAttribute("data-theme", theme);
+      } catch (error) {}
+    })();
+  </script>
+</head>
+<body data-page="resident-dashboard">
+  <header class="nav" id="nav">
+    <div class="nav-shell">
+      <a class="brand" href="/" aria-label="Heerlen Roleplay home"><img src="/images/heerlen-logo.png" alt="Heerlen - GG/HEERLENRP"></a>
+      <nav class="nav-links" id="navLinks" aria-label="Hoofdnavigatie">
+        <a href="/">Home</a><a href="/winkel/">Store</a><a href="/regels/">Regels</a><a href="/faq/">FAQ</a><a href="/nieuws/">Nieuws</a><a href="/updates/">Updates</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="nav-login" href="/">Terug naar de site</a>
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"></path></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="resident-page wrap">
+    <header class="resident-heading">
+      <p class="kicker">HEERLEN ROLEPLAY · INWONERS</p>
+      <h1>Mijn dashboard</h1>
+      <p>Je persoonlijke plek voor je profiel, communitymeldingen en onderscheidingen.</p>
+    </header>
+    <section class="resident-login" id="residentLogin" hidden>
+      <div class="resident-login-mark" aria-hidden="true">H</div>
+      <div><h2>Log in met Discord</h2><p>Koppel je Discord-account om je inwonersdashboard te bekijken. Je moet lid zijn van de Heerlen Roleplay Discord-server.</p><p id="residentLoginError" class="resident-error" role="alert"></p></div>
+      <a class="btn btn-primary" href="/api/auth/discord?next=%2Fdashboard%2F">Inloggen met Discord</a>
+    </section>
+    <div class="resident-layout" id="residentWorkspace" hidden>
+      <aside class="resident-sidebar" aria-label="Dashboardnavigatie">
+        <div class="resident-identity">
+          <img id="residentAvatar" alt="" width="58" height="58" hidden>
+          <span id="residentAvatarFallback" class="resident-avatar-fallback" aria-hidden="true">H</span>
+          <div><strong id="residentUsername"></strong><small>Heerlen-inwoner</small></div>
+        </div>
+        <nav>
+          <a href="#overzicht" class="is-active">Overzicht</a>
+          <a href="#profiel">Mijn profiel</a>
+          <a href="#onderscheidingen">Onderscheidingen</a>
+          <a href="#meldingen">Meldingen</a>
+          <a href="#instellingen">Accountinstellingen</a>
+        </nav>
+      </aside>
+      <div class="resident-content">
+        <section class="resident-panel" id="overzicht">
+          <div class="resident-panel-heading"><div><p class="resident-eyebrow">PERSOONLIJK OVERZICHT</p><h2>Welkom, <span id="residentGreeting"></span></h2></div><span class="resident-status"><i aria-hidden="true"></i> Discord gekoppeld</span></div>
+          <p class="resident-muted">Hier vind je je accountgegevens, communitymeldingen en behaalde onderscheidingen.</p>
+          <div class="resident-summary">
+            <article><span>Onderscheidingen</span><strong id="achievementCount">0</strong></article>
+            <article><span>Account</span><strong>Actief</strong></article>
+          </div>
+        </section>
+        <section class="resident-panel" id="profiel">
+          <div class="resident-panel-heading"><div><p class="resident-eyebrow">ACCOUNT</p><h2>Mijn profiel</h2></div></div>
+          <dl class="resident-profile-details">
+            <div><dt>Discord-gebruikersnaam</dt><dd id="profileDiscordName"></dd></div>
+            <div><dt>Discord-ID</dt><dd id="profileDiscordId"></dd></div>
+            <div><dt>Account aangemaakt</dt><dd id="profileCreatedAt">—</dd></div>
+          </dl>
+          <form id="residentProfileForm" class="resident-profile-form">
+            <label><span>In-game naam</span><input name="inGameName" maxlength="80" autocomplete="nickname" placeholder="Je naam in de stad"></label>
+            <button type="submit" class="btn btn-primary">Profiel opslaan</button>
+            <p id="profileSaveState" class="resident-muted" role="status"></p>
+          </form>
+        </section>
+        <section class="resident-panel" id="onderscheidingen">
+          <div class="resident-panel-heading"><div><p class="resident-eyebrow">MIJLPALEN</p><h2>Onderscheidingen</h2></div></div>
+          <div id="residentAchievements" class="resident-achievements"></div>
+        </section>
+        <section class="resident-panel" id="meldingen">
+          <div class="resident-panel-heading"><div><p class="resident-eyebrow">COMMUNITY</p><h2>Meldingen</h2></div></div>
+          <div id="residentNotices" class="resident-notices"></div>
+        </section>
+        <section class="resident-panel" id="instellingen">
+          <div class="resident-panel-heading"><div><p class="resident-eyebrow">BEVEILIGING</p><h2>Accountinstellingen</h2></div></div>
+          <p class="resident-muted">Je dashboard gebruikt je Discord-account. Uitloggen verwijdert de beveiligde sessiecookie van deze browser.</p>
+          <button type="button" class="btn btn-ghost" id="residentLogout">Uitloggen</button>
+        </section>
+        <p class="resident-privacy">Je Discord-ID en eventuele in-game naam worden alleen gebruikt voor je dashboard en beheer van onderscheidingen. Je profiel is niet openbaar.</p>
+      </div>
+    </div>
+  </main>
+  <footer class="content-footer"><div class="wrap"><span>© <span data-year></span> Heerlen Roleplay</span><nav><a href="/">Home</a><a href="/staff/">Staffteam</a><a href="https://discord.gg/heerlenrp" target="_blank" rel="noopener noreferrer">Discord</a></nav></div></footer>
+  <script src="/scripts/nav.js?v=20261113-1"></script>
+  <script src="/scripts/resident-dashboard.js?v=20261113-1" defer></script>
+</body>
+</html>

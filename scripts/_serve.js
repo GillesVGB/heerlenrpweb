@@ -17,6 +17,7 @@ try {
 
 const apiModules = {
   "/api/admin": "api/admin.mjs",
+  "/api/portal": "api/portal.mjs",
   "/api/players": "api/players.mjs",
   "/api/content": "api/content.mjs",
   "/api/auth/discord": "api/auth/discord.mjs",
