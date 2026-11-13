@@ -251,10 +251,16 @@
       })
       .then(function (data) {
         sourceEl.textContent = sourceLabel(data && data.source);
+        var serverInfo = [data && data.hostname, data && data.version ? "versie " + data.version : ""].filter(Boolean).join(" · ");
+        var checkedAt = data && data.lastCheckedAt ? new Date(data.lastCheckedAt) : null;
+        checkedAtEl.textContent = checkedAt && !Number.isNaN(checkedAt.getTime())
+          ? new Intl.DateTimeFormat("nl-NL", { dateStyle: "medium", timeStyle: "short" }).format(checkedAt)
+          : "Niet beschikbaar";
         if (data && data.online === false) {
           updateMetrics(0, Number(data.max) || 0);
           recordPlayers(0);
-          setState("offline", "Offline", "De statusbron meldt dat de server offline is.");
+          setState("offline", data.stale ? "Offline · laatst bekend" : "Offline",
+            (serverInfo ? serverInfo + ". " : "") + "De statusbron meldt dat de server offline is.");
           return;
         }
 
@@ -265,17 +271,21 @@
         var max = Number(data.max);
         updateMetrics(Math.floor(clients), Number.isFinite(max) && max > 0 ? Math.floor(max) : 0);
         recordPlayers(Math.floor(clients));
-        setState("online", "Online", "De server is bereikbaar en spelersaantallen zijn actueel.");
+        setState("online", data.stale ? "Online · laatst bekend" : "Online",
+          (serverInfo ? serverInfo + ". " : "") +
+          (data.stale ? "Statuscontrole mislukt; dit zijn de laatst bekende spelersaantallen." : "De server is bereikbaar en spelersaantallen zijn actueel."));
       })
       .catch(function () {
         clearMetrics();
         setState("unknown", "Status niet beschikbaar", "De actuele status kon niet worden opgehaald. Probeer het later opnieuw.");
       })
       .then(function () {
-        checkedAtEl.textContent = new Intl.DateTimeFormat("nl-NL", {
-          dateStyle: "medium",
-          timeStyle: "short"
-        }).format(new Date());
+        if (checkedAtEl.textContent === "Nog niet gecontroleerd") {
+          checkedAtEl.textContent = new Intl.DateTimeFormat("nl-NL", {
+            dateStyle: "medium",
+            timeStyle: "short"
+          }).format(new Date());
+        }
         pending = false;
         refreshButton.disabled = false;
         card.setAttribute("aria-busy", "false");

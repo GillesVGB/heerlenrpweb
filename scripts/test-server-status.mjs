@@ -22,16 +22,34 @@ try {
     });
   };
   const { default: handler } = await import('../api/players.mjs');
-  let response = await handler(new Request('https://site.test/api/players?host=127.0.0.1&code=attacker'));
+  globalThis.fetch = async () => { throw new Error('upstream unavailable before first check'); };
+  let response = await handler(new Request('https://site.test/api/players'));
   let data = await response.json();
+  assert.equal(response.status, 502, 'An upstream error before the first successful check must remain an error');
+  assert.equal(data.online, null);
+  assert.equal(data.lastCheckedAt, null);
+
+  calls.length = 0;
+  process.env.FIVEM_STATUS_CACHE_SECONDS = '42';
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify({ Data: { clients: 7, sv_maxclients: 64, hostname: 'Heerlen' } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+  response = await handler(new Request('https://site.test/api/players?host=127.0.0.1&code=attacker'));
+  data = await response.json();
   assert.equal(response.status, 200);
   assert.equal(data.online, true);
   assert.equal(data.clients, 7);
   assert.equal(data.stale, false);
   assert.ok(data.lastCheckedAt, 'A successful status check includes its timestamp');
+  assert.equal(response.headers.get('Cache-Control'), 'public, s-maxage=42, stale-while-revalidate=84');
   assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/j48ry5k', 'Browser query parameters must not select a host or CFX code');
 
   calls.length = 0;
+  delete process.env.FIVEM_STATUS_CACHE_SECONDS;
   process.env.CFX_JOIN_CODE = '5oayqbr';
   response = await handler(new Request('https://site.test/api/players'));
   data = await response.json();
