@@ -180,9 +180,8 @@
       .then(function (response) { return response.ok ? response.json() : null; })
       .then(function (data) {
         var manage = document.getElementById("authManageLink");
-        var localAccount = session();
-        var sameAccount = localAccount && localAccount.discordId && data && data.user && String(localAccount.discordId) === String(data.user.id);
-        if (manage) manage.hidden = !(sameAccount && data.authenticated && data.staff === true);
+        var confirmedStaff = data && data.authenticated === true && data.staff === true;
+        if (manage) manage.hidden = !confirmedStaff;
       })
       .catch(function () { staffMenuChecked = false; });
   }

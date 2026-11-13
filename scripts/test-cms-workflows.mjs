@@ -70,7 +70,7 @@ assert.match(helpPage, /id="faqList"/, 'the Helpcentrum retains searchable FAQ e
 assert.match(helpPage, /id="communityCards"/, 'the Helpcentrum also displays CMS-managed guide articles');
 assert.match(helpPage, /scripts\/auth\.js/, 'the Helpcentrum loads the shared account menu');
 const authClient = await readFile(new URL('./auth.js', import.meta.url), 'utf8');
-assert.match(authClient, /localAccount\.discordId[\s\S]*data\.user\.id/, 'the Beheer menu is tied to the signed-in account identity');
+assert.match(authClient, /data\.authenticated === true && data\.staff === true/, 'the Beheer menu requires a server-confirmed Discord staff session');
 assert.match(faqPage, /http-equiv="refresh" content="0;url=\/helpcentrum\/"/, 'the legacy FAQ URL redirects to the single Helpcentrum page');
 assert.match(profilePage, /data-community-page="profile"/, 'public resident profiles have a dedicated page');
 assert.match(adminStyles, /#cmsTabs[\s\S]*?position: sticky/, 'Admin sections use persistent side navigation on desktop');
