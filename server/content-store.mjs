@@ -372,6 +372,7 @@ export function publicContent(state) {
       requirements: String(job.requirements || '').slice(0, 6000),
       responsibilities: String(job.responsibilities || '').slice(0, 6000),
       information: String(job.information || '').slice(0, 6000),
+      webhookEnabled: typeof job.webhookUrl === 'string' && job.webhookUrl.length > 0,
       formId: String(job.formId || ''),
       opensAt: String(job.opensAt || ''),
       closesAt: String(job.closesAt || '')

@@ -94,6 +94,56 @@ function validateAnswers(form, rawAnswers) {
   return answers;
 }
 
+async function sendApplicationWebhook(webhookUrl, application) {
+  const attachments = [];
+  const lines = [
+    `Sollicitatie: ${application.jobTitle}`,
+    `Naam: ${application.username}`,
+    `In-game naam: ${application.inGameName || 'Niet ingevuld'}`,
+    `Discord-ID: ${application.discordId}`,
+    `Sollicitatie-ID: ${application.id}`,
+    `Ingediend: ${application.submittedAt}`,
+    '',
+    'Antwoorden:'
+  ];
+  for (const question of application.formSnapshot.questions || []) {
+    if (question.type === 'info') continue;
+    const value = application.answers[question.id];
+    if (value === undefined || value === null || value === '') continue;
+    if (typeof value === 'string' && value.startsWith('data:')) {
+      const match = value.match(/^data:(application\/pdf|image\/png|image\/jpeg|image\/webp);base64,([A-Za-z0-9+/]+={0,2})$/);
+      if (!match || attachments.length >= 9) throw new Error('Bestandsbijlagen konden niet veilig worden voorbereid.');
+      const extension = { 'application/pdf': 'pdf', 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp' }[match[1]];
+      const filename = `${question.id}.${extension}`;
+      const id = String(attachments.length + 1);
+      attachments.push({ id: Number(id), filename, contentType: match[1], data: Buffer.from(match[2], 'base64') });
+      lines.push(`${question.title}: ${filename} (bijgevoegd)`);
+    } else {
+      lines.push(`${question.title}: ${Array.isArray(value) ? value.join(', ') : String(value)}`);
+    }
+  }
+  const summary = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
+  const files = [{ id: 0, filename: 'sollicitatie.txt', contentType: 'text/plain', data: summary }];
+  files.push(...attachments);
+  const formData = new FormData();
+  formData.append('payload_json', JSON.stringify({
+    content: `Nieuwe sollicitatie ontvangen · ${application.jobTitle}`,
+    allowed_mentions: { parse: [] },
+    attachments: files.map(({ id, filename }) => ({ id, filename }))
+  }));
+  files.forEach(file => {
+    const data = file.data instanceof Blob ? file.data : new Blob([file.data], { type: file.contentType });
+    formData.append(`files[${file.id}]`, data, file.filename);
+  });
+  const response = await fetch(webhookUrl, {
+    method: 'POST',
+    body: formData,
+    redirect: 'error',
+    signal: AbortSignal.timeout(8000)
+  });
+  if (!response.ok) throw new Error(`Discord-webhook gaf HTTP ${response.status}.`);
+}
+
 function addNotification(state, discordId, type, title, message, key) {
   state.notifications ||= [];
   if (key && state.notifications.some(item => item.discordId === discordId && item.key === key)) return;
@@ -229,6 +279,9 @@ async function handler(request) {
         }
         if (state.applications.length >= 10000) throw new Error('Het aantal sollicitaties heeft de opslaglimiet bereikt.');
         const answers = validateAnswers(form, body.answers);
+        if (job.webhookUrl && Object.values(answers).filter(value => typeof value === 'string' && value.startsWith('data:')).length > 9) {
+          throw new Error('Bij een vacature met Discord-webhook kun je maximaal 9 bestanden meesturen.');
+        }
         const application = {
           id: randomUUID(), discordId: user.id, username: cleanText(user.username || 'Inwoner', 80, 'Naam'),
           inGameName: cleanText(body.inGameName || '', 80, 'In-game naam', true),
@@ -238,9 +291,22 @@ async function handler(request) {
           submittedAt: new Date().toISOString()
         };
         state.applications.push(application);
-        return { id: application.id, submittedAt: application.submittedAt };
+        return {
+          application: { id: application.id, submittedAt: application.submittedAt },
+          webhookUrl: job.webhookUrl || '',
+          webhookApplication: job.webhookUrl ? structuredClone(application) : null
+        };
       });
-      return json({ ok: true, application: result }, 201);
+      let webhook = null;
+      if (result.webhookUrl) {
+        try {
+          await sendApplicationWebhook(result.webhookUrl, result.webhookApplication);
+          webhook = { delivered: true };
+        } catch {
+          webhook = { delivered: false, message: 'Je sollicitatie is opgeslagen, maar de melding naar het vacaturekanaal kon niet worden verstuurd. Het team kan je sollicitatie nog steeds in het adminpanel bekijken.' };
+        }
+      }
+      return json({ ok: true, application: result.application, webhook }, 201);
     }
 
     if (body.action === 'notification-read' || body.action === 'notification-delete') {

@@ -64,7 +64,9 @@
       html += field("title", "Titel", item.title) + field("excerpt", "Intro", item.excerpt, "textarea") +
         field("description", "Beschrijving", item.description, "textarea") + field("image", "Afbeelding (HTTPS URL)", item.image) +
         field("requirements", "Vereisten", item.requirements, "textarea") + field("responsibilities", "Verantwoordelijkheden", item.responsibilities, "textarea") +
-        field("information", "Praktische informatie", item.information, "textarea") + field("formId", "Sollicitatieformulier", item.formId, "", forms) +
+        field("information", "Praktische informatie", item.information, "textarea") +
+        '<label><span>Discord-webhook voor sollicitaties (optioneel)</span><input name="webhookUrl" type="password" autocomplete="new-password" maxlength="300" value="' + esc(item.webhookUrl || "") + '" placeholder="https://discord.com/api/webhooks/..."><small>Sollicitatieantwoorden en eventuele bestanden worden privé naar dit Discord-kanaal gestuurd. De webhook blijft server-side en komt niet in de openbare vacature.</small></label>' +
+        field("formId", "Sollicitatieformulier", item.formId, "", forms) +
         field("opensAt", "Open vanaf (optioneel)", dateInput(item.opensAt), "datetime-local") + field("closesAt", "Sluit op (optioneel)", dateInput(item.closesAt), "datetime-local") +
         '<label class="check"><input name="allowMultiple" type="checkbox"' + (item.allowMultiple ? " checked" : "") + '><span>Meerdere sollicitaties toestaan</span></label>' +
         '<label class="check"><input name="closed" type="checkbox"' + (item.closed ? " checked" : "") + '><span>Vacature sluiten</span></label>';

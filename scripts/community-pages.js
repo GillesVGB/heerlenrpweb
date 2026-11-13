@@ -175,6 +175,7 @@
     panel.hidden = false;
     panel.replaceChildren(node("h2", "", "Solliciteren: " + job.title));
     panel.appendChild(node("p", "", applicationForm.description || "Vul de vragen in om je sollicitatie te versturen."));
+    if (job.webhookEnabled) panel.appendChild(node("p", "community-status", "Let op: je sollicitatieantwoorden en eventuele bestanden worden ook naar het Discord-kanaal van deze vacature gestuurd."));
     var inGame = node("input"); inGame.name = "inGameName"; inGame.maxLength = 80;
     var nameLabel = node("label"); nameLabel.append(node("span", "", "In-game naam"), inGame); form.appendChild(nameLabel);
     (applicationForm.sections || []).forEach(function (section) {
@@ -215,8 +216,10 @@
         var answers = {};
         applicationForm.questions.forEach(function (question) { answers[question.id] = answerValue(form, question); });
         return api("submit-application", { jobId: job.id, inGameName: inGame.value, answers: answers });
-      }).then(function () {
-        note.textContent = "Je sollicitatie is ontvangen. Je kunt de status volgen via je dashboard.";
+      }).then(function (result) {
+        note.textContent = result.webhook && result.webhook.delivered === false
+          ? result.webhook.message
+          : "Je sollicitatie is ontvangen. Je kunt de status volgen via je dashboard.";
         form.reset();
       }).catch(function (error) {
         note.textContent = error.message;

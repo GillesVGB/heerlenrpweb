@@ -42,6 +42,7 @@ const publicContentScript = await readFile(new URL('./content/public-content.js'
 const eventsPage = await readFile(new URL('../events/index.html', import.meta.url), 'utf8');
 const applicationsPage = await readFile(new URL('../solliciteren/index.html', import.meta.url), 'utf8');
 const helpPage = await readFile(new URL('../helpcentrum/index.html', import.meta.url), 'utf8');
+const faqPage = await readFile(new URL('../faq/index.html', import.meta.url), 'utf8');
 const profilePage = await readFile(new URL('../profiel/index.html', import.meta.url), 'utf8');
 assert.match(adminPage, /data-admin-section="overview"/, 'The admin panel opens on a dashboard overview');
 assert.match(adminPage, /data-admin-section="settings" hidden/, 'The site settings stay hidden until selected so they cannot overlap the overview');
@@ -55,7 +56,10 @@ assert.match(communityAdminClient, /save-community-record/, 'community admins ca
 assert.match(communityAdminClient, /review-application/, 'authorized staff can review applications');
 assert.match(eventsPage, /data-community-page="events"/, 'the public events page is included');
 assert.match(applicationsPage, /data-community-page="jobs"/, 'the dynamic application page is included');
-assert.match(helpPage, /data-community-page="help"/, 'the public searchable help center is included');
+assert.match(helpPage, /<h1>Helpcentrum<\/h1>/, 'the public Helpcentrum contains the FAQ answers');
+assert.match(helpPage, /id="faqList"/, 'the Helpcentrum retains searchable FAQ entries');
+assert.match(helpPage, /id="communityCards"/, 'the Helpcentrum also displays CMS-managed guide articles');
+assert.match(faqPage, /http-equiv="refresh" content="0;url=\/helpcentrum\/"/, 'the legacy FAQ URL redirects to the single Helpcentrum page');
 assert.match(profilePage, /data-community-page="profile"/, 'public resident profiles have a dedicated page');
 assert.match(adminStyles, /#cmsTabs[\s\S]*?position: sticky/, 'Admin sections use persistent side navigation on desktop');
 assert.match(adminStyles, /color: var\(--blue\)/, 'The redesigned admin dashboard keeps the existing site accent color');
@@ -164,13 +168,26 @@ try {
   const formSaved = await run(admin, 'POST', { action: 'save-community-record', type: 'applicationForms', item: {
     id: 'helper-form', title: 'Sollicitatieformulier', description: 'Vertel ons over jezelf.', status: 'published',
     sections: [{ id: 'about', title: 'Over jou', description: 'Een paar vragen.' }],
-    questions: [{ id: 'about-you', title: 'Vertel iets over jezelf', type: 'long', required: true, sectionId: 'about', maxLength: 300, privateKey: 'must-not-publish' }]
+    questions: [
+      { id: 'about-you', title: 'Vertel iets over jezelf', type: 'long', required: true, sectionId: 'about', maxLength: 300, privateKey: 'must-not-publish' },
+      { id: 'attachment', title: 'CV', type: 'file', required: false }
+    ]
   } }, cookie);
   assert.equal(formSaved.status, 200, 'admins can publish versioned application forms');
   const jobSaved = await run(admin, 'POST', { action: 'save-community-record', type: 'jobs', item: {
     id: 'helper-job', title: 'Communityhelper', description: 'Help nieuwe spelers.', formId: 'helper-form', status: 'published'
   } }, cookie);
   assert.equal(jobSaved.status, 200, 'admins can publish jobs linked to published application forms');
+  const invalidWebhook = await run(admin, 'POST', { action: 'save-community-record', type: 'jobs', item: {
+    id: 'helper-job', title: 'Communityhelper', description: 'Help nieuwe spelers.', formId: 'helper-form', status: 'published',
+    webhookUrl: 'https://attacker.example/collect'
+  } }, cookie);
+  assert.equal(invalidWebhook.status, 400, 'job webhooks reject non-Discord URLs');
+  const webhookUrl = 'https://discord.com/api/webhooks/123456789012345678/abcdefghijklmnopqrstuvwxyz123456';
+  const savedWebhook = await run(admin, 'POST', { action: 'save-community-record', type: 'jobs', item: {
+    id: 'helper-job', title: 'Communityhelper', description: 'Help nieuwe spelers.', formId: 'helper-form', status: 'published', webhookUrl
+  } }, cookie);
+  assert.equal(savedWebhook.status, 200, 'job managers can connect a Discord webhook to a vacancy');
   const eventSaved = await run(admin, 'POST', { action: 'save-community-record', type: 'events', item: {
     id: 'community-event', title: 'Communityavond', startsAt: new Date(Date.now() + 86400000).toISOString(), capacity: 1, status: 'published'
   } }, cookie);
@@ -178,15 +195,40 @@ try {
   const featureFeed = await content(new Request(base + '/api/content'));
   const featureFeedBody = await featureFeed.json();
   assert.equal(featureFeedBody.jobs[0].id, 'helper-job', 'published jobs appear in the public feed');
+  assert.equal(featureFeedBody.jobs[0].webhookEnabled, true, 'public vacancy data indicates when answers will also be sent to Discord');
+  assert.equal(JSON.stringify(featureFeedBody.jobs).includes(webhookUrl), false, 'vacancy webhooks are never exposed in public content');
   assert.equal(featureFeedBody.events[0].id, 'community-event', 'published events appear in the public feed');
   assert.equal('privateKey' in featureFeedBody.applicationForms[0].questions[0], false, 'public application forms use a strict question-field allowlist');
   assert.equal(featureFeedBody.applicationForms[0].questions[0].sectionId, 'about', 'public application forms preserve sanitized question-section relationships');
-  const submittedApplication = await runCommunity('POST', { action: 'submit-application', jobId: 'helper-job', answers: { 'about-you': 'Ik help graag nieuwe spelers.' } }, residentCookie);
+  let webhookRequest;
+  const originalWebhookFetch = globalThis.fetch;
+  globalThis.fetch = async (url, options) => {
+    webhookRequest = { url: String(url), body: options.body };
+    return new Response(null, { status: 204 });
+  };
+  let submittedApplication;
+  try {
+    submittedApplication = await runCommunity('POST', {
+      action: 'submit-application', jobId: 'helper-job',
+      answers: { 'about-you': 'Ik help graag nieuwe spelers.', 'attachment': 'data:application/pdf;base64,JVBERi0=' }
+    }, residentCookie);
+  } finally {
+    globalThis.fetch = originalWebhookFetch;
+  }
   assert.equal(submittedApplication.status, 201, 'residents can submit valid applications');
+  assert.equal((await submittedApplication.clone().json()).webhook.delivered, true, 'successful Discord webhook deliveries are reported');
+  assert.equal(webhookRequest.url, webhookUrl, 'application submission posts only to the configured Discord webhook');
+  const webhookPayload = JSON.parse(webhookRequest.body.get('payload_json'));
+  assert.deepEqual(webhookPayload.allowed_mentions, { parse: [] }, 'application webhooks cannot trigger Discord mentions');
+  assert.equal(webhookRequest.body.get('files[0]').name, 'sollicitatie.txt', 'the webhook receives a readable file with all application answers');
+  assert.equal(webhookRequest.body.get('files[1]').name, 'attachment.pdf', 'uploaded application files are attached to the webhook');
   const updatedForm = await run(admin, 'POST', { action: 'save-community-record', type: 'applicationForms', item: {
     id: 'helper-form', title: 'Sollicitatieformulier', description: 'Vertel ons over jezelf.', status: 'published',
     sections: [{ id: 'about', title: 'Over jou', description: 'Een paar vragen.' }],
-    questions: [{ id: 'about-you', title: 'Vertel meer over jezelf', type: 'long', required: true, maxLength: 300 }]
+    questions: [
+      { id: 'about-you', title: 'Vertel meer over jezelf', type: 'long', required: true, maxLength: 300 },
+      { id: 'attachment', title: 'CV', type: 'file', required: false }
+    ]
   } }, cookie);
   assert.equal((await updatedForm.json()).item.version, 2, 'form edits create a new form version');
   const applicationState = await run(admin, 'GET', undefined, cookie);

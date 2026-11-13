@@ -113,6 +113,7 @@
       try {
         var path = new URL(anchor.href, location.href).pathname.replace(/\/$/, "");
         if (path === "/regels.html" || path === "/regels") { anchor.href = "/regels/"; path = "/regels"; }
+        if (path === "/faq") { anchor.href = "/helpcentrum/"; anchor.textContent = "Helpcentrum"; path = "/helpcentrum"; }
         var current = location.pathname.replace(/\/$/, "") || "/";
         var isHome = current === "/" && (path === "/" || anchor.getAttribute("href") === "#top");
         anchor.classList.toggle("is-active", isHome || (current !== "/" && path === current));
@@ -122,13 +123,14 @@
       ["Home", "/"],
       ["Store", "/winkel/"],
       ["Regels", "/regels/"],
-      ["FAQ", "/faq/"],
+      ["Helpcentrum", "/helpcentrum/"],
       ["Nieuws", "/nieuws/"],
       ["Updates", "/updates/"]
     ];
     function normPath(anchor) {
       try {
         var path = new URL(anchor.href, location.href).pathname.replace(/\/index\.html$/, "/").replace(/\/$/, "");
+        if (path === "/faq") return "/helpcentrum";
         return path === "/regels.html" ? "/regels" : path;
       } catch (e) { return null; }
     }
@@ -290,12 +292,11 @@
               <a href="/">Home</a>
               <a href="/winkel/">Store</a>
               <a href="/regels/">Regels</a>
-              <a href="/faq/">FAQ</a>
+              <a href="/helpcentrum/">Helpcentrum</a>
               <a href="/nieuws/">Nieuws</a>
               <a href="/updates/">Serverupdates</a>
               <a href="/events/">Community-evenementen</a>
               <a href="/solliciteren/">Vacatures</a>
-              <a href="/helpcentrum/">Helpcentrum</a>
               <a href="/dashboard/">Inwonersdashboard</a>
               <a data-join href="https://cfx.re/join/5oayqbr">Connect</a>
             </nav>

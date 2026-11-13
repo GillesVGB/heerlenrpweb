@@ -55,7 +55,7 @@ function tpl(slug, name) {
       <a href="../">Home</a>
       <a href="./" class="is-active" aria-current="page">Store</a>
       <a href="../regels/">Regels</a>
-      <a href="../faq/">FAQ</a>
+      <a href="../helpcentrum/">Helpcentrum</a>
       <a href="../nieuws/">Nieuws</a>
       <a href="../updates/">Updates</a>
     </nav>

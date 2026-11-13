@@ -105,6 +105,18 @@ function cleanFormQuestion(raw, index) {
   return question;
 }
 
+function cleanDiscordWebhook(value) {
+  if (value === undefined || value === null || value === '') return '';
+  if (typeof value !== 'string' || value.length > 300) throw new Error('Vul een geldige Discord-webhook-URL in.');
+  let url;
+  try { url = new URL(value); } catch { throw new Error('Vul een geldige Discord-webhook-URL in.'); }
+  if (url.protocol !== 'https:' || url.hostname !== 'discord.com' || url.port || url.username || url.password || url.search || url.hash ||
+      !/^\/api\/webhooks\/\d{17,22}\/[A-Za-z0-9._-]{20,200}$/.test(url.pathname)) {
+    throw new Error('Gebruik de volledige HTTPS-webhook-URL van discord.com.');
+  }
+  return url.toString();
+}
+
 function cleanCommunityRecord(type, raw, current) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Ongeldig community-item.');
   const id = cleanText(raw.id || randomUUID(), 80, 'ID');
@@ -139,6 +151,7 @@ function cleanCommunityRecord(type, raw, current) {
       responsibilities: cleanText(raw.responsibilities || '', 6000, 'Verantwoordelijkheden', true),
       information: cleanText(raw.information || '', 6000, 'Informatie', true),
       formId: cleanText(raw.formId, 80, 'Sollicitatieformulier'), opensAt, closesAt,
+      webhookUrl: cleanDiscordWebhook(raw.webhookUrl),
       allowMultiple: raw.allowMultiple === true, closed: raw.closed === true, status, updatedAt,
       ...(current?.createdAt ? { createdAt: current.createdAt } : { createdAt: updatedAt })
     };
