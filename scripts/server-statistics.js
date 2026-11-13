@@ -260,7 +260,8 @@
           updateMetrics(0, Number(data.max) || 0);
           recordPlayers(0);
           setState("offline", data.stale ? "Offline · laatst bekend" : "Offline",
-            (serverInfo ? serverInfo + ". " : "") + "De statusbron meldt dat de server offline is.");
+            (serverInfo ? serverInfo + ". " : "") +
+            (data.stale ? "Statuscontrole mislukt; dit is de laatst bekende serverstatus." : "De statusbron meldt dat de server offline is."));
           return;
         }
 
@@ -280,12 +281,6 @@
         setState("unknown", "Status niet beschikbaar", "De actuele status kon niet worden opgehaald. Probeer het later opnieuw.");
       })
       .then(function () {
-        if (checkedAtEl.textContent === "Nog niet gecontroleerd") {
-          checkedAtEl.textContent = new Intl.DateTimeFormat("nl-NL", {
-            dateStyle: "medium",
-            timeStyle: "short"
-          }).format(new Date());
-        }
         pending = false;
         refreshButton.disabled = false;
         card.setAttribute("aria-busy", "false");

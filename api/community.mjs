@@ -106,6 +106,7 @@ async function sendApplicationWebhook(webhookUrl, application) {
     '',
     'Antwoorden:'
   ];
+  const answerFields = [];
   for (const question of application.formSnapshot.questions || []) {
     if (question.type === 'info') continue;
     const value = application.answers[question.id];
@@ -117,18 +118,42 @@ async function sendApplicationWebhook(webhookUrl, application) {
       const filename = `${question.id}.${extension}`;
       const id = String(attachments.length + 1);
       attachments.push({ id: Number(id), filename, contentType: match[1], data: Buffer.from(match[2], 'base64') });
-      lines.push(`${question.title}: ${filename} (bijgevoegd)`);
+      const answer = `${filename} (bijgevoegd)`;
+      lines.push(`${question.title}: ${answer}`);
+      answerFields.push({ name: question.title.slice(0, 256) || 'Bijlage', value: answer, inline: false });
     } else {
-      lines.push(`${question.title}: ${Array.isArray(value) ? value.join(', ') : String(value)}`);
+      const answer = Array.isArray(value) ? value.join(', ') : String(value);
+      lines.push(`${question.title}: ${answer}`);
+      answerFields.push({ name: question.title.slice(0, 256) || 'Antwoord', value: answer.slice(0, 1024) || '—', inline: false });
     }
   }
   const summary = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
   const files = [{ id: 0, filename: 'sollicitatie.txt', contentType: 'text/plain', data: summary }];
   files.push(...attachments);
   const formData = new FormData();
+  const embeds = [];
+  let fields = [];
+  let fieldChars = 0;
+  for (const field of answerFields) {
+    const size = field.name.length + field.value.length;
+    if (fields.length >= 20 || (fields.length && fieldChars + size > 4800)) {
+      embeds.push({ title: `Antwoorden · deel ${embeds.length + 1}`, color: 0x3286f5, fields });
+      fields = [];
+      fieldChars = 0;
+    }
+    fields.push(field);
+    fieldChars += size;
+  }
+  if (fields.length) embeds.push({ title: `Antwoorden${embeds.length ? ` · deel ${embeds.length + 1}` : ''}`, color: 0x3286f5, fields });
+  embeds.unshift({
+    title: `Nieuwe sollicitatie · ${application.jobTitle}`.slice(0, 256),
+    color: 0x3286f5,
+    description: `**${application.username}**${application.inGameName ? ` · ${application.inGameName}` : ''}\nIngediend <t:${Math.floor(Date.parse(application.submittedAt) / 1000)}:F> · ID \`${application.id}\``,
+    footer: { text: 'Volledige antwoorden en bijlagen staan in sollicitatie.txt en de bijgevoegde bestanden.' }
+  });
   formData.append('payload_json', JSON.stringify({
     content: `Nieuwe sollicitatie ontvangen · ${application.jobTitle}`,
-    allowed_mentions: { parse: [] },
+    allowed_mentions: { parse: [] }, embeds: embeds.slice(0, 10),
     attachments: files.map(({ id, filename }) => ({ id, filename }))
   }));
   files.forEach(file => {

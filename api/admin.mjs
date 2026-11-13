@@ -5,6 +5,7 @@ import { appendAudit, badMethod, cleanDate, cleanImage, cleanText, json, readJso
 import { vercelHandler } from '../server/vercel-adapter.mjs';
 
 const attempts = new Map();
+const webhookTests = new Map();
 const maxPasswordAttempts = 8;
 const allowedApplicationStatuses = new Set(['received', 'reviewing', 'interview', 'approved', 'rejected']);
 
@@ -271,7 +272,7 @@ async function handler(request) {
     const current = await currentSession(request);
     if (!current.user) return json({ ok: false, error: current.error }, current.status);
     const session = current.user;
-    const viewPermissions = ['admin:site', 'staff:read', 'users:manage', 'events:manage', 'jobs:manage', 'forms:manage', 'applications:read', 'applications:review', 'help:manage', 'comments:moderate', 'profiles:moderate', 'notifications:manage', 'achievements:manage'];
+    const viewPermissions = ['admin:site', 'staff:read', 'users:manage', 'events:manage', 'jobs:manage', 'forms:manage', 'applications:read', 'applications:review', 'help:manage', 'comments:moderate', 'profiles:moderate', 'notifications:manage', 'achievements:manage', 'support:manage'];
     if (!viewPermissions.some(permission => hasPermission(session, permission))) return json({ ok: false }, 403);
     try {
       const content = await readContent();
@@ -293,6 +294,7 @@ async function handler(request) {
         applications: hasPermission(session, 'applications:read') || hasPermission(session, 'applications:review') ? (content.applications || []) : undefined,
         helpArticles: hasPermission(session, 'help:manage') ? (content.helpArticles || []) : undefined,
         helpCategories: hasPermission(session, 'help:manage') ? (content.helpCategories || []) : undefined,
+        supportTickets: hasPermission(session, 'support:manage') ? (content.supportTickets || []) : undefined,
         newsComments: hasPermission(session, 'comments:moderate') ? (content.newsComments || []) : undefined,
         siteSettings: hasPermission(session, 'admin:site') ? (content.siteSettings || {}) : undefined,
         storeSettings: hasPermission(session, 'admin:site') ? (content.storeSettings || {}) : undefined
@@ -316,7 +318,7 @@ async function handler(request) {
     if (!constantTimeEqual(body.password, expected)) return json({ error: 'Inloggen is niet gelukt.' }, 401);
     try {
       attempts.delete(limiterKey(request));
-      const permissions = ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read', 'users:manage', 'events:manage', 'jobs:manage', 'forms:manage', 'applications:read', 'applications:review', 'help:manage', 'comments:moderate', 'achievements:manage', 'profiles:moderate', 'notifications:manage'];
+      const permissions = ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read', 'users:manage', 'events:manage', 'jobs:manage', 'forms:manage', 'applications:read', 'applications:review', 'help:manage', 'comments:moderate', 'achievements:manage', 'profiles:moderate', 'notifications:manage', 'support:manage'];
       const session = makeSession({ id: 'password-admin', username: 'Beheerder', roles: ['password-admin'], permissions, provider: 'password' });
       return json({ ok: true, user: { id: 'password-admin', username: 'Beheerder', permissions } }, 200, { 'Set-Cookie': sessionCookie(session, request) });
     } catch (error) { return json({ error: error.message }, 503); }
@@ -328,6 +330,28 @@ async function handler(request) {
   if (!user) return json({ error: current.error }, current.status);
 
   try {
+    if (body.action === 'test-application-webhook') {
+      if (!hasPermission(user, 'jobs:manage')) return json({ error: 'Je mag vacature-webhooks niet beheren.' }, 403);
+      const webhookUrl = cleanDiscordWebhook(body.webhookUrl);
+      if (!webhookUrl) return json({ error: 'Vul eerst de Discord-webhook van dit vacaturekanaal in.' }, 400);
+      const now = Date.now();
+      const lastTest = webhookTests.get(user.id) || 0;
+      if (now - lastTest < 15_000) return json({ error: 'Wacht even voordat je opnieuw een testbericht verstuurt.' }, 429);
+      webhookTests.set(user.id, now);
+      if (webhookTests.size > 5000) for (const [id, testedAt] of webhookTests) if (now - testedAt > 60 * 60 * 1000) webhookTests.delete(id);
+      const response = await fetch(webhookUrl, {
+        method: 'POST', redirect: 'error', signal: AbortSignal.timeout(6000),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          content: '✅ Testbericht Heerlen Roleplay · deze webhook is gekoppeld aan een vacature.',
+          allowed_mentions: { parse: [] },
+          embeds: [{ title: 'Sollicitaties ontvangen', description: 'Nieuwe inzendingen voor deze vacature verschijnen hier met kandidaat, antwoorden en eventuele bijlagen.', color: 0x3286f5, timestamp: new Date().toISOString() }]
+        })
+      });
+      if (!response.ok) return json({ error: `Discord heeft het testbericht geweigerd (HTTP ${response.status}). Controleer de webhook-URL en kanaalrechten.` }, 502);
+      return json({ ok: true, message: 'Testbericht is in Discord geplaatst. Sla de vacature op om deze webhook te koppelen.' });
+    }
+
     if (body.action === 'save-site-settings') {
       if (!hasPermission(user, 'admin:site')) return json({ error: 'Alleen sitebeheerders mogen de openbare instellingen wijzigen.' }, 403);
       const input = body.settings;
@@ -564,6 +588,34 @@ async function handler(request) {
         if (publicMessage) addAdminNotification(state, application.discordId, 'application', 'Update over je sollicitatie', publicMessage, `application:${application.id}:${application.updatedAt}`);
         appendAudit(state, user, 'beoordeeld', 'sollicitatie', `${application.jobTitle} · ${application.username}`);
         return { ok: true, application };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'manage-support-ticket') {
+      if (!hasPermission(user, 'support:manage')) return json({ error: 'Je mag supporttickets niet beheren.' }, 403);
+      const id = cleanText(body.id, 80, 'Ticket-ID');
+      const status = body.status;
+      if (!['open', 'in_progress', 'waiting', 'closed'].includes(status)) return json({ error: 'Kies een geldige ticketstatus.' }, 400);
+      const message = cleanText(body.message || '', 4000, 'Antwoord', true);
+      const result = await updateContent(state => {
+        const ticket = (state.supportTickets || []).find(item => item.id === id);
+        if (!ticket) throw new Error('Dit supportticket bestaat niet.');
+        if (ticket.status === 'closed' && status !== 'closed' && !message) throw new Error('Voeg een antwoord toe om het ticket te heropenen.');
+        const at = new Date().toISOString();
+        ticket.status = status;
+        ticket.updatedAt = at;
+        if (message) {
+          ticket.messages ||= [];
+          if (ticket.messages.length >= 200) throw new Error('Dit ticket bevat te veel berichten. Sluit het ticket en vraag de inwoner een nieuw ticket te openen.');
+          ticket.messages.push({
+            id: randomUUID(), authorId: String(user.id || ''), authorName: cleanText(user.username || 'Support', 80, 'Supportnaam'),
+            authorRole: 'staff', content: message, createdAt: at
+          });
+          addAdminNotification(state, ticket.discordId, 'support', 'Antwoord van support', `Er is een nieuw antwoord op je ticket: ${ticket.subject}`, `support:${ticket.id}:${at}`);
+        }
+        appendAudit(state, user, message ? 'beantwoord' : 'status gewijzigd', 'supportticket', ticket.subject);
+        return { ok: true };
       });
       return json(result);
     }

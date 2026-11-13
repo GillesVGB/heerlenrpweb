@@ -9,6 +9,9 @@
   var appSelect = document.getElementById("applicationSelect");
   var appDetail = document.getElementById("applicationDetail");
   var reviewForm = document.getElementById("applicationReviewForm");
+  var supportSelect = document.getElementById("supportTicketSelect");
+  var supportDetail = document.getElementById("supportTicketDetail");
+  var supportForm = document.getElementById("supportReplyForm");
   if (!typeSelect || !list || !editor) return;
   var labels = { events: "evenement", jobs: "vacature", applicationForms: "sollicitatieformulier", helpCategories: "helpcategorie", helpArticles: "helpartikel" };
   function can(permission) { return Array.isArray(user.permissions) && user.permissions.includes(permission); }
@@ -65,7 +68,8 @@
         field("description", "Beschrijving", item.description, "textarea") + field("image", "Afbeelding (HTTPS URL)", item.image) +
         field("requirements", "Vereisten", item.requirements, "textarea") + field("responsibilities", "Verantwoordelijkheden", item.responsibilities, "textarea") +
         field("information", "Praktische informatie", item.information, "textarea") +
-        '<label><span>Discord-webhook voor sollicitaties (optioneel)</span><input name="webhookUrl" type="password" autocomplete="new-password" maxlength="300" value="' + esc(item.webhookUrl || "") + '" placeholder="https://discord.com/api/webhooks/..."><small>Sollicitatieantwoorden en eventuele bestanden worden privé naar dit Discord-kanaal gestuurd. De webhook blijft server-side en komt niet in de openbare vacature.</small></label>' +
+        '<label><span>Discord-webhook voor deze vacature (optioneel)</span><input name="webhookUrl" type="password" autocomplete="new-password" maxlength="300" value="' + esc(item.webhookUrl || "") + '" placeholder="https://discord.com/api/webhooks/..."><small>Nieuwe sollicitaties voor deze vacature worden naar dit kanaal gestuurd. Antwoorden zijn direct leesbaar; uploads en het volledige antwoordoverzicht worden als bijlage meegestuurd. De webhook blijft server-side.</small></label>' +
+        '<div class="cms-actions"><button type="button" class="btn btn-ghost" data-test-application-webhook>Webhook testen</button><span class="cms-message" data-webhook-test-state role="status" aria-live="polite"></span></div>' +
         field("formId", "Sollicitatieformulier", item.formId, "", forms) +
         field("opensAt", "Open vanaf (optioneel)", dateInput(item.opensAt), "datetime-local") + field("closesAt", "Sluit op (optioneel)", dateInput(item.closesAt), "datetime-local") +
         '<label class="check"><input name="allowMultiple" type="checkbox"' + (item.allowMultiple ? " checked" : "") + '><span>Meerdere sollicitaties toestaan</span></label>' +
@@ -112,6 +116,17 @@
       }).catch(function (error) { editor.querySelector(".cms-message").textContent = error.message; });
     };
     editor.querySelector("[data-cancel]").onclick = function () { editor.hidden = true; };
+    var testWebhook = editor.querySelector("[data-test-application-webhook]");
+    if (testWebhook) testWebhook.onclick = function () {
+      var input = editor.elements.webhookUrl;
+      var output = editor.querySelector("[data-webhook-test-state]");
+      testWebhook.disabled = true;
+      output.textContent = "Testbericht versturen…";
+      request({ action: "test-application-webhook", webhookUrl: input.value.trim() })
+        .then(function (result) { output.textContent = result.message || "Webhook werkt."; })
+        .catch(function (error) { output.textContent = error.message; })
+        .finally(function () { testWebhook.disabled = false; });
+    };
     var remove = editor.querySelector("[data-delete]");
     if (remove) remove.onclick = function () {
       if (!confirm("Dit item verwijderen?")) return;
@@ -158,6 +173,37 @@
     reviewForm.elements.note.disabled = !can("applications:review");
     reviewForm.querySelector("button[type=submit]").hidden = !can("applications:review");
   }
+  function renderSupportTickets() {
+    if (!supportSelect || !supportDetail || !supportForm) return;
+    var tickets = Array.isArray(content.supportTickets) ? content.supportTickets : [];
+    var selected = supportSelect.value;
+    supportSelect.replaceChildren(new Option("Selecteer een ticket", ""));
+    tickets.slice().sort(function (a, b) { return String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")); }).forEach(function (ticket) {
+      supportSelect.appendChild(new Option(ticket.subject + " · " + ticket.username + " · " + ticket.status, ticket.id));
+    });
+    if (tickets.some(function (ticket) { return ticket.id === selected; })) supportSelect.value = selected;
+    var ticket = tickets.find(function (item) { return item.id === supportSelect.value; });
+    supportForm.hidden = !ticket;
+    supportForm.elements.id.value = ticket ? ticket.id : "";
+    if (!ticket) {
+      supportDetail.textContent = tickets.length ? "Selecteer een ticket om het gesprek te bekijken." : "Er zijn nog geen supporttickets.";
+      return;
+    }
+    supportDetail.textContent = JSON.stringify({
+      inwoner: ticket.username,
+      discordId: ticket.discordId,
+      onderwerp: ticket.subject,
+      categorie: ticket.category,
+      status: ticket.status,
+      berichten: (ticket.messages || []).map(function (message) {
+        return { afzender: message.authorRole === "staff" ? message.authorName || "Support" : ticket.username, bericht: message.content, datum: message.createdAt };
+      })
+    }, null, 2);
+    supportForm.elements.status.value = ticket.status;
+    supportForm.elements.status.disabled = !can("support:manage");
+    supportForm.elements.message.disabled = !can("support:manage");
+    supportForm.querySelector("button[type=submit]").hidden = !can("support:manage");
+  }
   function renderComments() {
     var target = document.getElementById("commentModerationList");
     target.replaceChildren();
@@ -182,11 +228,27 @@
   function refresh() {
     return fetch("/api/admin", { credentials: "same-origin", cache: "no-store" }).then(function (response) {
       return response.json().then(function (result) { if (!response.ok) throw new Error(result.error || "Beheergegevens niet beschikbaar."); return result; });
-    }).then(function (result) { content = result.content || {}; user = result.user || user; renderRecords(); renderApplications(); renderComments(); });
+    }).then(function (result) { content = result.content || {}; user = result.user || user; renderRecords(); renderApplications(); renderSupportTickets(); renderComments(); });
   }
   typeSelect.addEventListener("change", renderRecords);
   document.getElementById("communityNew").addEventListener("click", function () { openEditor(typeSelect.value, newItem(typeSelect.value)); });
   appSelect.addEventListener("change", renderApplications);
+  if (supportSelect) supportSelect.addEventListener("change", renderSupportTickets);
+  if (supportForm) supportForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var output = document.getElementById("supportReplyState");
+    output.textContent = "Opslaan…";
+    request({
+      action: "manage-support-ticket",
+      id: supportForm.elements.id.value,
+      status: supportForm.elements.status.value,
+      message: supportForm.elements.message.value
+    }).then(function () {
+      supportForm.elements.message.value = "";
+      output.textContent = "Supportticket bijgewerkt.";
+      return refresh();
+    }).catch(function (error) { output.textContent = error.message; });
+  });
   reviewForm.addEventListener("submit", function (event) {
     event.preventDefault();
     request({ action: "review-application", id: reviewForm.elements.id.value, status: reviewForm.elements.status.value, message: reviewForm.elements.message.value, note: reviewForm.elements.note.value })
@@ -206,6 +268,8 @@
     var canManageRecords = ["events:manage", "jobs:manage", "forms:manage", "help:manage"].some(can);
     typeSelect.closest("section").hidden = !canManageRecords;
     document.getElementById("applicationReviewForm").closest("section").hidden = !can("applications:read") && !can("applications:review");
+    var supportPanel = document.getElementById("supportTicketPanel");
+    if (supportPanel) supportPanel.hidden = !can("support:manage");
     document.getElementById("residentBroadcastForm").closest("section").hidden = !can("notifications:manage");
     document.getElementById("commentModerationList").closest("section").hidden = !can("comments:moderate");
     renderRecords(); renderApplications(); renderComments();

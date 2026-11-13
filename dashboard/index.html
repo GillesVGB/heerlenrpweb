@@ -60,6 +60,7 @@
           <a href="#overzicht" class="is-active">Overzicht</a>
           <a href="#profiel">Mijn profiel</a>
           <a href="#aanmeldingen">Evenementen &amp; sollicitaties</a>
+          <a href="#support">Supporttickets</a>
           <a href="#onderscheidingen">Onderscheidingen</a>
           <a href="#meldingen">Meldingen</a>
           <a href="#instellingen">Accountinstellingen</a>
@@ -73,8 +74,10 @@
           <div class="resident-panel-heading"><div><p class="resident-eyebrow">PERSOONLIJK OVERZICHT</p><h2>Welkom, <span id="residentGreeting"></span></h2></div><span class="resident-status"><i aria-hidden="true"></i> Discord gekoppeld</span></div>
           <p class="resident-muted">Hier vind je je accountgegevens, communitymeldingen en behaalde onderscheidingen.</p>
           <div class="resident-summary">
-            <article><span>Onderscheidingen</span><strong id="achievementCount">0</strong></article>
-            <article><span>Account</span><strong>Actief</strong></article>
+            <a href="#onderscheidingen"><span>Onderscheidingen</span><strong id="achievementCount">0</strong><small>Bekijk je mijlpalen</small></a>
+            <a href="#aanmeldingen"><span>Sollicitaties</span><strong id="residentApplicationCount">0</strong><small>Openstaande aanvragen</small></a>
+            <a href="#aanmeldingen"><span>Evenementen</span><strong id="residentRsvpCount">0</strong><small>Jouw aanmeldingen</small></a>
+            <a href="#support"><span>Supporttickets</span><strong id="residentSupportCount">0</strong><small>Nog in behandeling</small></a>
           </div>
         </section>
         <section class="resident-panel" id="profiel">
@@ -103,6 +106,18 @@
           <div class="resident-panel-heading"><div><p class="resident-eyebrow">COMMUNITY</p><h2>Evenementen &amp; sollicitaties</h2></div></div>
           <h3>Mijn evenementen</h3><div id="residentRsvps" class="resident-notices"></div>
           <h3>Mijn sollicitaties</h3><div id="residentApplications" class="resident-notices"></div>
+        </section>
+        <section class="resident-panel" id="support">
+          <div class="resident-panel-heading"><div><p class="resident-eyebrow">PERSOONLIJKE HULP</p><h2>Supporttickets</h2></div></div>
+          <p class="resident-muted">Berichten zijn alleen zichtbaar voor jou en bevoegde supportmedewerkers. Deel geen wachtwoorden of betaalgegevens.</p>
+          <form id="supportTicketForm" class="resident-profile-form">
+            <label><span>Onderwerp</span><input name="subject" maxlength="120" required></label>
+            <label><span>Categorie</span><select name="category"><option value="Account">Account</option><option value="Whitelist">Whitelist</option><option value="Aankoop">Aankoop</option><option value="Speler of straf">Speler of straf</option><option value="Technisch probleem">Technisch probleem</option><option value="Overig">Overig</option></select></label>
+            <label><span>Bericht</span><textarea name="content" rows="5" maxlength="4000" required></textarea></label>
+            <button type="submit" class="btn btn-primary">Supportticket versturen</button>
+            <p id="supportTicketState" class="resident-muted" role="status"></p>
+          </form>
+          <h3>Mijn gesprekken</h3><div id="residentSupportTickets" class="resident-notices"></div>
         </section>
         <section class="resident-panel" id="onderscheidingen">
           <div class="resident-panel-heading"><div><p class="resident-eyebrow">MIJLPALEN</p><h2>Onderscheidingen</h2></div></div>

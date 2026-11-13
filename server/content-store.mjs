@@ -48,6 +48,7 @@ async function initialState() {
   state.helpCategories ||= [];
   state.notifications ||= [];
   state.newsComments ||= [];
+  state.supportTickets ||= [];
   return state;
 }
 

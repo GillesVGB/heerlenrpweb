@@ -94,7 +94,7 @@ export function permissionsForRoleIds(roleIds) {
     'rules:write', 'audit:read', 'discord:read', 'users:manage',
     'events:manage', 'jobs:manage', 'forms:manage', 'applications:read',
     'applications:review', 'help:manage', 'comments:moderate',
-    'achievements:manage', 'profiles:moderate', 'notifications:manage'
+    'achievements:manage', 'profiles:moderate', 'notifications:manage', 'support:manage'
   ].forEach(permission => permissions.add(permission));
   if (roles.has(STAFF_ROLE_ID)) permissions.add('staff:read');
   const rolePermissions = [
@@ -107,7 +107,8 @@ export function permissionsForRoleIds(roleIds) {
     ['DISCORD_COMMENTS_ROLE_ID', 'comments:moderate'],
     ['DISCORD_ACHIEVEMENTS_ROLE_ID', 'achievements:manage'],
     ['DISCORD_PROFILES_ROLE_ID', 'profiles:moderate'],
-    ['DISCORD_NOTIFICATIONS_ROLE_ID', 'notifications:manage']
+    ['DISCORD_NOTIFICATIONS_ROLE_ID', 'notifications:manage'],
+    ['DISCORD_SUPPORT_ROLE_ID', 'support:manage']
   ];
   rolePermissions.forEach(([key, permission]) => {
     const roleId = process.env[key];

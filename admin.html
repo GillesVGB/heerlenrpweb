@@ -115,6 +115,16 @@
           <strong id="adminOverviewAchievements" class="admin-overview-value">—</strong>
           <span class="admin-overview-stat-note">Beschikbaar in het dashboard</span>
         </article>
+        <article class="admin-overview-stat" data-stat-permission="applications:read applications:review">
+          <span class="admin-overview-label">Te beoordelen sollicitaties</span>
+          <strong id="adminOverviewApplications" class="admin-overview-value">—</strong>
+          <span class="admin-overview-stat-note">Ontvangen, in behandeling of gesprek</span>
+        </article>
+        <article class="admin-overview-stat" data-stat-permission="support:manage">
+          <span class="admin-overview-label">Open supporttickets</span>
+          <strong id="adminOverviewSupport" class="admin-overview-value">—</strong>
+          <span class="admin-overview-stat-note">Wachten op afhandeling</span>
+        </article>
       </div>
       <div class="admin-overview-lower">
         <section class="admin-overview-workspace">
@@ -137,6 +147,9 @@
             </button>
             <button type="button" class="admin-overview-link" data-dashboard-link="residents">
               <span class="admin-overview-link-icon" aria-hidden="true">♧</span><span><strong>Inwoners</strong><small>Profielen en onderscheidingen</small></span><span class="admin-overview-arrow" aria-hidden="true">→</span>
+            </button>
+            <button type="button" class="admin-overview-link" data-dashboard-link="community">
+              <span class="admin-overview-link-icon" aria-hidden="true">✉</span><span><strong>Sollicitaties &amp; support</strong><small>Nieuwe inzendingen en open tickets</small></span><span class="admin-overview-arrow" aria-hidden="true">→</span>
             </button>
             <button type="button" class="admin-overview-link" data-dashboard-link="audit">
               <span class="admin-overview-link-icon" aria-hidden="true">◷</span><span><strong>Logboek &amp; Discord</strong><small>Activiteit en toegang</small></span><span class="admin-overview-arrow" aria-hidden="true">→</span>
@@ -361,6 +374,18 @@
             <label><span>Interne notitie</span><textarea name="note" rows="3" maxlength="2000"></textarea></label>
             <button type="submit" class="btn btn-blue">Beoordeling opslaan</button>
             <p id="applicationReviewState" class="cms-message" role="status"></p>
+          </form>
+        </section>
+        <section class="admin-card" id="supportTicketPanel">
+          <h3>Supporttickets</h3>
+          <label><span>Ticket</span><select id="supportTicketSelect"><option value="">Selecteer een ticket</option></select></label>
+          <pre id="supportTicketDetail" class="community-admin-detail"></pre>
+          <form id="supportReplyForm">
+            <input type="hidden" name="id">
+            <label><span>Status</span><select name="status"><option value="open">Open</option><option value="in_progress">In behandeling</option><option value="waiting">Wacht op inwoner</option><option value="closed">Gesloten</option></select></label>
+            <label><span>Antwoord (optioneel bij alleen statuswijziging)</span><textarea name="message" rows="4" maxlength="4000"></textarea></label>
+            <button type="submit" class="btn btn-blue">Antwoord/status opslaan</button>
+            <p id="supportReplyState" class="cms-message" role="status"></p>
           </form>
         </section>
         <section class="admin-card">
