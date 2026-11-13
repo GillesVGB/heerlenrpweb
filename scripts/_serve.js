@@ -18,6 +18,8 @@ try {
 const apiModules = {
   "/api/admin": "api/admin.mjs",
   "/api/portal": "api/portal.mjs",
+  "/api/fivem/link": "api/fivem/link.mjs",
+  "/api/account": "api/account.mjs",
   "/api/community": "api/community.mjs",
   "/api/players": "api/players.mjs",
   "/api/content": "api/content.mjs",

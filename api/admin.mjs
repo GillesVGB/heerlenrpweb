@@ -286,6 +286,7 @@ async function handler(request) {
         achievements: hasPermission(session, 'users:manage') || hasPermission(session, 'achievements:manage') ? (content.achievements || []) : undefined,
         achievementAwards: hasPermission(session, 'users:manage') || hasPermission(session, 'achievements:manage') ? (content.achievementAwards || []) : undefined,
         residentProfiles: hasPermission(session, 'users:manage') || hasPermission(session, 'profiles:moderate') ? (content.residentProfiles || []) : undefined,
+        gameLinks: hasPermission(session, 'users:manage') ? (content.gameLinks || []).map(link => ({ discordId: link.discordId, name: link.name, linkedAt: link.linkedAt })) : undefined,
         residentNotices: hasPermission(session, 'users:manage') ? (content.residentNotices || []) : undefined,
         events: hasPermission(session, 'events:manage') ? (content.events || []) : undefined,
         eventRsvps: hasPermission(session, 'events:manage') ? (content.eventRsvps || []) : undefined,
@@ -299,7 +300,7 @@ async function handler(request) {
         siteSettings: hasPermission(session, 'admin:site') ? (content.siteSettings || {}) : undefined,
         storeSettings: hasPermission(session, 'admin:site') ? (content.storeSettings || {}) : undefined
       };
-      return json({ ok: true, user: safeUser(session), content: view, integration: { discord: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET && process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN), database: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) || !!process.env.DATABASE_URL, privateBlob: !!process.env.BLOB_READ_WRITE_TOKEN || !!(process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN) } });
+      return json({ ok: true, user: safeUser(session), content: view, integration: { discord: !!(process.env.DISCORD_CLIENT_ID && process.env.DISCORD_CLIENT_SECRET && process.env.DISCORD_GUILD_ID && process.env.DISCORD_BOT_TOKEN), fivemLink: (process.env.FIVEM_LINK_SECRET || '').length >= 32, database: !!(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) || !!process.env.DATABASE_URL, privateBlob: !!process.env.BLOB_READ_WRITE_TOKEN || !!(process.env.BLOB_STORE_ID && process.env.VERCEL_OIDC_TOKEN) } });
     } catch (error) { return json({ error: error.message }, 503); }
   }
 
@@ -330,6 +331,23 @@ async function handler(request) {
   if (!user) return json({ error: current.error }, current.status);
 
   try {
+    if (body.action === 'admin-unlink-game-account') {
+      if (!hasPermission(user, 'users:manage')) return json({ error: 'Je mag in-game accounts niet beheren.' }, 403);
+      const discordId = cleanText(body.discordId, 22, 'Discord-ID');
+      if (!/^\d{17,22}$/.test(discordId)) return json({ error: 'Ongeldig Discord-ID.' }, 400);
+      const result = await updateContent(state => {
+        state.gameLinks ||= [];
+        const link = state.gameLinks.find(item => item.discordId === discordId);
+        if (!link) throw new Error('Er is geen gekoppeld personage voor dit account.');
+        state.gameLinks = state.gameLinks.filter(item => item.discordId !== discordId);
+        state.gameLinkRequests ||= [];
+        state.gameLinkRequests = state.gameLinkRequests.filter(item => item.discordId !== discordId);
+        appendAudit(state, user, 'ontkoppeld door beheer', 'game-account', `${link.name} · ${discordId}`);
+        return { ok: true };
+      });
+      return json(result);
+    }
+
     if (body.action === 'test-application-webhook') {
       if (!hasPermission(user, 'jobs:manage')) return json({ error: 'Je mag vacature-webhooks niet beheren.' }, 403);
       const webhookUrl = cleanDiscordWebhook(body.webhookUrl);

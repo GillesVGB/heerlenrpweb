@@ -19,6 +19,9 @@
     },
     "api/auth/*.mjs": {
       "includeFiles": "data/initial-content.json"
+    },
+    "api/fivem/*.mjs": {
+      "includeFiles": "data/initial-content.json"
     }
   }
 }

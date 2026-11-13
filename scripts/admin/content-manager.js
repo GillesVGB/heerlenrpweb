@@ -259,12 +259,14 @@
     var achievements = state.achievements || [];
     var awards = state.achievementAwards || [];
     var profiles = state.residentProfiles || [];
+    var gameLinks = state.gameLinks || [];
     var notices = state.residentNotices || [];
     var achievementList = document.getElementById("achievementList");
     var achievementSelect = document.querySelector('#awardForm [name="achievementId"]');
     var awardList = document.getElementById("awardList");
     var noticeList = document.getElementById("residentNoticeList");
     var profileList = document.getElementById("residentProfileList");
+    var gameLinkList = document.getElementById("residentGameLinkList");
     if (!achievementList || !achievementSelect || !awardList || !noticeList || !profileList) return;
     var achievementPermission = can("users:manage") || can("achievements:manage");
     var profilePermission = can("users:manage") || can("profiles:moderate");
@@ -272,6 +274,10 @@
     document.getElementById("awardForm").hidden = !achievementPermission;
     document.getElementById("residentNoticeForm").hidden = !can("users:manage");
     document.getElementById("residentsProfileCard").hidden = !profilePermission;
+    document.getElementById("residentsGameLinksCard").hidden = !can("users:manage");
+    gameLinkList.innerHTML = gameLinks.map(function (link) {
+      return '<div class="cms-list-item is-static"><strong>' + esc(link.name) + '</strong><span>Discord-ID ' + esc(link.discordId) + '</span><small>Gekoppeld ' + esc(new Date(link.linkedAt).toLocaleString("nl-NL")) + ' <button class="btn btn-ghost" type="button" data-unlink-game-account="' + esc(link.discordId) + '">Ontkoppelen</button></small></div>';
+    }).join("") || '<p class="content-empty">Er zijn nog geen FiveM-personages gekoppeld.</p>';
     achievementList.innerHTML = achievements.map(function (item) {
       return '<button class="cms-list-item" type="button" data-achievement="' + esc(item.id) + '"><strong>' + esc(item.icon || "✦") + ' ' + esc(item.title) + '</strong><span>' + esc(item.description) + '</span><small>' + esc(item.id) + (item.archived ? " · Gearchiveerd" : "") + '</small></button>';
     }).join("") || '<p class="content-empty">Nog geen onderscheidingen aangemaakt.</p>';
@@ -321,6 +327,7 @@
       if (result.integration.database) discord && (discord.textContent += " PostgreSQL-opslag is gekoppeld.");
       else if (result.integration.privateBlob) discord && (discord.textContent += " Private Vercel Blob-opslag is gekoppeld.");
       else discord && (discord.textContent += " Persistente Vercel-opslag ontbreekt.");
+      if (discord) discord.textContent += result.integration.fivemLink ? " FiveM-accountkoppeling is geconfigureerd." : " FiveM-accountkoppeling wacht op FIVEM_LINK_SECRET en installatie van de serverresource.";
     }).catch(function (error) { show(error.message); });
   }
 
@@ -415,6 +422,14 @@
     api({ action: "moderate-profile", discordId: button.dataset.profileId, isPublic: button.dataset.profilePublic === "true" })
       .then(function () { show("Profielstatus bijgewerkt"); load(); })
       .catch(function (error) { alert(error.message); });
+  });
+  document.getElementById("residentGameLinkList").addEventListener("click", function (event) {
+    var button = event.target.closest("[data-unlink-game-account]");
+    if (!button || !confirm("Dit FiveM-personage ontkoppelen van Discord-ID " + button.dataset.unlinkGameAccount + "?")) return;
+    button.disabled = true;
+    api({ action: "admin-unlink-game-account", discordId: button.dataset.unlinkGameAccount })
+      .then(function () { show("FiveM-account ontkoppeld"); load(); })
+      .catch(function (error) { button.disabled = false; alert(error.message); });
   });
   document.querySelector('[data-section="settings"]').addEventListener("click", function () { selectSection("settings"); });
   window.addEventListener("heerlen:admin-ready", load);

@@ -3,7 +3,12 @@
 .community-hero h1 { margin: 10px 0 14px; font-size: clamp(2.4rem, 6vw, 4.5rem); }
 .community-hero p:last-child { color: var(--muted, #a5ada6); line-height: 1.7; }
 .community-toolbar { display: flex; gap: 12px; margin: 24px auto; max-width: 900px; }
-.community-toolbar input, .community-form input, .community-form textarea, .community-form select { width: 100%; }
+.community-toolbar input { flex: 1 1 auto; }
+.community-toolbar select { flex: 0 0 240px; }
+.community-toolbar input, .community-toolbar select, .community-form input, .community-form textarea, .community-form select { width: 100%; min-width: 0; min-height: 48px; padding: 0 14px; border: 1px solid var(--line-strong, rgba(255,255,255,.18)); border-radius: 11px; background: var(--card, #191d19); color: var(--ink, #f2f4f1); font: inherit; }
+.community-toolbar input::placeholder, .community-form input::placeholder, .community-form textarea::placeholder { color: var(--muted, #a5ada6); opacity: 1; }
+.community-toolbar input:focus-visible, .community-toolbar select:focus-visible, .community-form input:focus-visible, .community-form textarea:focus-visible, .community-form select:focus-visible { outline: 2px solid var(--blue, #5aaefd); outline-offset: 2px; }
+.community-toolbar select option, .community-form select option { background: #171a19; color: #f2f4f1; }
 .community-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 290px), 1fr)); gap: 18px; }
 .community-card, .community-panel { border: 1px solid rgba(255,255,255,.1); border-radius: 18px; background: rgba(25,29,25,.82); padding: 22px; }
 .community-card { display: flex; flex-direction: column; gap: 12px; }
@@ -28,12 +33,22 @@
 .community-profile-avatar { width: 76px; height: 76px; object-fit: cover; border-radius: 50%; }
 .community-empty { text-align: center; padding: 36px 16px; color: var(--muted, #a5ada6); }
 .community-status { min-height: 1.4em; color: var(--muted, #a5ada6); }
-.community-admin-detail { max-height: 420px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; padding: 14px; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: rgba(0,0,0,.18); color: var(--muted, #a5ada6); }
+.community-admin-detail { max-height: 520px; overflow: auto; overflow-wrap: anywhere; padding: 14px; border: 1px solid var(--line, rgba(255,255,255,.1)); border-radius: 14px; background: color-mix(in srgb,var(--card,#191d19) 82%,#000); color: var(--ink,#f2f4f1); }
+.support-admin-summary { display: grid; gap: 4px; padding: 3px 2px 14px; border-bottom: 1px solid var(--line,rgba(255,255,255,.1)); }
+.support-admin-summary strong { font: 700 1rem "Space Grotesk",Figtree,sans-serif; }
+.support-admin-summary span,.support-admin-message time { color: var(--muted,#a5ada6); font-size: .78rem; }
+.support-admin-transcript { display: grid; gap: 10px; padding-top: 13px; }
+.support-admin-message { padding: 12px 14px; border: 1px solid var(--line,rgba(255,255,255,.1)); border-radius: 12px 12px 12px 4px; background: color-mix(in srgb,var(--bg,#141614) 72%,transparent); }
+.support-admin-message.is-staff { border-color: color-mix(in srgb,var(--blue,#5aaefd) 38%,var(--line,rgba(255,255,255,.1))); background: color-mix(in srgb,var(--blue,#5aaefd) 8%,var(--card,#191d19)); }
+.support-admin-message header { display:flex; justify-content:space-between; gap:12px; margin-bottom:6px; }
+.support-admin-message p { margin:0; line-height:1.6; }
 .resident-privacy-controls { display: grid; gap: 8px; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 14px; }
 .resident-privacy-controls label { display: flex; align-items: center; gap: 9px; }
 .resident-privacy-controls input { width: auto; }
 @media (max-width: 640px) {
   .community-page { padding: 48px 0 72px; }
   .community-toolbar { display: grid; }
+  .community-toolbar select { width: 100%; }
   .community-card, .community-panel { padding: 17px; }
 }
+html[data-theme="light"] .community-toolbar select option, html[data-theme="light"] .community-form select option { background: #fff; color: #18202a; }

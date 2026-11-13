@@ -49,6 +49,8 @@ async function initialState() {
   state.notifications ||= [];
   state.newsComments ||= [];
   state.supportTickets ||= [];
+  state.gameLinkRequests ||= [];
+  state.gameLinks ||= [];
   return state;
 }
 

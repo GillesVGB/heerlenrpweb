@@ -7,12 +7,14 @@ import { runInNewContext } from 'node:vm';
 
 process.env.SESSION_SECRET = 'cms-workflow-test-session-secret-not-for-production';
 process.env.ADMIN_PASSWORD = 'cms-workflow-test-password-not-for-production';
+process.env.FIVEM_LINK_SECRET = 'cms-workflow-test-fivem-link-secret-32-characters';
 process.env.CONTENT_STORE_PATH = path.join(tmpdir(), `heerlen-cms-test-${process.pid}.json`);
 const originalPublicOrigin = process.env.PUBLIC_ORIGIN;
 
-const [{ default: admin }, { default: content }, { default: avatar }, { default: donations }, { default: portal }, { default: community }, { default: discordCallback }, { makeSession, permissionsForRoleIds, readSession, sessionCookie, setOAuthState, validateOAuthState, verifyOrigin }] = await Promise.all([
-  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../api/donations.mjs'), import('../api/portal.mjs'), import('../api/community.mjs'), import('../api/auth/callback.mjs'), import('../server/security.mjs')
+const [{ default: admin }, { default: content }, { default: avatar }, { default: donations }, { default: portal }, { default: community }, { default: discordCallback }, { default: account }, { makeSession, permissionsForRoleIds, readSession, sessionCookie, setOAuthState, validateOAuthState, verifyOrigin }] = await Promise.all([
+  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../api/donations.mjs'), import('../api/portal.mjs'), import('../api/community.mjs'), import('../api/auth/callback.mjs'), import('../api/account.mjs'), import('../server/security.mjs')
 ]);
+const fivemLink = (await import('../api/fivem/link.mjs')).default;
 const base = 'http://127.0.0.1:8765';
 const origin = { origin: base, 'content-type': 'application/json' };
 const run = (handler, method, payload, cookie) => handler(new Request(base + '/api/admin', {
@@ -66,6 +68,9 @@ assert.match(applicationsPage, /data-community-page="jobs"/, 'the dynamic applic
 assert.match(helpPage, /<h1>Helpcentrum<\/h1>/, 'the public Helpcentrum contains the FAQ answers');
 assert.match(helpPage, /id="faqList"/, 'the Helpcentrum retains searchable FAQ entries');
 assert.match(helpPage, /id="communityCards"/, 'the Helpcentrum also displays CMS-managed guide articles');
+assert.match(helpPage, /scripts\/auth\.js/, 'the Helpcentrum loads the shared account menu');
+const authClient = await readFile(new URL('./auth.js', import.meta.url), 'utf8');
+assert.match(authClient, /localAccount\.discordId[\s\S]*data\.user\.id/, 'the Beheer menu is tied to the signed-in account identity');
 assert.match(faqPage, /http-equiv="refresh" content="0;url=\/helpcentrum\/"/, 'the legacy FAQ URL redirects to the single Helpcentrum page');
 assert.match(profilePage, /data-community-page="profile"/, 'public resident profiles have a dedicated page');
 assert.match(adminStyles, /#cmsTabs[\s\S]*?position: sticky/, 'Admin sections use persistent side navigation on desktop');
@@ -147,9 +152,34 @@ try {
 
   const residentSession = makeSession({ id: '12345678901234567', username: 'InwonerTest', avatar: 'https://cdn.discordapp.com/avatars/12345678901234567/test.png', roles: [], permissions: [], provider: 'discord' });
   const residentCookie = sessionCookie(residentSession, { url: base + '/api/portal' }).split(';')[0];
+  const accountCookie = permissions => sessionCookie(makeSession({ id: '12345678901234567', username: 'InwonerTest', avatar: null, permissions, provider: 'discord' }), { url: base + '/api/account' }).split(';')[0];
+  const accountForStaff = await account(new Request(base + '/api/account', { headers: { cookie: accountCookie(['staff:read']) } }));
+  assert.equal(accountForStaff.status, 200);
+  assert.equal((await accountForStaff.json()).staff, true, 'the staff dashboard role receives the Beheer account link');
+  const accountForResident = await account(new Request(base + '/api/account', { headers: { cookie: accountCookie([]) } }));
+  assert.equal((await accountForResident.json()).staff, false, 'regular residents do not receive the Beheer account link');
+  const accountAnonymous = await account(new Request(base + '/api/account'));
+  assert.equal((await accountAnonymous.json()).authenticated, false, 'the account menu does not treat anonymous visitors as staff');
+  assert.match(await readFile(new URL('../helpcentrum/index.html', import.meta.url), 'utf8'), /scripts\/auth\.js/, 'the Helpcentrum loads the shared account menu');
   const residentBefore = await runPortal('GET', undefined, residentCookie);
   assert.equal(residentBefore.status, 200, 'a Discord member without staff roles can open their own dashboard');
   assert.equal((await residentBefore.json()).profile.inGameName, '', 'new resident profiles start with no optional in-game name');
+  const deniedGameLink = await fivemLink(new Request(base + '/api/fivem/link', { method: 'POST', headers: { authorization: 'Bearer wrong-secret', 'content-type': 'application/json' }, body: JSON.stringify({ code: '0123456789', license: 'license:abcdefgh12345678', name: 'Test Personage' }) }));
+  assert.equal(deniedGameLink.status, 401, 'the FiveM callback requires the server-only shared secret');
+  const codeResponse = await runPortal('POST', { action: 'create-game-link' }, residentCookie);
+  assert.equal(codeResponse.status, 201, 'a Discord resident can generate a temporary game-link code');
+  const gameCode = (await codeResponse.json()).code;
+  const linkedResponse = await fivemLink(new Request(base + '/api/fivem/link', { method: 'POST', headers: { authorization: 'Bearer ' + process.env.FIVEM_LINK_SECRET, 'content-type': 'application/json' }, body: JSON.stringify({ code: gameCode, license: 'license:abcdefgh12345678', name: 'Test Personage' }) }));
+  assert.equal(linkedResponse.status, 200, 'the FiveM server callback consumes the temporary code');
+  const linkedBody = await (await runPortal('GET', undefined, residentCookie)).json();
+  assert.equal(linkedBody.gameLink.name, 'Test Personage', 'the resident dashboard receives the linked in-game name');
+  assert.equal(JSON.stringify(linkedBody).includes('license:abcdefgh12345678'), false, 'private FiveM identifiers are never exposed to the resident dashboard');
+  const reusedCode = await fivemLink(new Request(base + '/api/fivem/link', { method: 'POST', headers: { authorization: 'Bearer ' + process.env.FIVEM_LINK_SECRET, 'content-type': 'application/json' }, body: JSON.stringify({ code: gameCode, license: 'license:abcdefgh12345678', name: 'Test Personage' }) }));
+  assert.equal(reusedCode.status, 409, 'a consumed game-link code cannot be used twice');
+  const staffCookieForUnlink = sessionCookie(makeSession({ id: 'game-link-admin', username: 'GameLinkAdmin', permissions: ['users:manage'], provider: 'test' }), { url: base + '/api/admin' }).split(';')[0];
+  const adminUnlink = await run(admin, 'POST', { action: 'admin-unlink-game-account', discordId: '12345678901234567' }, staffCookieForUnlink);
+  assert.equal(adminUnlink.status, 200, 'authorized user managers can unlink a game account');
+  assert.equal((await (await runPortal('GET', undefined, residentCookie)).json()).gameLink.linked, false, 'the account owner immediately sees the unlink');
   const savedProfile = await runPortal('POST', { action: 'save-profile', inGameName: 'Test Personage' }, residentCookie);
   assert.equal(savedProfile.status, 200, 'residents can save their own profile');
   assert.equal((await savedProfile.json()).profile.inGameName, 'Test Personage');

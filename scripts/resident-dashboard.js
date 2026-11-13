@@ -52,6 +52,19 @@
     profileForm.elements.showBio.checked = profile.showBio !== false;
     profileForm.elements.showInGameName.checked = profile.showInGameName !== false;
     profileForm.elements.showAchievements.checked = profile.showAchievements !== false;
+    var link = data.gameLink || { linked: false };
+    var gameStatus = document.getElementById("gameLinkStatus");
+    var gameDetails = document.getElementById("gameLinkDetails");
+    var createGameLink = document.getElementById("gameLinkCreate");
+    var unlinkGameLink = document.getElementById("gameLinkRemove");
+    var gameCodePanel = document.getElementById("gameLinkCodePanel");
+    gameStatus.textContent = link.linked ? "Personage gekoppeld" : "Nog niet gekoppeld";
+    gameStatus.classList.toggle("is-linked", link.linked === true);
+    gameDetails.hidden = !link.linked;
+    gameDetails.textContent = link.linked ? link.name + " · gekoppeld op " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" }).format(new Date(link.linkedAt)) : "";
+    createGameLink.hidden = link.linked === true;
+    unlinkGameLink.hidden = link.linked !== true;
+    gameCodePanel.hidden = true;
     var profileLink = document.getElementById("publicProfileLink");
     profileLink.textContent = profile.isPublic && profile.slug ? "Je openbare profiel: " + location.origin + "/profiel/?id=" + profile.slug : "Je profiel is privé en wordt niet openbaar getoond.";
 
@@ -115,17 +128,26 @@
     var tickets = Array.isArray(data.supportTickets) ? data.supportTickets : [];
     if (!tickets.length) supportList.appendChild(node("p", "resident-empty", "Je hebt nog geen supporttickets."));
     tickets.forEach(function (ticket) {
-      var card = node("article", "resident-notice");
+      var card = node("article", "resident-notice resident-ticket");
       var statusLabels = { open: "Open", in_progress: "In behandeling", waiting: "Wacht op support", closed: "Gesloten" };
-      card.appendChild(node("h3", "", ticket.subject + " · " + (statusLabels[ticket.status] || "Open")));
+      var ticketHead = node("div", "resident-ticket-head");
+      ticketHead.appendChild(node("h3", "", ticket.subject));
+      ticketHead.appendChild(node("span", "resident-ticket-status", statusLabels[ticket.status] || "Open"));
+      card.appendChild(ticketHead);
       card.appendChild(node("p", "resident-muted", ticket.category + " · geopend op " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" }).format(new Date(ticket.createdAt))));
+      var conversation = node("div", "resident-conversation");
       (ticket.messages || []).forEach(function (message) {
-        var paragraph = node("p", "", (message.authorRole === "staff" ? "Supportteam" : "Jij") + " · " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "short", timeStyle: "short" }).format(new Date(message.createdAt)) + "\n" + message.content);
-        paragraph.style.whiteSpace = "pre-wrap";
-        card.appendChild(paragraph);
+        var bubble = node("article", "resident-message" + (message.authorRole === "staff" ? " is-staff" : " is-resident"));
+        bubble.appendChild(node("strong", "", message.authorRole === "staff" ? "Supportteam" : "Jij"));
+        bubble.appendChild(node("time", "", new Intl.DateTimeFormat("nl-NL", { dateStyle: "short", timeStyle: "short" }).format(new Date(message.createdAt))));
+        var text = node("p", "", message.content);
+        text.style.whiteSpace = "pre-wrap";
+        bubble.appendChild(text);
+        conversation.appendChild(bubble);
       });
+      card.appendChild(conversation);
       if (ticket.status !== "closed") {
-        var replyForm = node("form", "resident-profile-form");
+        var replyForm = node("form", "resident-profile-form resident-ticket-reply");
         var label = node("label");
         label.appendChild(node("span", "", "Bericht toevoegen"));
         var reply = node("textarea");
@@ -214,6 +236,38 @@
     });
   }
   loadDashboard();
+
+  document.getElementById("gameLinkCreate").addEventListener("click", function () {
+    var button = this;
+    var message = document.getElementById("gameLinkMessage");
+    button.disabled = true;
+    message.textContent = "Een veilige code maken…";
+    fetch("/api/portal", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "create-game-link" }) })
+      .then(function (response) { return response.json().then(function (result) { if (!response.ok) throw new Error(result.error || "Koppelcode aanmaken is mislukt."); return result; }); })
+      .then(function (result) {
+        document.getElementById("gameLinkCode").textContent = result.code;
+        document.getElementById("gameLinkCommand").textContent = result.command;
+        document.getElementById("gameLinkExpiry").textContent = "Geldig tot " + new Intl.DateTimeFormat("nl-NL", { timeStyle: "short" }).format(new Date(result.expiresAt)) + ". Vernieuw je code als deze is verlopen.";
+        document.getElementById("gameLinkCodePanel").hidden = false;
+        message.textContent = "Voer de code in-game in om je account te koppelen.";
+      })
+      .catch(function (error) { message.textContent = error.message; })
+      .finally(function () { button.disabled = false; });
+  });
+  document.getElementById("gameLinkCopy").addEventListener("click", function () {
+    var command = document.getElementById("gameLinkCommand").textContent;
+    if (navigator.clipboard && window.isSecureContext) navigator.clipboard.writeText(command).then(function () { document.getElementById("gameLinkMessage").textContent = "FiveM-commando gekopieerd."; }).catch(function () { document.getElementById("gameLinkMessage").textContent = "Kopieer het commando handmatig uit het vak hierboven."; });
+    else document.getElementById("gameLinkMessage").textContent = "Kopieer het commando handmatig uit het vak hierboven.";
+  });
+  document.getElementById("gameLinkRemove").addEventListener("click", function () {
+    if (!window.confirm("Weet je zeker dat je dit FiveM-personage wilt ontkoppelen?")) return;
+    var message = document.getElementById("gameLinkMessage");
+    message.textContent = "Ontkoppelen…";
+    fetch("/api/portal", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "unlink-game-account" }) })
+      .then(function (response) { return response.json().then(function (result) { if (!response.ok) throw new Error(result.error || "Ontkoppelen is mislukt."); return result; }); })
+      .then(function () { message.textContent = "Personage ontkoppeld."; return loadDashboard(); })
+      .catch(function (error) { message.textContent = error.message; });
+  });
 
   supportForm.addEventListener("submit", function (event) {
     event.preventDefault();

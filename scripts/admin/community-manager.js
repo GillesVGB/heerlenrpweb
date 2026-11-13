@@ -189,16 +189,23 @@
       supportDetail.textContent = tickets.length ? "Selecteer een ticket om het gesprek te bekijken." : "Er zijn nog geen supporttickets.";
       return;
     }
-    supportDetail.textContent = JSON.stringify({
-      inwoner: ticket.username,
-      discordId: ticket.discordId,
-      onderwerp: ticket.subject,
-      categorie: ticket.category,
-      status: ticket.status,
-      berichten: (ticket.messages || []).map(function (message) {
-        return { afzender: message.authorRole === "staff" ? message.authorName || "Support" : ticket.username, bericht: message.content, datum: message.createdAt };
-      })
-    }, null, 2);
+    supportDetail.replaceChildren();
+    var summary = document.createElement("header"); summary.className = "support-admin-summary";
+    var title = document.createElement("strong"); title.textContent = ticket.subject;
+    var meta = document.createElement("span"); meta.textContent = ticket.username + " · " + ticket.category + " · " + ticket.discordId;
+    summary.append(title, meta); supportDetail.appendChild(summary);
+    var transcript = document.createElement("div"); transcript.className = "support-admin-transcript";
+    (ticket.messages || []).forEach(function (message) {
+      var bubble = document.createElement("article"); bubble.className = "support-admin-message" + (message.authorRole === "staff" ? " is-staff" : "");
+      var head = document.createElement("header");
+      var author = document.createElement("strong"); author.textContent = message.authorRole === "staff" ? (message.authorName || "Support") : ticket.username;
+      var time = document.createElement("time");
+      var parsed = new Date(message.createdAt);
+      time.textContent = Number.isNaN(parsed.getTime()) ? "" : new Intl.DateTimeFormat("nl-NL", { dateStyle: "short", timeStyle: "short" }).format(parsed);
+      var body = document.createElement("p"); body.textContent = message.content; body.style.whiteSpace = "pre-wrap";
+      head.append(author, time); bubble.append(head, body); transcript.appendChild(bubble);
+    });
+    supportDetail.appendChild(transcript);
     supportForm.elements.status.value = ticket.status;
     supportForm.elements.status.disabled = !can("support:manage");
     supportForm.elements.message.disabled = !can("support:manage");
@@ -272,7 +279,7 @@
     if (supportPanel) supportPanel.hidden = !can("support:manage");
     document.getElementById("residentBroadcastForm").closest("section").hidden = !can("notifications:manage");
     document.getElementById("commentModerationList").closest("section").hidden = !can("comments:moderate");
-    renderRecords(); renderApplications(); renderComments();
+    renderRecords(); renderApplications(); renderSupportTickets(); renderComments();
   }
   window.addEventListener("heerlen:admin-loaded", function (event) { update(event.detail || {}); });
   if (window.HeerlenAdminState) update(window.HeerlenAdminState);

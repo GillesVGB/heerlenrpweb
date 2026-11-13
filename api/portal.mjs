@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { readContent, updateContent } from '../server/content-store.mjs';
 import { clearSessionCookie, hasPermission, readSession, verifyOrigin } from '../server/security.mjs';
 import { appendAudit, badMethod, cleanImage, cleanText, json, readJson } from '../server/http.mjs';
@@ -19,6 +19,7 @@ async function handler(request) {
     try {
       const state = await readContent();
       const profile = (state.residentProfiles || []).find(item => item.discordId === user.id) || {};
+      const gameLink = (state.gameLinks || []).find(item => item.discordId === user.id);
       const awards = (state.achievementAwards || [])
         .filter(award => award.discordId === user.id)
         .map(award => {
@@ -40,6 +41,7 @@ async function handler(request) {
           showAchievements: profile.showAchievements !== false,
           createdAt: profile.createdAt || ''
         },
+        gameLink: gameLink ? { linked: true, name: gameLink.name, linkedAt: gameLink.linkedAt } : { linked: false },
         achievements: awards,
         notices: (state.residentNotices || []).filter(notice => notice.active !== false).slice(0, 20),
         rsvps: (state.eventRsvps || []).filter(item => item.discordId === user.id).map(item => {
@@ -75,6 +77,36 @@ async function handler(request) {
 
   const user = currentResident(request);
   if (!user) return json({ error: 'Je Discord-sessie is verlopen. Log opnieuw in.' }, 401);
+  if (body.action === 'create-game-link') {
+    try {
+      const code = randomBytes(5).toString('hex').toUpperCase();
+      const now = Date.now();
+      const expiresAt = new Date(now + 10 * 60 * 1000).toISOString();
+      await updateContent(state => {
+        state.gameLinkRequests ||= [];
+        state.gameLinks ||= [];
+        if (state.gameLinks.some(item => item.discordId === user.id)) throw new Error('Je Discord-account is al aan een personage gekoppeld. Verbreek eerst de huidige koppeling.');
+        state.gameLinkRequests = state.gameLinkRequests.filter(item => Date.parse(item.expiresAt) > now && item.discordId !== user.id).slice(-4999);
+        state.gameLinkRequests.push({ discordId: user.id, codeHash: createHash('sha256').update(code).digest('hex'), createdAt: new Date(now).toISOString(), expiresAt });
+        return true;
+      });
+      return json({ ok: true, code, expiresAt, command: `/koppelaccount ${code}` }, 201);
+    } catch (error) { return json({ error: error.message || 'De koppelcode kon niet worden aangemaakt.' }, 400); }
+  }
+  if (body.action === 'unlink-game-account') {
+    try {
+      await updateContent(state => {
+        state.gameLinks ||= [];
+        const before = state.gameLinks.length;
+        state.gameLinks = state.gameLinks.filter(item => item.discordId !== user.id);
+        if (state.gameLinks.length === before) throw new Error('Er is geen personage gekoppeld.');
+        state.gameLinkRequests ||= [];
+        state.gameLinkRequests = state.gameLinkRequests.filter(item => item.discordId !== user.id);
+        appendAudit(state, user, 'ontkoppeld', 'game-account', user.username);
+      });
+      return json({ ok: true });
+    } catch (error) { return json({ error: error.message || 'De koppeling kon niet worden verbroken.' }, 400); }
+  }
   if (body.action === 'create-support-ticket' || body.action === 'reply-support-ticket') {
     const now = Date.now();
     const lastAttempt = supportAttempts.get(user.id) || 0;

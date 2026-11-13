@@ -53,6 +53,39 @@
 .resident-notice { border-left: 3px solid var(--blue); }
 .resident-privacy { max-width: 760px; margin: 0 auto; padding: 8px 4px; color: var(--muted); font-size: .82rem; line-height: 1.6; }
 .resident-page[hidden],.resident-layout[hidden],.resident-login[hidden] { display: none; }
+.resident-heading { max-width: none; margin: 0 0 24px; padding: clamp(22px,4vw,42px); border: 1px solid var(--line); border-radius: 20px; background: radial-gradient(ellipse at 94% 4%,color-mix(in srgb,var(--blue) 17%,transparent),transparent 42%),linear-gradient(130deg,color-mix(in srgb,var(--card) 88%,var(--bg)),var(--card)); }
+.resident-heading h1 { margin: 8px 0 9px; font-size: clamp(2.2rem,4.8vw,3.6rem); }
+.resident-heading > p:last-child { max-width: 640px; margin: 0; }
+.resident-panel { box-shadow: 0 12px 34px rgba(0,0,0,.08); }
+.resident-panel[id="overzicht"] { background: radial-gradient(ellipse at 100% 0,color-mix(in srgb,var(--blue) 12%,transparent),transparent 44%),var(--card); }
+.resident-panel h3 { margin: 22px 0 12px; font: 700 1.05rem/1.3 "Space Grotesk",sans-serif; }
+.resident-profile-form select { width:100%; min-height:46px; padding:0 12px; border:1px solid var(--line); border-radius:9px; background:var(--bg); color:var(--ink); }
+.resident-game-panel { background:radial-gradient(ellipse at 100% 0,color-mix(in srgb,var(--blue) 12%,transparent),transparent 50%),var(--card); }
+.resident-game-status { padding:7px 11px; border:1px solid var(--line); border-radius:999px; color:var(--muted); font-size:.78rem; font-weight:750; }
+.resident-game-status.is-linked { border-color:color-mix(in srgb,#49c98b 42%,var(--line)); color:#49c98b; }
+.resident-game-linked { margin:15px 0; padding:16px 18px; border:1px solid color-mix(in srgb,#49c98b 30%,var(--line)); border-radius:12px; background:color-mix(in srgb,#49c98b 7%,var(--bg)); font-weight:700; }
+.resident-game-code { display:grid; justify-items:start; gap:9px; margin:16px 0; padding:17px; border:1px solid color-mix(in srgb,var(--blue) 42%,var(--line)); border-radius:14px; background:color-mix(in srgb,var(--blue) 8%,var(--bg)); }
+.resident-game-code > span,.resident-game-code small { color:var(--muted); font-size:.8rem; }
+.resident-game-code > strong { color:var(--blue); font:700 2rem/1 "Space Grotesk",sans-serif; letter-spacing:.14em; }
+.resident-game-code p { margin:0; color:var(--muted); }
+.resident-game-code code { color:var(--ink); }
+.resident-game-actions { display:flex; flex-wrap:wrap; gap:9px; margin-top:14px; }
+.resident-game-panel > .resident-muted:last-child { min-height:1.4em; margin:10px 0 0; }
+.resident-ticket { padding:18px; }
+.resident-ticket-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.resident-ticket-head h3 { margin:0 0 8px; }
+.resident-ticket-status { flex:none; padding:5px 9px; border:1px solid var(--line); border-radius:999px; color:var(--blue); font-size:.72rem; font-weight:750; }
+.resident-conversation { display:grid; gap:9px; margin:16px 0; }
+.resident-message { max-width:92%; padding:11px 13px; border:1px solid var(--line); border-radius:12px 12px 12px 4px; background:var(--bg); }
+.resident-message.is-resident { justify-self:end; border-radius:12px 12px 4px 12px; }
+.resident-message.is-staff { justify-self:start; border-color:color-mix(in srgb,var(--blue) 38%,var(--line)); background:color-mix(in srgb,var(--blue) 8%,var(--card)); }
+.resident-message strong { font-size:.8rem; }
+.resident-message time { float:right; margin-left:12px; color:var(--muted); font-size:.7rem; }
+.resident-message p { margin:5px 0 0; color:var(--ink); line-height:1.55; }
+.resident-ticket-reply { grid-template-columns:minmax(0,1fr) auto; align-items:end; padding-top:14px; border-top:1px solid var(--line); }
+.resident-ticket-reply label { grid-column:1/-1; }
+.resident-ticket-reply textarea { min-height:82px; }
+@media(max-width:640px){.resident-heading{padding:22px 18px}.resident-panel-heading{gap:10px}.resident-game-actions>.btn{width:100%;justify-content:center}.resident-message{max-width:100%}.resident-ticket-head{flex-direction:column}}
 @media(max-width:1000px) { .resident-summary { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width:800px) { .resident-layout { grid-template-columns: 1fr; } .resident-sidebar { position: static; } .resident-sidebar nav { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 @media(max-width:580px) { .resident-page { width: calc(100% - 32px); padding-top: 94px; } .resident-login { grid-template-columns: 48px minmax(0,1fr); padding: 20px; gap: 14px; } .resident-login-mark { width: 44px; height: 44px; } .resident-login .btn { grid-column: 1/-1; justify-content: center; } .resident-panel-heading { align-items: flex-start; flex-direction: column; } .resident-profile-details { grid-template-columns: 1fr; } .resident-summary { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 9px; } .resident-summary a { min-height: 108px; padding: 13px; } .resident-profile-form { grid-template-columns: 1fr; } .resident-profile-form .btn { justify-content: center; } .resident-sidebar nav { grid-template-columns: 1fr 1fr; } }

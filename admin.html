@@ -345,6 +345,11 @@
         <label><span>Zoek op Discord-ID of in-game naam</span><input id="residentSearch" type="search" autocomplete="off"></label>
         <div id="residentProfileList" class="cms-list"></div>
       </section>
+      <section class="admin-card" id="residentsGameLinksCard">
+        <h3>Gekoppelde FiveM-personages</h3>
+        <p class="hint">Alleen beheerders met inwonersbeheer kunnen een personage ontkoppelen. Het gevoelige FiveM-ID wordt niet getoond.</p>
+        <div id="residentGameLinkList" class="cms-list"></div>
+      </section>
     </section>
 
     <section class="admin-card cms-panel" data-admin-section="community" hidden>
@@ -379,7 +384,7 @@
         <section class="admin-card" id="supportTicketPanel">
           <h3>Supporttickets</h3>
           <label><span>Ticket</span><select id="supportTicketSelect"><option value="">Selecteer een ticket</option></select></label>
-          <pre id="supportTicketDetail" class="community-admin-detail"></pre>
+          <div id="supportTicketDetail" class="community-admin-detail" aria-live="polite"></div>
           <form id="supportReplyForm">
             <input type="hidden" name="id">
             <label><span>Status</span><select name="status"><option value="open">Open</option><option value="in_progress">In behandeling</option><option value="waiting">Wacht op inwoner</option><option value="closed">Gesloten</option></select></label>

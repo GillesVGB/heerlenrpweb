@@ -17,11 +17,13 @@
   function saveSession(data) {
     localStorage.setItem(SESSION_KEY, JSON.stringify(data));
     if (data && data.name) localStorage.setItem(NAME_KEY, data.name);
+    staffMenuChecked = false;
     root.dispatchEvent(new Event("heerlen:auth"));
   }
 
   function clearSession() {
     localStorage.removeItem(SESSION_KEY);
+    staffMenuChecked = false;
     root.dispatchEvent(new Event("heerlen:auth"));
   }
 
@@ -150,6 +152,9 @@
       '<button type="button" class="auth-link" id="authPurchases" role="menuitem">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>' +
       "Mijn aankopen</button>" +
+      '<a class="auth-link" id="authManageLink" href="/admin.html" role="menuitem" hidden>' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v2m0 14v2M3 12h2m14 0h2M5.6 5.6 7 7m10 10 1.4 1.4m0-12.8L17 7M7 17l-1.4 1.4"/><circle cx="12" cy="12" r="4"/></svg>' +
+      "Beheer</a>" +
       '<button type="button" class="auth-link is-muted" id="authLogout" role="menuitem">' +
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/></svg>' +
       "Uitloggen</button>" +
@@ -161,9 +166,25 @@
       var open = menu.hidden;
       menu.hidden = !open;
       this.setAttribute("aria-expanded", open ? "true" : "false");
+      if (open) loadStaffMenuAccess();
     });
     document.getElementById("authPurchases").addEventListener("click", openPurchases);
     document.getElementById("authLogout").addEventListener("click", logout);
+  }
+
+  var staffMenuChecked = false;
+  function loadStaffMenuAccess() {
+    if (staffMenuChecked) return;
+    staffMenuChecked = true;
+    fetch("/api/account", { credentials: "same-origin", cache: "no-store" })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .then(function (data) {
+        var manage = document.getElementById("authManageLink");
+        var localAccount = session();
+        var sameAccount = localAccount && localAccount.discordId && data && data.user && String(localAccount.discordId) === String(data.user.id);
+        if (manage) manage.hidden = !(sameAccount && data.authenticated && data.staff === true);
+      })
+      .catch(function () { staffMenuChecked = false; });
   }
 
   function mount() {

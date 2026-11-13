@@ -59,6 +59,7 @@
         <nav>
           <a href="#overzicht" class="is-active">Overzicht</a>
           <a href="#profiel">Mijn profiel</a>
+          <a href="#gameaccount">FiveM-account</a>
           <a href="#aanmeldingen">Evenementen &amp; sollicitaties</a>
           <a href="#support">Supporttickets</a>
           <a href="#onderscheidingen">Onderscheidingen</a>
@@ -101,6 +102,19 @@
             <button type="submit" class="btn btn-primary">Profiel opslaan</button>
             <p id="profileSaveState" class="resident-muted" role="status"></p>
           </form>
+        </section>
+        <section class="resident-panel resident-game-panel" id="gameaccount">
+          <div class="resident-panel-heading"><div><p class="resident-eyebrow">HEERLEN ROLEPLAY · FIVE M</p><h2>Gekoppeld personage</h2></div><span class="resident-game-status" id="gameLinkStatus">Nog niet gekoppeld</span></div>
+          <p class="resident-muted">Koppel je websiteaccount veilig aan je personage. De tijdelijke code is tien minuten geldig en kan maar één keer worden gebruikt.</p>
+          <div class="resident-game-linked" id="gameLinkDetails" hidden></div>
+          <div class="resident-game-code" id="gameLinkCodePanel" hidden>
+            <span>Je eenmalige code</span><strong id="gameLinkCode"></strong>
+            <p>Voer in FiveM in: <code id="gameLinkCommand"></code></p>
+            <small id="gameLinkExpiry"></small>
+            <button type="button" class="btn btn-ghost" id="gameLinkCopy">Code kopiëren</button>
+          </div>
+          <div class="resident-game-actions"><button type="button" class="btn btn-primary" id="gameLinkCreate">Koppelcode aanmaken</button><button type="button" class="btn btn-ghost" id="gameLinkRemove" hidden>Personage ontkoppelen</button></div>
+          <p class="resident-muted" id="gameLinkMessage" role="status" aria-live="polite"></p>
         </section>
         <section class="resident-panel" id="aanmeldingen">
           <div class="resident-panel-heading"><div><p class="resident-eyebrow">COMMUNITY</p><h2>Evenementen &amp; sollicitaties</h2></div></div>
