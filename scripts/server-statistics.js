@@ -7,6 +7,7 @@
   var playersEl = document.getElementById("statsPlayers");
   var capacityEl = document.getElementById("statsCapacity");
   var occupancyEl = document.getElementById("statsOccupancy");
+  var peakEl = document.getElementById("statsPeak");
   var progress = document.getElementById("statsProgress");
   var progressFill = document.getElementById("statsProgressFill");
   var sourceEl = document.getElementById("statsSource");
@@ -51,6 +52,25 @@
     return element;
   }
 
+  function smoothPath(points) {
+    if (!points.length) return "";
+    var path = "M" + points[0].x.toFixed(2) + " " + points[0].y.toFixed(2);
+    for (var index = 0; index < points.length - 1; index += 1) {
+      var previous = points[Math.max(0, index - 1)];
+      var start = points[index];
+      var end = points[index + 1];
+      var next = points[Math.min(points.length - 1, index + 2)];
+      var controlOneX = start.x + (end.x - previous.x) / 6;
+      var controlOneY = start.y + (end.y - previous.y) / 6;
+      var controlTwoX = end.x - (next.x - start.x) / 6;
+      var controlTwoY = end.y - (next.y - start.y) / 6;
+      path += " C" + controlOneX.toFixed(2) + " " + controlOneY.toFixed(2) +
+        " " + controlTwoX.toFixed(2) + " " + controlTwoY.toFixed(2) +
+        " " + end.x.toFixed(2) + " " + end.y.toFixed(2);
+    }
+    return path;
+  }
+
   function renderChart() {
     var now = Date.now();
     var cutoff = now - historyWindow;
@@ -61,6 +81,7 @@
     chartLabels.replaceChildren();
 
     var maxPlayers = history.reduce(function (max, point) { return Math.max(max, point.players); }, 0);
+    peakEl.textContent = history.length ? String(maxPlayers) : "—";
     var yMax = Math.max(4, Math.ceil(maxPlayers / 4) * 4);
     var left = 54;
     var right = 788;
@@ -94,6 +115,11 @@
     (history.length > 1 ? [0, 0.5, 1] : [0.5]).forEach(function (fraction) {
       var time = history.length ? firstTime + measuredRange * fraction : cutoff + historyWindow * fraction;
       var x = history.length > 1 ? left + (right - left) * fraction : (left + right) / 2;
+      if (history.length > 1 && fraction > 0) {
+        chartGrid.appendChild(svgElement("line", {
+          x1: x, x2: x, y1: top, y2: bottom, class: "stats-chart-grid-line stats-chart-grid-vertical"
+        }));
+      }
       var label = new Intl.DateTimeFormat("nl-NL", { hour: "2-digit", minute: "2-digit" })
         .format(new Date(time));
       chartLabels.appendChild(svgElement("text", {
@@ -103,9 +129,7 @@
     });
 
     if (points.length) {
-      var linePath = points.map(function (point, index) {
-        return (index === 0 ? "M" : "L") + point.x.toFixed(2) + " " + point.y.toFixed(2);
-      }).join(" ");
+      var linePath = smoothPath(points);
       chartLine.setAttribute("d", linePath);
       chartArea.setAttribute("d", linePath + " L" + points[points.length - 1].x.toFixed(2) + " " + bottom +
         " L" + points[0].x.toFixed(2) + " " + bottom + " Z");
@@ -122,6 +146,15 @@
         circle.appendChild(svgElement("title", {}, title));
         chartPoints.appendChild(circle);
       });
+      var currentPoint = points[points.length - 1];
+      chartPoints.appendChild(svgElement("circle", {
+        cx: currentPoint.x.toFixed(2), cy: currentPoint.y.toFixed(2), r: 9,
+        class: "stats-chart-current-halo"
+      }));
+      chartPoints.appendChild(svgElement("circle", {
+        cx: currentPoint.x.toFixed(2), cy: currentPoint.y.toFixed(2), r: 4.5,
+        class: "stats-chart-current-point"
+      }));
       chart.removeAttribute("hidden");
     } else {
       chartLine.removeAttribute("d");

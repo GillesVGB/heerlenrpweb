@@ -3,15 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Bekijk de actuele serverstatus en spelersbezetting van Heerlen Roleplay.">
+  <meta name="description" content="Bekijk live de serverstatus, spelersbezetting en het lokale spelersverloop van Heerlen Roleplay.">
   <meta name="theme-color" content="#141614">
-  <title>Serverstatistieken | Heerlen Roleplay</title>
+  <title>Live serverstatus | Heerlen Roleplay</title>
   <link rel="icon" href="/images/heerlen-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/styles/heerlen.css?v=20261111-5">
-  <link rel="stylesheet" href="/styles/server-statistics.css?v=20261112-1">
+  <link rel="stylesheet" href="/styles/server-statistics.css?v=20261113-2">
   <script>
     (function () {
       try {
@@ -50,9 +50,9 @@
         <nav class="stats-breadcrumb" aria-label="Broodkruimelpad">
           <a href="/">Home</a><span aria-hidden="true">/</span><span aria-current="page">Serverstatistieken</span>
         </nav>
-        <p class="kicker">HEERLEN ROLEPLAY · FIVE M</p>
-        <h1 id="statsTitle">De stad, live in beeld.</h1>
-        <p class="stats-intro">Bekijk of Heerlen Roleplay bereikbaar is en hoeveel spelers er op dit moment in de stad zijn.</p>
+        <p class="stats-live-eyebrow"><span aria-hidden="true"></span> LIVE · HEERLEN ROLEPLAY · AUTOMATISCHE STATUSCONTROLE</p>
+        <h1 id="statsTitle">Server &amp; <span>spelerverloop</span></h1>
+        <p class="stats-intro">Volg de actuele serverstatus en spelersbezetting. De grafiek toont metingen die deze browser verzamelt zolang de website openstaat.</p>
 
         <section class="stats-status-card is-unknown" id="statsStatusCard" data-state="unknown" role="status" aria-live="polite" aria-atomic="true" aria-busy="true">
           <span class="stats-status-indicator" aria-hidden="true"></span>
@@ -87,6 +87,11 @@
               <span id="statsProgressFill"></span>
             </div>
           </article>
+          <article class="stats-metric">
+            <p class="stats-eyebrow">Piek · laatste 24 uur</p>
+            <p class="stats-value" id="statsPeak" aria-live="polite">—</p>
+            <p class="stats-caption">Hoogste meting in deze browser</p>
+          </article>
         </section>
 
         <section class="stats-chart-card" aria-labelledby="statsChartTitle">
@@ -95,7 +100,7 @@
               <p class="stats-eyebrow">Spelersverloop</p>
               <h2 id="statsChartTitle">Laatste 24 uur</h2>
             </div>
-            <span class="stats-chart-badge">Metingen op dit apparaat</span>
+            <span class="stats-chart-badge">Alleen lokale metingen · 24 uur</span>
           </div>
           <p class="stats-chart-description">Deze browser begint bij het openen van de website met statusmetingen, ongeveer elke minuut zolang de website openstaat.</p>
           <div class="stats-chart-wrap">
@@ -104,8 +109,17 @@
               <defs>
                 <linearGradient id="statsChartGradient" x1="0" x2="0" y1="0" y2="1">
                   <stop offset="0%" stop-color="#5aaefd" stop-opacity=".3"></stop>
-                  <stop offset="100%" stop-color="#5aaefd" stop-opacity=".01"></stop>
+                  <stop offset="58%" stop-color="#5aaefd" stop-opacity=".1"></stop>
+                  <stop offset="100%" stop-color="#5aaefd" stop-opacity="0"></stop>
                 </linearGradient>
+                <linearGradient id="statsChartLineGradient" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0%" stop-color="#5aaefd"></stop>
+                  <stop offset="100%" stop-color="#7cc0ff"></stop>
+                </linearGradient>
+                <filter id="statsChartLineGlow" x="-20%" y="-30%" width="140%" height="160%">
+                  <feGaussianBlur stdDeviation="3" result="blur"></feGaussianBlur>
+                  <feComposite in="SourceGraphic" in2="blur" operator="over"></feComposite>
+                </filter>
               </defs>
               <g id="statsChartGrid" aria-hidden="true"></g>
               <path id="statsChartArea" class="stats-chart-area" aria-hidden="true"></path>
@@ -139,7 +153,7 @@
 
   <footer class="footer"></footer>
   <script src="/scripts/nav.js?v=20261112-2"></script>
-  <script src="/scripts/server-statistics.js?v=20261112-2" defer></script>
+  <script src="/scripts/server-statistics.js?v=20261113-1" defer></script>
   <script src="/scripts/site-footer.js?v=20261113-1" defer></script>
 </body>
 </html>

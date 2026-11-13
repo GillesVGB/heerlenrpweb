@@ -29,7 +29,18 @@ const runPortal = (method, payload, cookie, requestOrigin = base) => portal(new 
 const dashboardPage = await readFile(new URL('../dashboard/index.html', import.meta.url), 'utf8');
 const dashboardClient = await readFile(new URL('./resident-dashboard.js', import.meta.url), 'utf8');
 const staffPage = await readFile(new URL('../staff/index.html', import.meta.url), 'utf8');
+const adminPage = await readFile(new URL('../admin.html', import.meta.url), 'utf8');
+const adminStyles = await readFile(new URL('../styles/admin.css', import.meta.url), 'utf8');
+const adminClient = await readFile(new URL('./admin/content-manager.js', import.meta.url), 'utf8');
 const publicContentScript = await readFile(new URL('./content/public-content.js', import.meta.url), 'utf8');
+assert.match(adminPage, /data-admin-section="overview"/, 'The admin panel opens on a dashboard overview');
+assert.match(adminPage, /class="admin-overview-profile"/, 'The overview has the Heerlen identity header');
+assert.match(adminPage, /class="admin-overview-stats"/, 'The overview shows real dashboard statistic cards');
+assert.match(adminPage, /data-section="overview"/, 'The admin dashboard is reachable from its sidebar navigation');
+assert.match(adminPage, /id="adminOverviewStatus"/, 'The admin dashboard exposes the live server summary');
+assert.match(adminClient, /fetch\("\/api\/players"/, 'The admin dashboard uses the existing live server status endpoint');
+assert.match(adminStyles, /#cmsTabs[\s\S]*?position: sticky/, 'Admin sections use persistent side navigation on desktop');
+assert.match(adminStyles, /color: var\(--blue\)/, 'The redesigned admin dashboard keeps the existing site accent color');
 assert.match(dashboardPage, /id="residentWorkspace" hidden/, 'resident dashboard details stay hidden until authentication succeeds');
 assert.match(dashboardPage, /noindex,nofollow/, 'personal dashboard pages are excluded from search indexing');
 assert.match(dashboardPage, /api\/auth\/discord\?next=%2Fdashboard%2F/, 'resident login requests a dashboard-scoped Discord session');

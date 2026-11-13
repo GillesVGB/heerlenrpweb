@@ -29,6 +29,8 @@ const navigation = await readFile(new URL('./nav.js', import.meta.url), 'utf8');
 assert.doesNotMatch(navigation, /\["Serverstatistieken",\s*"\/server-statistieken\/"\]/, 'The shared navigation should not reinsert server statistics');
 assert.match(page, /aria-current="page"/, 'The page should identify the current navigation item');
 assert.match(page, /id="statsStatusCard"[^>]*role="status"[^>]*aria-live="polite"/, 'The live status should be announced accessibly');
+assert.match(page, /id="statsPeak"/, 'The statistics overview should show the retained local 24-hour peak');
+assert.match(page, /id="statsChartLineGradient"/, 'The chart should provide a brand-colored line gradient');
 assert.match(page, /id="statsRefresh"/, 'The page should provide a manual refresh control');
 assert.match(page, /href="https:\/\/cfx\.re\/join\/j48ry5k"/, 'Connect links on the statistics page should use the current server code');
 assert.match(page, /Metingen worden alleen in deze browser bewaard/i, 'The page should disclose that history is browser-local');
@@ -36,7 +38,10 @@ assert.match(page, /maximaal 24 uur/i, 'The page should disclose the chart reten
 assert.match(clientScript, /fetch\("\/api\/players"/, 'The page should use the existing server status API');
 assert.match(clientScript, /setTimeout\(fetchStatus, 60000\)/, 'The live status should refresh periodically');
 assert.match(clientScript, /localStorage\.setItem\(historyKey/, 'The chart should persist only measurements captured by this browser');
+assert.match(clientScript, /function smoothPath/, 'The chart line should interpolate measurements smoothly');
+assert.match(clientScript, /stats-chart-current-point/, 'The chart should distinguish its latest measurement');
 assert.match(stylesheet, /prefers-reduced-motion/);
+assert.match(stylesheet, /stats-chart-grid-vertical/, 'The chart should show lightweight vertical time markers');
 assert.doesNotMatch(page, /ZuiderVeen/i, 'The Heerlen page should not use the reference site branding');
 
 function fakeElement() {
@@ -68,7 +73,7 @@ function fakeElement() {
 async function verifyClientState(initialResponse, options = {}) {
   const ids = [
     'statsStatusCard', 'statsStatusLabel', 'statsStatusDetail', 'statsPlayers',
-    'statsCapacity', 'statsOccupancy', 'statsProgress', 'statsProgressFill',
+    'statsCapacity', 'statsOccupancy', 'statsPeak', 'statsProgress', 'statsProgressFill',
     'statsSource', 'statsCheckedAt', 'statsRefresh', 'statsChart', 'statsChartGrid',
     'statsChartArea', 'statsChartLine', 'statsChartPoints', 'statsChartLabels',
     'statsChartEmpty', 'statsChartNote'
@@ -129,6 +134,7 @@ assert.equal(result.elements.statsStatusLabel.textContent, 'Online');
 assert.equal(result.elements.statsPlayers.textContent, '12');
 assert.equal(result.elements.statsCapacity.textContent, '64');
 assert.equal(result.elements.statsOccupancy.textContent, '19%');
+assert.equal(result.elements.statsPeak.textContent, '12');
 assert.equal(result.elements.statsProgress.hidden, false);
 assert.equal(result.elements.statsProgress.getAttribute('aria-valuenow'), '19');
 assert.equal(result.elements.statsSource.textContent, 'CFX-serverlijst');
@@ -146,10 +152,11 @@ result.setResponse({
 result.elements.statsRefresh.onclick();
 await new Promise((resolve) => setImmediate(resolve));
 assert.equal(result.elements.statsChart.hidden, false);
+assert.equal(result.elements.statsPeak.textContent, '18', 'The local 24-hour peak should use the highest retained sample');
 assert.equal(result.elements.statsChart.hasAttribute('hidden'), false, 'The SVG graph remains visible when a trend is drawn');
-assert.match(result.elements.statsChartLine.getAttribute('d'), /^M.* L/);
-assert.match(result.elements.statsChartLine.getAttribute('d'), /^M54\.00 .* L788\.00 /, 'Recent samples are spread across the chart so short trends remain visible');
-assert.equal(result.elements.statsChartPoints.children.length, 2);
+assert.match(result.elements.statsChartLine.getAttribute('d'), /^M.* C/);
+assert.match(result.elements.statsChartLine.getAttribute('d'), /^M54\.00 .* 788\.00 /, 'Recent samples are spread across the chart so short trends remain visible');
+assert.equal(result.elements.statsChartPoints.children.length, 4, 'Recent sample markers and a distinct latest-point marker should be rendered');
 assert.equal(JSON.parse(result.storage.get('heerlenrp_player_history_v1')).length, 2);
 assert.equal(result.elements.statsChartEmpty.hidden, true);
 
@@ -205,6 +212,7 @@ assert.equal(result.elements.statsStatusLabel.textContent, 'Offline');
 assert.equal(result.elements.statsPlayers.textContent, '0');
 assert.equal(result.elements.statsCapacity.textContent, 'Niet beschikbaar');
 assert.equal(result.elements.statsOccupancy.textContent, '—');
+assert.equal(result.elements.statsPeak.textContent, '0');
 assert.equal(result.elements.statsProgress.hidden, true);
 assert.equal(JSON.parse(result.storage.get('heerlenrp_player_history_v1'))[0].players, 0, 'Confirmed offline states should be recorded as zero');
 
@@ -253,7 +261,7 @@ try {
   assert.ok(ready, 'The local preview server should start');
 
   for (const [route, pattern] of [
-    ['/server-statistieken/', /De stad, live in beeld\./],
+    ['/server-statistieken/', /Server &amp; <span>spelerverloop<\/span>/],
     ['/scripts/server-statistics.js', /statsStatusCard/],
     ['/scripts/player-history.js', /heerlenrp_player_history_v1/],
     ['/styles/server-statistics.css', /\.stats-status-card/]
