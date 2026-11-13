@@ -9,8 +9,8 @@
 <link rel="icon" href="/images/heerlen-logo.png">
 <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/styles/heerlen.css?v=20261111-5">
-<link rel="stylesheet" href="/styles/admin.css?v=20261111-11">
-<link rel="stylesheet" href="/styles/cms.css">
+<link rel="stylesheet" href="/styles/admin.css?v=20261113-2">
+<link rel="stylesheet" href="/styles/cms.css?v=20261113-1">
 </head>
 <body class="admin-body">
 
@@ -61,7 +61,8 @@
     </div>
 
     <nav class="cms-tabs" aria-label="Beheerdelen" id="cmsTabs">
-      <button type="button" class="is-active" data-section="settings">Site</button>
+      <button type="button" class="is-active" data-section="overview">Dashboard</button>
+      <button type="button" data-section="settings">Site</button>
       <button type="button" data-section="shop">Shop</button>
       <button type="button" data-section="news">Nieuws</button>
       <button type="button" data-section="changelog">Serverupdates</button>
@@ -70,6 +71,85 @@
       <button type="button" data-section="residents">Inwoners</button>
       <button type="button" data-section="audit">Logboek & Discord</button>
     </nav>
+
+    <section class="admin-overview cms-section" data-admin-section="overview" aria-labelledby="adminOverviewTitle">
+      <div class="admin-overview-profile">
+        <div class="admin-overview-avatar"><img src="/images/heerlen-logo.png" alt=""></div>
+        <div class="admin-overview-identity">
+          <p class="admin-overview-label">HEERLEN ROLEPLAY · BEHEER</p>
+          <h2 id="adminOverviewTitle">Beheerdersdashboard</h2>
+          <p id="adminOverviewUser">Website- en communitybeheer</p>
+        </div>
+        <a class="admin-overview-site-link" href="/" target="_blank" rel="noreferrer">Website bekijken <span aria-hidden="true">↗</span></a>
+      </div>
+      <div class="admin-overview-stats">
+        <a class="admin-overview-stat admin-overview-server" href="/server-statistieken/">
+          <span class="admin-overview-label">Serverstatus</span>
+          <strong id="adminOverviewStatus" class="admin-overview-value">Controleren…</strong>
+          <span id="adminOverviewPlayers" class="admin-overview-stat-note">Livegegevens laden</span>
+        </a>
+        <article class="admin-overview-stat">
+          <span class="admin-overview-label">Spelers online</span>
+          <strong id="adminOverviewPlayerCount" class="admin-overview-value">—</strong>
+          <span class="admin-overview-stat-note">Actueel op de server</span>
+        </article>
+        <article class="admin-overview-stat" data-stat-permission="news:write">
+          <span class="admin-overview-label">Gepubliceerde items</span>
+          <strong id="adminOverviewPublished" class="admin-overview-value">—</strong>
+          <span class="admin-overview-stat-note">Nieuws en serverupdates</span>
+        </article>
+        <article class="admin-overview-stat" data-stat-permission="staff:read">
+          <span class="admin-overview-label">Staffprofielen</span>
+          <strong id="adminOverviewStaff" class="admin-overview-value">—</strong>
+          <span class="admin-overview-stat-note">In de staffdirectory</span>
+        </article>
+        <article class="admin-overview-stat" data-stat-permission="users:manage">
+          <span class="admin-overview-label">Inwonersprofielen</span>
+          <strong id="adminOverviewResidents" class="admin-overview-value">—</strong>
+          <span class="admin-overview-stat-note">Gekoppeld aan Discord</span>
+        </article>
+        <article class="admin-overview-stat" data-stat-permission="users:manage">
+          <span class="admin-overview-label">Onderscheidingen</span>
+          <strong id="adminOverviewAchievements" class="admin-overview-value">—</strong>
+          <span class="admin-overview-stat-note">Beschikbaar in het dashboard</span>
+        </article>
+      </div>
+      <div class="admin-overview-lower">
+        <section class="admin-overview-workspace">
+          <div class="admin-overview-section-head">
+            <div><p class="admin-overview-label">Beheer</p><h3>Beheeronderdelen</h3></div>
+            <span>Snelle toegang</span>
+          </div>
+          <div class="admin-overview-links">
+            <button type="button" class="admin-overview-link" data-dashboard-link="settings">
+              <span class="admin-overview-link-icon" aria-hidden="true">⌂</span><span><strong>Website</strong><small>Homepage, thema en onderhoud</small></span><span class="admin-overview-arrow" aria-hidden="true">→</span>
+            </button>
+            <button type="button" class="admin-overview-link" data-dashboard-link="shop">
+              <span class="admin-overview-link-icon" aria-hidden="true">◇</span><span><strong>Shop</strong><small>Producten, categorieën en Tebex</small></span><span class="admin-overview-arrow" aria-hidden="true">→</span>
+            </button>
+            <button type="button" class="admin-overview-link" data-dashboard-link="news">
+              <span class="admin-overview-link-icon" aria-hidden="true">▤</span><span><strong>Nieuws &amp; updates</strong><small>Berichten en serverwijzigingen</small></span><span class="admin-overview-arrow" aria-hidden="true">→</span>
+            </button>
+            <button type="button" class="admin-overview-link" data-dashboard-link="staff">
+              <span class="admin-overview-link-icon" aria-hidden="true">♙</span><span><strong>Staff</strong><small>Teamprofielen en zichtbaarheid</small></span><span class="admin-overview-arrow" aria-hidden="true">→</span>
+            </button>
+            <button type="button" class="admin-overview-link" data-dashboard-link="residents">
+              <span class="admin-overview-link-icon" aria-hidden="true">♧</span><span><strong>Inwoners</strong><small>Profielen en onderscheidingen</small></span><span class="admin-overview-arrow" aria-hidden="true">→</span>
+            </button>
+            <button type="button" class="admin-overview-link" data-dashboard-link="audit">
+              <span class="admin-overview-link-icon" aria-hidden="true">◷</span><span><strong>Logboek &amp; Discord</strong><small>Activiteit en toegang</small></span><span class="admin-overview-arrow" aria-hidden="true">→</span>
+            </button>
+          </div>
+        </section>
+        <a class="admin-overview-feature" href="/server-statistieken/">
+          <span class="admin-overview-label">Live volgen</span>
+          <strong>Serverstatistieken</strong>
+          <span class="admin-overview-feature-copy">Bekijk de spelersbezetting, status en het lokale spelersverloop.</span>
+          <span class="admin-overview-feature-chart" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span>
+          <span class="admin-overview-card-link">Open statistieken <span aria-hidden="true">↗</span></span>
+        </a>
+      </div>
+    </section>
 
     <div class="cms-section" data-admin-section="settings">
     <div class="admin-grid">
@@ -268,6 +348,6 @@
 <script src="/scripts/tebex.js?v=20261111-1"></script>
 <script src="/scripts/nav.js?v=20261112-2"></script>
 <script src="/scripts/admin.js?v=20261112-1"></script>
-<script src="/scripts/admin/content-manager.js?v=20261113-1"></script>
+<script src="/scripts/admin/content-manager.js?v=20261113-2"></script>
 </body>
 </html>

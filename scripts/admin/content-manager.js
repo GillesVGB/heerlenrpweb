@@ -38,12 +38,67 @@
     var save = document.getElementById("saveAll");
     if (save) save.hidden = name !== "settings" && name !== "shop";
   }
+  function renderOverviewSummary(result) {
+    var content = result.content || {};
+    var user = document.getElementById("adminOverviewUser");
+    if (user) user.textContent = "Ingelogd als " + ((result.user && result.user.username) || "beheerder");
+    var published = []
+      .concat(Array.isArray(content.news) ? content.news : [])
+      .concat(Array.isArray(content.changelog) ? content.changelog : [])
+      .filter(function (item) { return item.status === "published"; }).length;
+    [
+      ["adminOverviewPublished", published],
+      ["adminOverviewStaff", Array.isArray(content.staff) ? content.staff.length : null],
+      ["adminOverviewResidents", Array.isArray(content.residentProfiles) ? content.residentProfiles.length : null],
+      ["adminOverviewAchievements", Array.isArray(content.achievements) ? content.achievements.length : null]
+    ].forEach(function (entry) {
+      var target = document.getElementById(entry[0]);
+      if (target) target.textContent = entry[1] === null ? "—" : String(entry[1]);
+    });
+  }
+  function loadOverviewStatus() {
+    var status = document.getElementById("adminOverviewStatus");
+    var players = document.getElementById("adminOverviewPlayers");
+    var playerCount = document.getElementById("adminOverviewPlayerCount");
+    var card = document.querySelector(".admin-overview-server");
+    if (!status || !players || !playerCount || !card) return;
+    fetch("/api/players", { cache: "no-store" }).then(function (response) {
+      return response.json().then(function (data) {
+        if (!response.ok) throw new Error("Serverstatus niet beschikbaar");
+        return data;
+      });
+    }).then(function (data) {
+      if (data && data.online === true && Number.isFinite(Number(data.clients)) && Number(data.clients) >= 0) {
+        status.textContent = "Online";
+        var clients = Math.floor(Number(data.clients));
+        playerCount.textContent = String(clients);
+        players.textContent = Number(data.max) > 0 ? "Capaciteit · " + Math.floor(Number(data.max)) + " slots" : "Server is bereikbaar";
+        card.dataset.state = "online";
+      } else if (data && data.online === false) {
+        status.textContent = "Offline";
+        playerCount.textContent = "0";
+        players.textContent = "Server is momenteel niet bereikbaar";
+        card.dataset.state = "offline";
+      } else {
+        throw new Error("Ongeldige serverstatus");
+      }
+    }).catch(function () {
+      status.textContent = "Niet beschikbaar";
+      playerCount.textContent = "—";
+      players.textContent = "De actuele serverstatus kon niet worden opgehaald";
+      card.dataset.state = "unknown";
+    });
+  }
   function can(permission) { return !!currentUser && Array.isArray(currentUser.permissions) && currentUser.permissions.includes(permission); }
   function accessTabs() {
     document.querySelectorAll("#cmsTabs [data-section]").forEach(function (button) {
       var section = button.getAttribute("data-section");
-      var permitted = ((section === "settings" || section === "shop") && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write")) || (section === "residents" && can("users:manage"));
+      var permitted = section === "overview" || ((section === "settings" || section === "shop") && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write")) || (section === "residents" && can("users:manage"));
       button.hidden = !permitted;
+    });
+    document.querySelectorAll("[data-dashboard-link]").forEach(function (link) {
+      var tab = document.querySelector('#cmsTabs [data-section="' + link.getAttribute("data-dashboard-link") + '"]');
+      link.hidden = !tab || tab.hidden;
     });
     if (!can("admin:site")) document.querySelector('[data-admin-section="settings"]')?.setAttribute("hidden", "");
     if (!can("admin:site")) document.querySelector('[data-admin-section="shop"]')?.setAttribute("hidden", "");
@@ -224,6 +279,10 @@
     fetch("/api/admin", { credentials: "same-origin", cache: "no-store" }).then(function (response) { return response.json().then(function (body) { if (!response.ok) throw new Error(body.error || "Beheergegevens niet beschikbaar."); return body; }); }).then(function (result) {
       state = result.content; currentUser = result.user;
       accessTabs();
+      renderOverviewSummary(result);
+      document.querySelectorAll("[data-stat-permission]").forEach(function (stat) {
+        stat.hidden = !can(stat.getAttribute("data-stat-permission"));
+      });
       var activeTab = document.querySelector("#cmsTabs [data-section].is-active");
       if (!activeTab || activeTab.hidden) {
         var firstTab = Array.from(document.querySelectorAll("#cmsTabs [data-section]")).find(function (button) { return !button.hidden; });
@@ -235,6 +294,7 @@
       if (state.rulesDraft) renderRules();
       if (state.auditLog) renderAudit();
       if (state.achievements) renderResidents();
+      loadOverviewStatus();
       var discord = document.getElementById("discordState");
       if (discord) discord.textContent = result.integration.discord ? "Discord-login, guildcontrole en Discord-rolcontrole zijn ingesteld." : "Discord-login vraagt nog Discord OAuth Client ID/Secret, server-ID en bot-token als geheime hostingvariabelen. De twee rol-ID’s staan hieronder al ingevuld.";
       if (result.integration.database) discord && (discord.textContent += " PostgreSQL-opslag is gekoppeld.");
@@ -246,6 +306,10 @@
   document.getElementById("cmsTabs").addEventListener("click", function (event) {
     var button = event.target.closest("[data-section]");
     if (button && !button.hidden) selectSection(button.dataset.section);
+  });
+  document.querySelector(".admin-overview").addEventListener("click", function (event) {
+    var button = event.target.closest("[data-dashboard-link]");
+    if (button && !button.hidden) selectSection(button.getAttribute("data-dashboard-link"));
   });
   document.querySelectorAll("[data-new]").forEach(function (button) { button.addEventListener("click", function () { openEditor(button.dataset.new, newItem(button.dataset.new)); }); });
   ["news", "changelog", "staff"].forEach(function (type) {
