@@ -39,11 +39,94 @@ async function initialState() {
   state.achievements ||= [];
   state.achievementAwards ||= [];
   state.residentNotices ||= [];
+  state.events ||= [];
+  state.eventRsvps ||= [];
+  state.jobs ||= [];
+  state.applicationForms ||= [];
+  state.applications ||= [];
+  state.helpArticles ||= [];
+  state.helpCategories ||= [];
+  state.notifications ||= [];
+  state.newsComments ||= [];
   return state;
 }
 
 function parseStored(value) {
   return typeof value === 'string' ? JSON.parse(value) : value;
+}
+
+function publicImage(value) {
+  if (typeof value !== 'string') return '';
+  if (/^https:\/\/[^\s"'<>]{1,1900}$/i.test(value)) return value;
+  return /^data:image\/(?:png|jpeg|webp);base64,[a-z\d+/]+=*$/i.test(value) && value.length <= 550_000 ? value : '';
+}
+
+function publicForm(form) {
+  const allowedTypes = new Set(['short', 'long', 'number', 'date', 'choice', 'multiple', 'dropdown', 'boolean', 'file', 'info']);
+  const questions = (Array.isArray(form.questions) ? form.questions : []).slice(0, 100)
+    .filter(question => question && typeof question.id === 'string' && /^[a-z0-9][a-z0-9_-]{0,59}$/.test(question.id) && allowedTypes.has(question.type))
+    .filter((question, index, list) => list.findIndex(item => item.id === question.id) === index);
+  const ids = new Set(questions.map(question => question.id));
+  const sections = (Array.isArray(form.sections) ? form.sections : []).slice(0, 30)
+    .filter(section => section && typeof section === 'object')
+    .map((section, index) => ({
+      id: String(section.id || `section-${index + 1}`).slice(0, 60),
+      title: String(section.title || '').slice(0, 120),
+      description: String(section.description || '').slice(0, 500)
+    }));
+  const sectionIds = new Set(sections.map(section => section.id));
+  return {
+    id: String(form.id || '').slice(0, 80),
+    title: String(form.title || '').slice(0, 120),
+    description: String(form.description || '').slice(0, 600),
+    version: Number.isInteger(Number(form.version)) ? Math.max(1, Number(form.version)) : 1,
+    sections,
+    questions: questions.map(question => ({
+      id: question.id,
+      title: String(question.title || '').slice(0, 160),
+      description: String(question.description || '').slice(0, 500),
+      ...(sectionIds.has(question.sectionId) ? { sectionId: question.sectionId } : {}),
+      type: question.type,
+      required: question.required === true,
+      ...(Array.isArray(question.options) ? { options: question.options.slice(0, 100).map(option => String(option).slice(0, 120)) } : {}),
+      ...(Number.isInteger(question.minLength) ? { minLength: Math.max(0, Math.min(5000, question.minLength)) } : {}),
+      ...(Number.isInteger(question.maxLength) ? { maxLength: Math.max(1, Math.min(5000, question.maxLength)) } : {}),
+      ...(question.type === 'file' ? { allowedFiles: ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'], maxFileBytes: 400000 } : {}),
+      ...(Array.isArray(question.conditions) ? {
+        conditions: question.conditions.slice(0, 10)
+          .filter(condition => condition && ids.has(condition.questionId) && condition.questionId !== question.id)
+          .map(condition => ({ questionId: condition.questionId, value: String(condition.value || '').slice(0, 240) })),
+        conditionMode: question.conditionMode === 'any' ? 'any' : 'all'
+      } : {})
+    }))
+  };
+}
+
+function publicPost(item, type) {
+  const post = {
+    id: String(item.id || '').slice(0, 80),
+    title: String(item.title || '').slice(0, 160),
+    category: String(item.category || (type === 'news' ? 'Nieuws' : 'Serverupdate')).slice(0, 60),
+    excerpt: String(item.excerpt || '').slice(0, 600),
+    content: String(item.content || '').slice(0, 12000),
+    image: publicImage(item.image),
+    publishAt: String(item.publishAt || ''),
+    updatedAt: String(item.updatedAt || ''),
+    featured: item.featured === true,
+    author: String(item.author || 'Heerlen Roleplay').slice(0, 80)
+  };
+  if (type === 'news') {
+    post.commentsEnabled = item.commentsEnabled === true;
+    post.comments = post.commentsEnabled
+      ? (item.comments || []).slice(0, 200).map(comment => ({
+        id: String(comment.id || '').slice(0, 80),
+        username: String(comment.username || 'Inwoner').slice(0, 80),
+        content: String(comment.content || '').slice(0, 1000),
+        createdAt: String(comment.createdAt || '')
+      }))
+      : [];
+  } else post.version = String(item.version || '').slice(0, 60);
+  return post;
 }
 
 async function initDatabase() {
@@ -257,10 +340,108 @@ export function publicContent(state) {
     }))
     .filter(person => person.id && person.name && person.role)
     .sort((a, b) => a.order - b.order || a.category.localeCompare(b.category, 'nl') || a.name.localeCompare(b.name, 'nl'));
+  const events = (state.events || [])
+    .filter(event => event.status === 'published' && event.cancelled !== true)
+    .map(event => ({
+      id: String(event.id || ''),
+      title: String(event.title || '').slice(0, 120),
+      excerpt: String(event.excerpt || '').slice(0, 600),
+      description: String(event.description || '').slice(0, 12000),
+      image: publicImage(event.image),
+      location: String(event.location || '').slice(0, 160),
+      organizer: String(event.organizer || '').slice(0, 100),
+      startsAt: String(event.startsAt || ''),
+      endsAt: String(event.endsAt || ''),
+      capacity: Number.isInteger(event.capacity) && event.capacity > 0 ? Math.min(event.capacity, 10000) : 0,
+      featured: event.featured === true,
+      attendeeCount: (state.eventRsvps || []).filter(rsvp => rsvp.eventId === event.id && rsvp.status === 'going').length
+    }))
+    .filter(event => event.id && event.title && Number.isFinite(Date.parse(event.startsAt)))
+    .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
+  const jobs = (state.jobs || [])
+    .filter(job => job.status === 'published' && job.closed !== true &&
+      (!job.opensAt || Date.parse(job.opensAt) <= now) &&
+      (!job.closesAt || Date.parse(job.closesAt) > now) &&
+      (state.applicationForms || []).some(form => form.id === job.formId && form.status === 'published'))
+    .map(job => ({
+      id: String(job.id || ''),
+      title: String(job.title || '').slice(0, 120),
+      excerpt: String(job.excerpt || '').slice(0, 600),
+      description: String(job.description || '').slice(0, 12000),
+      image: publicImage(job.image),
+      requirements: String(job.requirements || '').slice(0, 6000),
+      responsibilities: String(job.responsibilities || '').slice(0, 6000),
+      information: String(job.information || '').slice(0, 6000),
+      formId: String(job.formId || ''),
+      opensAt: String(job.opensAt || ''),
+      closesAt: String(job.closesAt || '')
+    }))
+    .filter(job => job.id && job.title);
+  const applicationForms = (state.applicationForms || [])
+    .filter(form => form.status === 'published')
+    .map(publicForm)
+    .filter(form => form.id && form.title);
+  const helpCategories = (state.helpCategories || [])
+    .filter(category => category && typeof category.id === 'string' && typeof category.name === 'string')
+    .map(category => ({ id: category.id.slice(0, 60), name: category.name.slice(0, 80), description: String(category.description || '').slice(0, 300), order: Math.max(0, Number(category.order) || 0) }))
+    .sort((a, b) => a.order - b.order || a.name.localeCompare(b.name, 'nl'));
+  const helpArticles = visible(state.helpArticles)
+    .map(article => ({
+      id: String(article.id || ''),
+      title: String(article.title || '').slice(0, 160),
+      category: String(article.category || '').slice(0, 80),
+      keywords: Array.isArray(article.keywords) ? article.keywords.slice(0, 20).map(value => String(value).slice(0, 40)) : [],
+      excerpt: String(article.excerpt || '').slice(0, 600),
+      content: String(article.content || '').slice(0, 12000),
+      image: publicImage(article.image),
+      featured: article.featured === true,
+      updatedAt: String(article.updatedAt || '')
+    }))
+    .filter(article => article.id && article.title);
+  const profiles = (state.residentProfiles || [])
+    .filter(profile => profile && profile.isPublic === true && /^\d{17,22}$/.test(String(profile.discordId || '')))
+    .map(profile => {
+      const avatar = typeof profile.avatar === 'string' && /^https:\/\/cdn\.discordapp\.com\/avatars\/\d{17,22}\/[\w.-]+(?:\.(?:png|webp|gif))?(?:\?.*)?$/i.test(profile.avatar)
+        ? profile.avatar.slice(0, 1000) : '';
+      return {
+        slug: String(profile.slug || '').slice(0, 60),
+        username: String(profile.username || 'Heerlen-inwoner').slice(0, 80),
+        avatar,
+        banner: publicImage(profile.banner),
+        inGameName: profile.showInGameName === false ? '' : String(profile.inGameName || '').slice(0, 80),
+        bio: profile.showBio === false ? '' : String(profile.bio || '').slice(0, 500),
+        createdAt: String(profile.createdAt || ''),
+        showAchievements: profile.showAchievements !== false,
+        achievements: profile.showAchievements === false ? [] : (state.achievementAwards || [])
+          .filter(award => award.discordId === profile.discordId)
+          .map(award => {
+            const achievement = (state.achievements || []).find(item => item.id === award.achievementId && item.archived !== true);
+            return achievement ? { id: achievement.id, title: achievement.title, description: achievement.description, icon: achievement.icon, image: publicImage(achievement.image), awardedAt: award.awardedAt } : null;
+          }).filter(Boolean)
+      };
+    })
+    .filter(profile => /^[a-z0-9]{24}$/.test(profile.slug))
+    .slice(0, 1000);
+  const news = visible(state.news).sort((a, b) => Date.parse(b.publishAt || b.updatedAt || 0) - Date.parse(a.publishAt || a.updatedAt || 0))
+    .map(item => publicPost({
+      ...item,
+      comments: item.commentsEnabled === true
+        ? (state.newsComments || []).filter(comment => comment.newsId === item.id && comment.hidden !== true).slice(-200)
+        : []
+    }, 'news')).filter(item => item.id && item.title);
+  const changelog = visible(state.changelog)
+    .sort((a, b) => Date.parse(b.publishAt || b.updatedAt || 0) - Date.parse(a.publishAt || a.updatedAt || 0))
+    .map(item => publicPost(item, 'changelog')).filter(item => item.id && item.title);
   return {
-    news: visible(state.news).sort((a, b) => Date.parse(b.publishAt || b.updatedAt || 0) - Date.parse(a.publishAt || a.updatedAt || 0)),
-    changelog: visible(state.changelog).sort((a, b) => Date.parse(b.publishAt || b.updatedAt || 0) - Date.parse(a.publishAt || a.updatedAt || 0)),
+    news,
+    changelog,
     staff,
+    profiles,
+    events,
+    jobs,
+    applicationForms,
+    helpCategories,
+    helpArticles,
     rulesVersions: (state.rulesVersions || []).filter(version => version.status === 'published').sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt)),
     siteSettings,
     storeSettings: {

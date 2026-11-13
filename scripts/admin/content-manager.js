@@ -93,7 +93,7 @@
   function accessTabs() {
     document.querySelectorAll("#cmsTabs [data-section]").forEach(function (button) {
       var section = button.getAttribute("data-section");
-      var permitted = section === "overview" || ((section === "settings" || section === "shop") && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write")) || (section === "residents" && can("users:manage"));
+      var permitted = section === "overview" || ((section === "settings" || section === "shop") && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write")) || (section === "residents" && (can("users:manage") || can("achievements:manage") || can("profiles:moderate"))) || (section === "community" && ["events:manage", "jobs:manage", "forms:manage", "applications:read", "applications:review", "help:manage", "comments:moderate", "notifications:manage"].some(can));
       button.hidden = !permitted;
     });
     document.querySelectorAll("[data-dashboard-link]").forEach(function (link) {
@@ -107,7 +107,8 @@
     if (!can("changelog:write")) document.querySelector('[data-admin-section="changelog"]')?.setAttribute("hidden", "");
     if (!can("staff:write")) document.querySelector('[data-admin-section="staff"]')?.setAttribute("hidden", "");
     if (!can("rules:write")) document.querySelector('[data-admin-section="rules"]')?.setAttribute("hidden", "");
-    if (!can("users:manage")) document.querySelector('[data-admin-section="residents"]')?.setAttribute("hidden", "");
+    if (!(can("users:manage") || can("achievements:manage") || can("profiles:moderate"))) document.querySelector('[data-admin-section="residents"]')?.setAttribute("hidden", "");
+    if (!(["events:manage", "jobs:manage", "forms:manage", "applications:read", "applications:review", "help:manage", "comments:moderate", "notifications:manage"].some(can))) document.querySelector('[data-admin-section="community"]')?.setAttribute("hidden", "");
   }
   function newItem(type) {
     var base = { id: "", title: "", category: type === "staff" ? "Moderatie" : "Nieuwe functies", excerpt: "", content: "", image: "", publishAt: new Date().toISOString(), status: "draft", featured: false, author: currentUser.username || "Staff", version: "", name: "", username: "", role: "", bio: "", discordId: "", order: 0, active: true, joinedAt: "" };
@@ -136,7 +137,7 @@
     var categoryOptions = categories.slice();
     if (item.category && categoryOptions.indexOf(item.category) < 0) categoryOptions.push(item.category);
     var categorySelect = categoryOptions.map(function (category) { return '<option' + (item.category === category ? ' selected' : '') + '>' + esc(category) + '</option>'; }).join("");
-    return common + '<h3>' + (type === "news" ? "Nieuwsbericht" : "Serverupdate") + '</h3>' + (type === "changelog" ? '<label><span>Versie / naam</span><input name="version" maxlength="60" value="' + esc(item.version) + '" placeholder="Bijv. Versie 1.4"></label>' : '') + '<label><span>Titel</span><input name="title" maxlength="160" required value="' + esc(item.title) + '"></label><label><span>Categorie</span><select name="category">' + categorySelect + '</select></label><label><span>Intro / samenvatting</span><textarea name="excerpt" rows="2" maxlength="600">' + esc(item.excerpt) + '</textarea></label><label><span>Uitgebreide beschrijving</span><textarea name="content" rows="9" maxlength="12000" required>' + esc(item.content) + '</textarea></label><label><span>Afbeelding (HTTPS URL)</span><input name="image" maxlength="2000" value="' + esc(item.image) + '"></label><label><span>Of kies een kleine afbeelding (max. 400 KB)</span><input type="file" accept="image/png,image/jpeg,image/webp" data-image-file></label><label><span>Publicatiedatum</span><input name="publishAt" type="datetime-local" value="' + esc(dateInput(item.publishAt)) + '"></label><label><span>Auteur</span><input name="author" maxlength="80" value="' + esc(currentUser.username || item.author || "Staff") + '"></label><label class="check"><input name="featured" type="checkbox"' + (item.featured ? " checked" : "") + '><span>Uitgelicht</span></label><label><span>Status</span><select name="status"><option value="draft"' + (item.status !== "published" ? " selected" : "") + '>Concept</option><option value="published"' + (item.status === "published" ? " selected" : "") + '>Publiceren</option></select></label>';
+    return common + '<h3>' + (type === "news" ? "Nieuwsbericht" : "Serverupdate") + '</h3>' + (type === "changelog" ? '<label><span>Versie / naam</span><input name="version" maxlength="60" value="' + esc(item.version) + '" placeholder="Bijv. Versie 1.4"></label>' : '') + '<label><span>Titel</span><input name="title" maxlength="160" required value="' + esc(item.title) + '"></label><label><span>Categorie</span><select name="category">' + categorySelect + '</select></label><label><span>Intro / samenvatting</span><textarea name="excerpt" rows="2" maxlength="600">' + esc(item.excerpt) + '</textarea></label><label><span>Uitgebreide beschrijving</span><textarea name="content" rows="9" maxlength="12000" required>' + esc(item.content) + '</textarea></label><label><span>Afbeelding (HTTPS URL)</span><input name="image" maxlength="2000" value="' + esc(item.image) + '"></label><label><span>Of kies een kleine afbeelding (max. 400 KB)</span><input type="file" accept="image/png,image/jpeg,image/webp" data-image-file></label><label><span>Publicatiedatum</span><input name="publishAt" type="datetime-local" value="' + esc(dateInput(item.publishAt)) + '"></label><label><span>Auteur</span><input name="author" maxlength="80" value="' + esc(currentUser.username || item.author || "Staff") + '"></label><label class="check"><input name="featured" type="checkbox"' + (item.featured ? " checked" : "") + '><span>Uitgelicht</span></label>' + (type === "news" ? '<label class="check"><input name="commentsEnabled" type="checkbox"' + (item.commentsEnabled ? " checked" : "") + '><span>Reacties toestaan</span></label>' : '') + '<label><span>Status</span><select name="status"><option value="draft"' + (item.status !== "published" ? " selected" : "") + '>Concept</option><option value="published"' + (item.status === "published" ? " selected" : "") + '>Publiceren</option></select></label>';
   }
   function openEditor(type, item) {
     var form = document.getElementById(type + "Editor");
@@ -166,6 +167,7 @@
       if (value !== "") item[key] = value;
     });
     if (form.elements.featured) item.featured = form.elements.featured.checked;
+    if (form.elements.commentsEnabled) item.commentsEnabled = form.elements.commentsEnabled.checked;
     if (form.elements.active) item.active = form.elements.active.checked;
     if (item.publishAt) item.publishAt = new Date(item.publishAt).toISOString();
     if (!item.id) item.id = "item-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
@@ -253,10 +255,16 @@
     var noticeList = document.getElementById("residentNoticeList");
     var profileList = document.getElementById("residentProfileList");
     if (!achievementList || !achievementSelect || !awardList || !noticeList || !profileList) return;
+    var achievementPermission = can("users:manage") || can("achievements:manage");
+    var profilePermission = can("users:manage") || can("profiles:moderate");
+    document.getElementById("achievementForm").hidden = !achievementPermission;
+    document.getElementById("awardForm").hidden = !achievementPermission;
+    document.getElementById("residentNoticeForm").hidden = !can("users:manage");
+    document.getElementById("residentsProfileCard").hidden = !profilePermission;
     achievementList.innerHTML = achievements.map(function (item) {
-      return '<button class="cms-list-item" type="button" data-achievement="' + esc(item.id) + '"><strong>' + esc(item.icon || "✦") + ' ' + esc(item.title) + '</strong><span>' + esc(item.description) + '</span><small>' + esc(item.id) + '</small></button>';
+      return '<button class="cms-list-item" type="button" data-achievement="' + esc(item.id) + '"><strong>' + esc(item.icon || "✦") + ' ' + esc(item.title) + '</strong><span>' + esc(item.description) + '</span><small>' + esc(item.id) + (item.archived ? " · Gearchiveerd" : "") + '</small></button>';
     }).join("") || '<p class="content-empty">Nog geen onderscheidingen aangemaakt.</p>';
-    achievementSelect.innerHTML = achievements.map(function (item) {
+    achievementSelect.innerHTML = achievements.filter(function (item) { return item.archived !== true; }).map(function (item) {
       return '<option value="' + esc(item.id) + '">' + esc(item.title) + '</option>';
     }).join("");
     awardList.innerHTML = awards.map(function (award) {
@@ -270,7 +278,7 @@
       var normalized = String(query || "").trim().toLowerCase();
       var filtered = profiles.filter(function (profile) { return !normalized || (profile.discordId + " " + profile.inGameName).toLowerCase().includes(normalized); });
       profileList.innerHTML = filtered.map(function (profile) {
-        return '<div class="cms-list-item is-static"><strong>' + esc(profile.inGameName || "Naam niet ingesteld") + '</strong><span>Discord-ID ' + esc(profile.discordId) + '</span><small>Gekoppeld ' + esc(profile.createdAt ? new Date(profile.createdAt).toLocaleDateString("nl-NL") : "onbekend") + '</small></div>';
+        return '<div class="cms-list-item is-static"><strong>' + esc(profile.inGameName || profile.username || "Naam niet ingesteld") + '</strong><span>Discord-ID ' + esc(profile.discordId) + '</span><small>' + (profile.isPublic ? "Openbaar profiel" : "Privé profiel") + ' · ' + (can("profiles:moderate") && profile.isPublic ? '<button class="btn btn-ghost" type="button" data-profile-id="' + esc(profile.discordId) + '" data-profile-public="false">Verbergen</button>' : can("profiles:moderate") ? "Inwoner beheert zichtbaarheid" : "") + '</small></div>';
       }).join("") || '<p class="content-empty">Geen dashboardprofielen gevonden.</p>';
     }
     renderProfiles(document.getElementById("residentSearch").value);
@@ -278,6 +286,8 @@
   function load() {
     fetch("/api/admin", { credentials: "same-origin", cache: "no-store" }).then(function (response) { return response.json().then(function (body) { if (!response.ok) throw new Error(body.error || "Beheergegevens niet beschikbaar."); return body; }); }).then(function (result) {
       state = result.content; currentUser = result.user;
+      window.HeerlenAdminState = result;
+      window.dispatchEvent(new CustomEvent("heerlen:admin-loaded", { detail: result }));
       accessTabs();
       renderOverviewSummary(result);
       document.querySelectorAll("[data-stat-permission]").forEach(function (stat) {
@@ -293,7 +303,7 @@
       if (state.staff) renderList("staff");
       if (state.rulesDraft) renderRules();
       if (state.auditLog) renderAudit();
-      if (state.achievements) renderResidents();
+      if (state.achievements || state.residentProfiles) renderResidents();
       loadOverviewStatus();
       var discord = document.getElementById("discordState");
       if (discord) discord.textContent = result.integration.discord ? "Discord-login, guildcontrole en Discord-rolcontrole zijn ingesteld." : "Discord-login vraagt nog Discord OAuth Client ID/Secret, server-ID en bot-token als geheime hostingvariabelen. De twee rol-ID’s staan hieronder al ingevuld.";
@@ -340,6 +350,7 @@
     event.preventDefault();
     var form = event.currentTarget;
     var item = Object.fromEntries(new FormData(form).entries());
+    item.archived = form.elements.archived.checked;
     api({ action: "save-achievement", item: item }).then(function () { show("Onderscheiding opgeslagen"); load(); }).catch(function (error) { alert(error.message); });
   });
   document.getElementById("awardForm").addEventListener("submit", function (event) {
@@ -360,7 +371,8 @@
     var item = (state.achievements || []).find(function (achievement) { return achievement.id === button.dataset.achievement; });
     if (!item) return;
     var form = document.getElementById("achievementForm");
-    ["id", "title", "description", "icon"].forEach(function (key) { form.elements[key].value = item[key] || ""; });
+    ["id", "title", "description", "icon", "image"].forEach(function (key) { form.elements[key].value = item[key] || ""; });
+    form.elements.archived.checked = item.archived === true;
   });
   document.getElementById("awardList").addEventListener("click", function (event) {
     var button = event.target.closest("[data-revoke-award]");
@@ -383,8 +395,15 @@
     var profiles = state.residentProfiles || [];
     var filtered = profiles.filter(function (profile) { return !query || (profile.discordId + " " + profile.inGameName).toLowerCase().includes(query); });
     document.getElementById("residentProfileList").innerHTML = filtered.map(function (profile) {
-      return '<div class="cms-list-item is-static"><strong>' + esc(profile.inGameName || "Naam niet ingesteld") + '</strong><span>Discord-ID ' + esc(profile.discordId) + '</span><small>Gekoppeld ' + esc(profile.createdAt ? new Date(profile.createdAt).toLocaleDateString("nl-NL") : "onbekend") + '</small></div>';
+      return '<div class="cms-list-item is-static"><strong>' + esc(profile.inGameName || profile.username || "Naam niet ingesteld") + '</strong><span>Discord-ID ' + esc(profile.discordId) + '</span><small>' + (profile.isPublic ? "Openbaar profiel" : "Privé profiel") + ' · ' + (can("profiles:moderate") && profile.isPublic ? '<button class="btn btn-ghost" type="button" data-profile-id="' + esc(profile.discordId) + '" data-profile-public="false">Verbergen</button>' : can("profiles:moderate") ? "Inwoner beheert zichtbaarheid" : "") + '</small></div>';
     }).join("") || '<p class="content-empty">Geen dashboardprofielen gevonden.</p>';
+  });
+  document.getElementById("residentProfileList").addEventListener("click", function (event) {
+    var button = event.target.closest("[data-profile-id]");
+    if (!button) return;
+    api({ action: "moderate-profile", discordId: button.dataset.profileId, isPublic: button.dataset.profilePublic === "true" })
+      .then(function () { show("Profielstatus bijgewerkt"); load(); })
+      .catch(function (error) { alert(error.message); });
   });
   document.querySelector('[data-section="settings"]').addEventListener("click", function () { selectSection("settings"); });
   window.addEventListener("heerlen:admin-ready", load);

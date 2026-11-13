@@ -59,9 +59,13 @@
         <nav>
           <a href="#overzicht" class="is-active">Overzicht</a>
           <a href="#profiel">Mijn profiel</a>
+          <a href="#aanmeldingen">Evenementen &amp; sollicitaties</a>
           <a href="#onderscheidingen">Onderscheidingen</a>
           <a href="#meldingen">Meldingen</a>
           <a href="#instellingen">Accountinstellingen</a>
+          <a href="/events/">Evenementen</a>
+          <a href="/solliciteren/">Vacatures</a>
+          <a href="/helpcentrum/">Helpcentrum</a>
         </nav>
       </aside>
       <div class="resident-content">
@@ -82,9 +86,23 @@
           </dl>
           <form id="residentProfileForm" class="resident-profile-form">
             <label><span>In-game naam</span><input name="inGameName" maxlength="80" autocomplete="nickname" placeholder="Je naam in de stad"></label>
+            <label><span>Over mij</span><textarea name="bio" rows="4" maxlength="500" placeholder="Vertel iets over jezelf"></textarea></label>
+            <label><span>Profielfoto/banner (HTTPS URL)</span><input name="banner" type="url" maxlength="2000" placeholder="https://..."></label>
+            <fieldset class="resident-privacy-controls"><legend>Privacy van mijn profiel</legend>
+              <label><input name="isPublic" type="checkbox"><span>Toon mijn profiel openbaar</span></label>
+              <label><input name="showInGameName" type="checkbox" checked><span>Toon mijn in-game naam</span></label>
+              <label><input name="showBio" type="checkbox" checked><span>Toon mijn beschrijving</span></label>
+              <label><input name="showAchievements" type="checkbox" checked><span>Toon mijn onderscheidingen</span></label>
+            </fieldset>
+            <p id="publicProfileLink" class="resident-muted"></p>
             <button type="submit" class="btn btn-primary">Profiel opslaan</button>
             <p id="profileSaveState" class="resident-muted" role="status"></p>
           </form>
+        </section>
+        <section class="resident-panel" id="aanmeldingen">
+          <div class="resident-panel-heading"><div><p class="resident-eyebrow">COMMUNITY</p><h2>Evenementen &amp; sollicitaties</h2></div></div>
+          <h3>Mijn evenementen</h3><div id="residentRsvps" class="resident-notices"></div>
+          <h3>Mijn sollicitaties</h3><div id="residentApplications" class="resident-notices"></div>
         </section>
         <section class="resident-panel" id="onderscheidingen">
           <div class="resident-panel-heading"><div><p class="resident-eyebrow">MIJLPALEN</p><h2>Onderscheidingen</h2></div></div>
@@ -93,13 +111,14 @@
         <section class="resident-panel" id="meldingen">
           <div class="resident-panel-heading"><div><p class="resident-eyebrow">COMMUNITY</p><h2>Meldingen</h2></div></div>
           <div id="residentNotices" class="resident-notices"></div>
+          <h3>Persoonlijke meldingen</h3><div id="residentNotifications" class="resident-notices"></div>
         </section>
         <section class="resident-panel" id="instellingen">
           <div class="resident-panel-heading"><div><p class="resident-eyebrow">BEVEILIGING</p><h2>Accountinstellingen</h2></div></div>
           <p class="resident-muted">Je dashboard gebruikt je Discord-account. Uitloggen verwijdert de beveiligde sessiecookie van deze browser.</p>
           <button type="button" class="btn btn-ghost" id="residentLogout">Uitloggen</button>
         </section>
-        <p class="resident-privacy">Je Discord-ID en eventuele in-game naam worden alleen gebruikt voor je dashboard en beheer van onderscheidingen. Je profiel is niet openbaar.</p>
+        <p class="resident-privacy">Je profiel is standaard privé. Je kiest zelf of je profiel, in-game naam, beschrijving en onderscheidingen openbaar zichtbaar zijn. Je Discord-ID blijft altijd privé.</p>
       </div>
     </div>
   </main>

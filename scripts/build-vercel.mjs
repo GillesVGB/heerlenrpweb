@@ -26,6 +26,10 @@ const staticEntries = [
   'faq',
   'server-statistieken',
   'dashboard',
+  'events',
+  'solliciteren',
+  'helpcentrum',
+  'profiel',
   'winkel'
 ];
 

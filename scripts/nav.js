@@ -293,6 +293,10 @@
               <a href="/faq/">FAQ</a>
               <a href="/nieuws/">Nieuws</a>
               <a href="/updates/">Serverupdates</a>
+              <a href="/events/">Community-evenementen</a>
+              <a href="/solliciteren/">Vacatures</a>
+              <a href="/helpcentrum/">Helpcentrum</a>
+              <a href="/dashboard/">Inwonersdashboard</a>
               <a data-join href="https://cfx.re/join/5oayqbr">Connect</a>
             </nav>
           </div>
