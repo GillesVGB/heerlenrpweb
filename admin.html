@@ -11,6 +11,7 @@
 <link rel="stylesheet" href="/styles/heerlen.css?v=20261111-5">
 <link rel="stylesheet" href="/styles/admin.css?v=20261113-2">
 <link rel="stylesheet" href="/styles/cms.css?v=20261113-1">
+<link rel="stylesheet" href="/styles/community.css">
 </head>
 <body class="admin-body">
 
@@ -69,6 +70,7 @@
       <button type="button" data-section="staff">Staff</button>
       <button type="button" data-section="rules">Regels & versies</button>
       <button type="button" data-section="residents">Inwoners</button>
+      <button type="button" data-section="community">Community &amp; vacatures</button>
       <button type="button" data-section="audit">Logboek & Discord</button>
     </nav>
 
@@ -151,7 +153,7 @@
       </div>
     </section>
 
-    <div class="cms-section" data-admin-section="settings">
+    <div class="cms-section" data-admin-section="settings" hidden>
     <div class="admin-grid">
       <form class="admin-card" id="siteForm">
         <h2>Homepage</h2>
@@ -303,6 +305,8 @@
           <label><span>Naam</span><input name="title" maxlength="60" required></label>
           <label><span>Beschrijving</span><textarea name="description" rows="3" maxlength="240"></textarea></label>
           <label><span>Icoon</span><input name="icon" maxlength="8" value="✦"></label>
+          <label><span>Afbeelding (HTTPS URL)</span><input name="image" type="url" maxlength="2000"></label>
+          <label class="check"><input name="archived" type="checkbox"><span>Archiveren (niet meer tonen of toekennen)</span></label>
           <button type="submit" class="btn btn-blue">Onderscheiding opslaan</button>
           <div id="achievementList" class="cms-list"></div>
         </form>
@@ -323,10 +327,56 @@
           <div id="residentNoticeList" class="cms-list"></div>
         </form>
       </div>
-      <section class="admin-card">
+      <section class="admin-card" id="residentsProfileCard">
         <h3>Gekoppelde dashboardprofielen</h3>
         <label><span>Zoek op Discord-ID of in-game naam</span><input id="residentSearch" type="search" autocomplete="off"></label>
         <div id="residentProfileList" class="cms-list"></div>
+      </section>
+    </section>
+
+    <section class="admin-card cms-panel" data-admin-section="community" hidden>
+      <header class="cms-panel-head"><div><h2>Communitybeheer</h2><p class="hint">Beheer evenementen, sollicitatieformulieren, vacatures, kennisbank, sollicitaties en moderatie.</p></div></header>
+      <div class="admin-grid">
+        <section class="admin-card">
+          <h3>Community-inhoud</h3>
+          <label><span>Onderdeel</span><select id="communityType">
+            <option value="events">Evenementen</option><option value="jobs">Vacatures</option>
+            <option value="applicationForms">Sollicitatieformulieren</option><option value="helpCategories">Helpcategorieën</option>
+            <option value="helpArticles">Helpartikelen</option>
+          </select></label>
+          <button type="button" class="btn btn-blue" id="communityNew">Nieuw item</button>
+          <div id="communityRecordList" class="cms-list"></div>
+        </section>
+        <form class="admin-card" id="communityEditor" hidden></form>
+      </div>
+      <div class="admin-grid">
+        <section class="admin-card">
+          <h3>Sollicitaties beoordelen</h3>
+          <label><span>Sollicitatie</span><select id="applicationSelect"><option value="">Selecteer een sollicitatie</option></select></label>
+          <pre id="applicationDetail" class="community-admin-detail"></pre>
+          <form id="applicationReviewForm">
+            <input type="hidden" name="id">
+            <label><span>Status</span><select name="status"><option value="received">Ontvangen</option><option value="reviewing">In behandeling</option><option value="interview">Gesprek</option><option value="approved">Goedgekeurd</option><option value="rejected">Afgewezen</option></select></label>
+            <label><span>Bericht voor sollicitant</span><textarea name="message" rows="3" maxlength="500"></textarea></label>
+            <label><span>Interne notitie</span><textarea name="note" rows="3" maxlength="2000"></textarea></label>
+            <button type="submit" class="btn btn-blue">Beoordeling opslaan</button>
+            <p id="applicationReviewState" class="cms-message" role="status"></p>
+          </form>
+        </section>
+        <section class="admin-card">
+          <h3>Inwonersmelding versturen</h3>
+          <form id="residentBroadcastForm">
+            <label><span>Ontvanger</span><input name="discordId" value="all" placeholder="all of Discord-ID" required></label>
+            <label><span>Titel</span><input name="title" maxlength="100" required></label>
+            <label><span>Bericht</span><textarea name="message" rows="3" maxlength="300" required></textarea></label>
+            <button type="submit" class="btn btn-blue">Melding versturen</button>
+            <p id="broadcastState" class="cms-message" role="status"></p>
+          </form>
+        </section>
+      </div>
+      <section class="admin-card">
+        <h3>Nieuwsreacties modereren</h3>
+        <div id="commentModerationList" class="cms-list"></div>
       </section>
     </section>
 
@@ -349,5 +399,6 @@
 <script src="/scripts/nav.js?v=20261112-2"></script>
 <script src="/scripts/admin.js?v=20261112-1"></script>
 <script src="/scripts/admin/content-manager.js?v=20261113-2"></script>
+<script src="/scripts/admin/community-manager.js" defer></script>
 </body>
 </html>

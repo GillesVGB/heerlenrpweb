@@ -74,6 +74,50 @@
         if (item.image) { var image = element("img", "news-article-image"); image.src = item.image; image.alt = ""; article.appendChild(image); }
         if (item.author) article.appendChild(element("p", "content-muted", "Door " + item.author));
         (item.content || "").split(/\n{2,}/).filter(Boolean).forEach(function (line) { article.appendChild(element("p", "", line)); });
+        if (item.commentsEnabled) {
+          var comments = element("section", "community-panel community-comments");
+          comments.appendChild(element("h3", "", "Reacties"));
+          var commentList = element("div", "community-comment-list");
+          (item.comments || []).forEach(function (comment) {
+            var row = element("article", "community-comment");
+            row.appendChild(element("strong", "", comment.username));
+            row.appendChild(element("small", "", " · " + formatDate(comment.createdAt)));
+            row.appendChild(element("p", "", comment.content));
+            commentList.appendChild(row);
+          });
+          if (!item.comments || !item.comments.length) commentList.appendChild(element("p", "content-muted", "Er zijn nog geen reacties."));
+          comments.appendChild(commentList);
+          var commentForm = element("form", "community-form");
+          var label = element("label");
+          label.appendChild(element("span", "", "Plaats een reactie"));
+          var input = element("textarea"); input.name = "content"; input.required = true; input.maxLength = 1000; input.rows = 3;
+          label.appendChild(input); commentForm.appendChild(label);
+          var submit = element("button", "btn btn-primary", "Reactie plaatsen"); submit.type = "submit";
+          var state = element("p", "community-status"); state.setAttribute("role", "status");
+          commentForm.append(submit, state);
+          commentForm.addEventListener("submit", function (event) {
+            event.preventDefault(); submit.disabled = true; state.textContent = "Versturen…";
+            fetch("/api/community", {
+              method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ action: "comment-create", newsId: item.id, content: input.value })
+            }).then(function (response) {
+              return response.json().then(function (result) {
+                if (!response.ok) throw new Error(result.error || "Reactie plaatsen is niet gelukt.");
+                return result;
+              });
+            }).then(function () { state.textContent = "Je reactie is geplaatst."; input.value = ""; })
+              .catch(function (error) {
+                state.textContent = error.message;
+                if (error.message.indexOf("Log in") >= 0) {
+                  var login = element("a", "content-more", "Inloggen met Discord");
+                  login.href = "/api/auth/discord?next=" + encodeURIComponent("/nieuws/?id=" + item.id);
+                  state.appendChild(login);
+                }
+              }).finally(function () { submit.disabled = false; });
+          });
+          comments.appendChild(commentForm);
+          article.appendChild(comments);
+        }
         detail.appendChild(article);
       }
       fillCards(cards, all.filter(function (row) { return row.id !== id; }).slice(0, 3), "news", "");

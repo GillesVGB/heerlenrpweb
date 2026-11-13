@@ -10,8 +10,8 @@ process.env.ADMIN_PASSWORD = 'cms-workflow-test-password-not-for-production';
 process.env.CONTENT_STORE_PATH = path.join(tmpdir(), `heerlen-cms-test-${process.pid}.json`);
 const originalPublicOrigin = process.env.PUBLIC_ORIGIN;
 
-const [{ default: admin }, { default: content }, { default: avatar }, { default: donations }, { default: portal }, { default: discordCallback }, { makeSession, permissionsForRoleIds, readSession, sessionCookie, setOAuthState, validateOAuthState, verifyOrigin }] = await Promise.all([
-  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../api/donations.mjs'), import('../api/portal.mjs'), import('../api/auth/callback.mjs'), import('../server/security.mjs')
+const [{ default: admin }, { default: content }, { default: avatar }, { default: donations }, { default: portal }, { default: community }, { default: discordCallback }, { makeSession, permissionsForRoleIds, readSession, sessionCookie, setOAuthState, validateOAuthState, verifyOrigin }] = await Promise.all([
+  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../api/donations.mjs'), import('../api/portal.mjs'), import('../api/community.mjs'), import('../api/auth/callback.mjs'), import('../server/security.mjs')
 ]);
 const base = 'http://127.0.0.1:8765';
 const origin = { origin: base, 'content-type': 'application/json' };
@@ -25,6 +25,11 @@ const runPortal = (method, payload, cookie, requestOrigin = base) => portal(new 
   headers: { origin: requestOrigin, 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
   ...(method === 'GET' ? {} : { body: JSON.stringify(payload || {}) })
 }));
+const runCommunity = (method, payload, cookie) => community(new Request(base + '/api/community', {
+  method,
+  headers: { origin: base, 'content-type': 'application/json', ...(cookie ? { cookie } : {}) },
+  ...(method === 'GET' ? {} : { body: JSON.stringify(payload || {}) })
+}));
 
 const dashboardPage = await readFile(new URL('../dashboard/index.html', import.meta.url), 'utf8');
 const dashboardClient = await readFile(new URL('./resident-dashboard.js', import.meta.url), 'utf8');
@@ -32,13 +37,26 @@ const staffPage = await readFile(new URL('../staff/index.html', import.meta.url)
 const adminPage = await readFile(new URL('../admin.html', import.meta.url), 'utf8');
 const adminStyles = await readFile(new URL('../styles/admin.css', import.meta.url), 'utf8');
 const adminClient = await readFile(new URL('./admin/content-manager.js', import.meta.url), 'utf8');
+const communityAdminClient = await readFile(new URL('./admin/community-manager.js', import.meta.url), 'utf8');
 const publicContentScript = await readFile(new URL('./content/public-content.js', import.meta.url), 'utf8');
+const eventsPage = await readFile(new URL('../events/index.html', import.meta.url), 'utf8');
+const applicationsPage = await readFile(new URL('../solliciteren/index.html', import.meta.url), 'utf8');
+const helpPage = await readFile(new URL('../helpcentrum/index.html', import.meta.url), 'utf8');
+const profilePage = await readFile(new URL('../profiel/index.html', import.meta.url), 'utf8');
 assert.match(adminPage, /data-admin-section="overview"/, 'The admin panel opens on a dashboard overview');
+assert.match(adminPage, /data-admin-section="settings" hidden/, 'The site settings stay hidden until selected so they cannot overlap the overview');
 assert.match(adminPage, /class="admin-overview-profile"/, 'The overview has the Heerlen identity header');
 assert.match(adminPage, /class="admin-overview-stats"/, 'The overview shows real dashboard statistic cards');
 assert.match(adminPage, /data-section="overview"/, 'The admin dashboard is reachable from its sidebar navigation');
 assert.match(adminPage, /id="adminOverviewStatus"/, 'The admin dashboard exposes the live server summary');
 assert.match(adminClient, /fetch\("\/api\/players"/, 'The admin dashboard uses the existing live server status endpoint');
+assert.match(adminPage, /data-section="community"/, 'the admin panel exposes community management');
+assert.match(communityAdminClient, /save-community-record/, 'community admins can manage content through the CMS');
+assert.match(communityAdminClient, /review-application/, 'authorized staff can review applications');
+assert.match(eventsPage, /data-community-page="events"/, 'the public events page is included');
+assert.match(applicationsPage, /data-community-page="jobs"/, 'the dynamic application page is included');
+assert.match(helpPage, /data-community-page="help"/, 'the public searchable help center is included');
+assert.match(profilePage, /data-community-page="profile"/, 'public resident profiles have a dedicated page');
 assert.match(adminStyles, /#cmsTabs[\s\S]*?position: sticky/, 'Admin sections use persistent side navigation on desktop');
 assert.match(adminStyles, /color: var\(--blue\)/, 'The redesigned admin dashboard keeps the existing site accent color');
 assert.match(dashboardPage, /id="residentWorkspace" hidden/, 'resident dashboard details stay hidden until authentication succeeds');
@@ -103,7 +121,7 @@ try {
   assert.equal(data.content.rulesVersions[0].version, '1.0', 'complete source rules were migrated as version 1');
   assert.equal(data.content.rulesDraft.documents.length, 3, 'the APV and two code books are present in the draft');
 
-  const created = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'test-news', title: 'Testbericht', category: 'Nieuws', excerpt: 'Intro', content: 'Eerste alinea', status: 'published', publishAt: new Date(Date.now() - 1000).toISOString() } }, cookie);
+  const created = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'test-news', title: 'Testbericht', category: 'Nieuws', excerpt: 'Intro', content: 'Eerste alinea', status: 'published', commentsEnabled: true, publishAt: new Date(Date.now() - 1000).toISOString() } }, cookie);
   assert.equal(created.status, 200, 'news can be created: ' + JSON.stringify(await created.clone().json()));
   const staffProfile = await run(admin, 'POST', { action: 'save', type: 'staff', item: { id: 'test-staff', name: 'Test Staff', username: 'teststaff', category: 'Support', role: 'Support', bio: 'Helpt inwoners.', discordId: '12345678901234567', order: 1, active: true, joinedAt: '2025-01-15T00:00:00.000Z' } }, cookie);
   assert.equal(staffProfile.status, 200, 'admins can manage a public staff profile');
@@ -124,15 +142,110 @@ try {
   const savedProfile = await runPortal('POST', { action: 'save-profile', inGameName: 'Test Personage' }, residentCookie);
   assert.equal(savedProfile.status, 200, 'residents can save their own profile');
   assert.equal((await savedProfile.json()).profile.inGameName, 'Test Personage');
+  const publicProfileSave = await runPortal('POST', { action: 'save-profile', profile: { inGameName: 'Test Personage', bio: 'Ik speel graag in Heerlen.', isPublic: true, showBio: true, showInGameName: true, showAchievements: true } }, residentCookie);
+  assert.equal(publicProfileSave.status, 200, 'residents can select public profile visibility and field-level privacy');
   const otherResidentCookie = sessionCookie(makeSession({ id: '22345678901234567', username: 'AndereInwoner', provider: 'discord', roles: [], permissions: [] }), { url: base + '/api/portal' }).split(';')[0];
+  const thirdResidentCookie = sessionCookie(makeSession({ id: '32345678901234567', username: 'DerdeInwoner', provider: 'discord', roles: [], permissions: [] }), { url: base + '/api/portal' }).split(';')[0];
   const otherResident = await runPortal('GET', undefined, otherResidentCookie);
   assert.equal((await otherResident.json()).profile.inGameName, '', 'resident profile reads are isolated by Discord account');
+  assert.equal((await runCommunity('GET')).status, 401, 'community dashboard data requires a Discord session');
   const crossOriginPortalWrite = await runPortal('POST', { action: 'save-profile', inGameName: 'Overgenomen' }, residentCookie, 'https://attacker.example');
   assert.equal(crossOriginPortalWrite.status, 403, 'resident profile writes reject cross-origin requests');
   const oversizedResidentName = await runPortal('POST', { action: 'save-profile', inGameName: 'x'.repeat(81) }, residentCookie);
   assert.equal(oversizedResidentName.status, 400, 'resident profile fields are validated server-side');
   const anonymousPortal = await runPortal('GET');
   assert.equal(anonymousPortal.status, 401, 'resident data requires a valid Discord session');
+  const profileFeed = await content(new Request(base + '/api/content'));
+  const profileFeedBody = await profileFeed.json();
+  assert.equal(profileFeedBody.profiles.length, 1, 'only opted-in profiles are included in the public feed');
+  assert.equal(profileFeedBody.profiles[0].bio, 'Ik speel graag in Heerlen.', 'public profiles respect selected visible fields');
+  assert.equal('discordId' in profileFeedBody.profiles[0], false, 'public profiles never expose Discord IDs');
+
+  const formSaved = await run(admin, 'POST', { action: 'save-community-record', type: 'applicationForms', item: {
+    id: 'helper-form', title: 'Sollicitatieformulier', description: 'Vertel ons over jezelf.', status: 'published',
+    sections: [{ id: 'about', title: 'Over jou', description: 'Een paar vragen.' }],
+    questions: [{ id: 'about-you', title: 'Vertel iets over jezelf', type: 'long', required: true, sectionId: 'about', maxLength: 300, privateKey: 'must-not-publish' }]
+  } }, cookie);
+  assert.equal(formSaved.status, 200, 'admins can publish versioned application forms');
+  const jobSaved = await run(admin, 'POST', { action: 'save-community-record', type: 'jobs', item: {
+    id: 'helper-job', title: 'Communityhelper', description: 'Help nieuwe spelers.', formId: 'helper-form', status: 'published'
+  } }, cookie);
+  assert.equal(jobSaved.status, 200, 'admins can publish jobs linked to published application forms');
+  const eventSaved = await run(admin, 'POST', { action: 'save-community-record', type: 'events', item: {
+    id: 'community-event', title: 'Communityavond', startsAt: new Date(Date.now() + 86400000).toISOString(), capacity: 1, status: 'published'
+  } }, cookie);
+  assert.equal(eventSaved.status, 200, 'admins can publish events with a capacity');
+  const featureFeed = await content(new Request(base + '/api/content'));
+  const featureFeedBody = await featureFeed.json();
+  assert.equal(featureFeedBody.jobs[0].id, 'helper-job', 'published jobs appear in the public feed');
+  assert.equal(featureFeedBody.events[0].id, 'community-event', 'published events appear in the public feed');
+  assert.equal('privateKey' in featureFeedBody.applicationForms[0].questions[0], false, 'public application forms use a strict question-field allowlist');
+  assert.equal(featureFeedBody.applicationForms[0].questions[0].sectionId, 'about', 'public application forms preserve sanitized question-section relationships');
+  const submittedApplication = await runCommunity('POST', { action: 'submit-application', jobId: 'helper-job', answers: { 'about-you': 'Ik help graag nieuwe spelers.' } }, residentCookie);
+  assert.equal(submittedApplication.status, 201, 'residents can submit valid applications');
+  const updatedForm = await run(admin, 'POST', { action: 'save-community-record', type: 'applicationForms', item: {
+    id: 'helper-form', title: 'Sollicitatieformulier', description: 'Vertel ons over jezelf.', status: 'published',
+    sections: [{ id: 'about', title: 'Over jou', description: 'Een paar vragen.' }],
+    questions: [{ id: 'about-you', title: 'Vertel meer over jezelf', type: 'long', required: true, maxLength: 300 }]
+  } }, cookie);
+  assert.equal((await updatedForm.json()).item.version, 2, 'form edits create a new form version');
+  const applicationState = await run(admin, 'GET', undefined, cookie);
+  const storedApplication = (await applicationState.json()).content.applications[0];
+  assert.equal(storedApplication.formVersion, 1, 'submitted applications retain their original form version');
+  assert.equal(storedApplication.formSnapshot.questions[0].title, 'Vertel iets over jezelf', 'submitted applications preserve the original question snapshot');
+  const residentCommunity = await runCommunity('GET', undefined, residentCookie);
+  const residentCommunityBody = await residentCommunity.json();
+  assert.equal(residentCommunityBody.applications.length, 1, 'residents can view their own application status');
+  assert.equal('answers' in residentCommunityBody.applications[0], false, 'the resident status API omits private application answers');
+  const otherResidentCommunity = await runCommunity('GET', undefined, otherResidentCookie);
+  assert.equal((await otherResidentCommunity.json()).applications.length, 0, 'applications are isolated by Discord account');
+  const invalidAnswer = await runCommunity('POST', { action: 'submit-application', jobId: 'helper-job', answers: {} }, otherResidentCookie);
+  assert.equal(invalidAnswer.status, 400, 'required application questions are validated server-side');
+  const firstRsvp = await runCommunity('POST', { action: 'event-rsvp', eventId: 'community-event' }, residentCookie);
+  assert.equal((await firstRsvp.json()).status, 'going', 'the event capacity is reserved for the first resident');
+  const secondRsvp = await runCommunity('POST', { action: 'event-rsvp', eventId: 'community-event' }, otherResidentCookie);
+  assert.equal((await secondRsvp.json()).status, 'waitlist', 'event capacity overflow is placed on a waitlist');
+  const thirdRsvp = await runCommunity('POST', { action: 'event-rsvp', eventId: 'community-event' }, thirdResidentCookie);
+  assert.equal((await thirdRsvp.json()).status, 'waitlist', 'waitlisted residents retain their registration order');
+  await runCommunity('POST', { action: 'event-rsvp', eventId: 'community-event', cancel: true }, otherResidentCookie);
+  assert.equal((await runCommunity('GET', undefined, thirdResidentCookie)).status, 200, 'a waitlisted resident can cancel their own RSVP');
+  const remainingRsvp = await runCommunity('POST', { action: 'event-rsvp', eventId: 'community-event' }, thirdResidentCookie);
+  assert.equal((await remainingRsvp.json()).status, 'waitlist', 'cancelling a waitlist entry does not promote another resident into a full event');
+  await runCommunity('POST', { action: 'event-rsvp', eventId: 'community-event', cancel: true }, residentCookie);
+  const promotedResident = await runCommunity('GET', undefined, thirdResidentCookie);
+  assert.equal((await promotedResident.json()).rsvps[0].status, 'going', 'the earliest waitlisted resident is promoted when a seat opens');
+  const comment = await runCommunity('POST', { action: 'comment-create', newsId: 'test-news', content: 'Leuk bericht.' }, residentCookie);
+  assert.equal(comment.status, 201, 'authenticated residents can comment on news that enables comments');
+  let communityFeed = await (await content(new Request(base + '/api/content'))).json();
+  assert.equal(communityFeed.news[0].comments[0].content, 'Leuk bericht.', 'public news comments contain only moderated public fields');
+  const commentId = communityFeed.news[0].comments[0].id;
+  const moderatedComment = await run(admin, 'POST', { action: 'moderate-comment', id: commentId, hidden: true }, cookie);
+  assert.equal(moderatedComment.status, 200, 'admins can moderate a news comment');
+  communityFeed = await (await content(new Request(base + '/api/content'))).json();
+  assert.equal(communityFeed.news[0].comments.length, 0, 'hidden comments are excluded from the public feed');
+  const review = await run(admin, 'POST', { action: 'review-application', id: residentCommunityBody.applications[0].id, status: 'interview', message: 'We nodigen je uit voor een gesprek.', note: 'Sterke motivatie.' }, cookie);
+  assert.equal(review.status, 200, 'admins can review applications and send an applicant-facing status update: ' + JSON.stringify(await review.clone().json()));
+  const updatedResident = await runCommunity('GET', undefined, residentCookie);
+  const updatedResidentBody = await updatedResident.json();
+  assert.equal(updatedResidentBody.applications[0].status, 'interview', 'application status updates are visible to the applicant');
+  assert.equal(updatedResidentBody.notifications[0].type, 'application', 'applicant-facing review messages create private notifications');
+  const readNotification = await runCommunity('POST', { action: 'notification-read', id: updatedResidentBody.notifications[0].id }, residentCookie);
+  assert.equal(readNotification.status, 200, 'residents can mark their own notifications as read');
+
+  const oldEventsRole = process.env.DISCORD_EVENTS_ROLE_ID;
+  process.env.DISCORD_EVENTS_ROLE_ID = 'events-manager-role';
+  assert.deepEqual(permissionsForRoleIds(['events-manager-role']), ['events:manage'], 'optional event roles receive only their configured least-privilege permission');
+  if (oldEventsRole === undefined) delete process.env.DISCORD_EVENTS_ROLE_ID;
+  else process.env.DISCORD_EVENTS_ROLE_ID = oldEventsRole;
+  const eventManagerCookie = sessionCookie(makeSession({ id: 'event-manager', username: 'EventManager', permissions: ['events:manage'], provider: 'test' }), { url: base + '/api/admin' }).split(';')[0];
+  const eventManagerData = await run(admin, 'GET', undefined, eventManagerCookie);
+  assert.equal(eventManagerData.status, 200, 'an event-specific role can open the community CMS');
+  const eventManagerContent = (await eventManagerData.json()).content;
+  assert.equal(eventManagerContent.events.length, 1, 'event managers can view event data');
+  assert.equal(eventManagerContent.applications, undefined, 'event managers cannot read applicant data');
+  assert.equal(eventManagerContent.siteSettings, undefined, 'event managers cannot read site settings');
+  const eventManagerDenied = await run(admin, 'POST', { action: 'save-community-record', type: 'jobs', item: { id: 'forbidden-job' } }, eventManagerCookie);
+  assert.equal(eventManagerDenied.status, 403, 'event managers cannot edit unrelated community modules');
 
   const achievementSaved = await run(admin, 'POST', { action: 'save-achievement', item: { id: 'community-helper', title: 'Communityhelper', description: 'Helpt nieuwe inwoners op weg.', icon: '✦' } }, cookie);
   assert.equal(achievementSaved.status, 200, 'site admins can create dashboard achievements');
@@ -151,6 +264,9 @@ try {
   assert.deepEqual((await otherDashboard.json()).achievements, [], 'achievement data is not visible to other residents');
   const residentList = await run(admin, 'GET', undefined, cookie);
   assert.equal((await residentList.json()).content.residentProfiles.length, 1, 'resident management lists only saved profiles');
+  await runPortal('POST', { action: 'save-profile', inGameName: 'Privé profiel' }, otherResidentCookie);
+  const forcedPublic = await run(admin, 'POST', { action: 'moderate-profile', discordId: '22345678901234567', isPublic: true }, cookie);
+  assert.equal(forcedPublic.status, 400, 'administrators cannot override a resident opt-in privacy choice');
   const logout = await runPortal('POST', { action: 'logout' }, residentCookie);
   assert.equal(logout.status, 200, 'resident logout clears the secure session');
   assert.match(logout.headers.get('set-cookie'), /Max-Age=0/);

@@ -8,10 +8,10 @@ De site is statische HTML, CSS en JavaScript met Vercel Functions voor gedeeld b
 - `faq/` — doorzoekbare FAQ over whitelist, regels, aankopen en support.
 - `data/initial-content.json` — volledige beginsnapshot van de bestaande drie regelboeken; versie 1 blijft als eerste gepubliceerde versie bewaard.
 - `images/` — bestaande logo-, banner-, video- en winkelafbeeldingen.
-- `nieuws/`, `updates/`, `staff/` — losse pagina’s met eigen `index.html`.
+- `nieuws/`, `updates/`, `staff/`, `events/`, `solliciteren/`, `helpcentrum/`, `profiel/` — losse pagina’s met eigen `index.html`.
 - `scripts/` — bestaande winkel/sitecode; nieuwe browsercode staat gescheiden in `scripts/admin/` en `scripts/content/`.
 - `server/` — sessiebeveiliging, Discord-rollen en gedeelde data-opslag.
-- `styles/` — bestaande vormgeving plus losse `content.css` en `cms.css`.
+- `styles/` — bestaande vormgeving plus losse content-, CMS- en communitystyles.
 - `winkel/` en `hl-tebexwrapper/` — bestaande Tebex-winkel en FiveM resource.
 
 ## Lokaal
@@ -30,7 +30,9 @@ Stel de variabelen uit `.env.example` in als geheime Vercel Environment Variable
 
 ## CMS
 
-Open `/admin.html`. Beheer kan via Discord met rol `1568033014384951366` of via het sterk ingestelde `ADMIN_PASSWORD`. De rol `1567581357004038184` geeft alleen toegang tot `/staff/`; deze rol krijgt geen beheerrechten. Discord-rollen worden server-side opnieuw opgehaald bij elk beschermd verzoek, zodat gewijzigde rollen meteen gelden. Nieuws, updates, profielen, regelconcepten, gepubliceerde regelversies en het logboek gaan naar de gedeelde opslag.
+Open `/admin.html`. Beheer kan via Discord met rol `1568033014384951366` of via het sterk ingestelde `ADMIN_PASSWORD`. De rol `1567581357004038184` krijgt alleen `staff:read` en geen beheerrechten; de openbare staffdirectory is voor iedereen toegankelijk. Discord-rollen worden server-side opnieuw opgehaald bij elk beschermd verzoek, zodat gewijzigde rollen meteen gelden. Optionele rollen met beperkte rechten configureer je met de `DISCORD_*_ROLE_ID` variabelen hierboven. Community-items, sollicitaties, beoordelingen, meldingen, reacties, profielen en onderscheidingen gaan naar de gedeelde opslag. Aanvraagbestanden zijn beperkt tot PDF/PNG/JPEG/WebP tot 400 KB; contentopslag blijft begrensd op 4 MB.
+
+Bewoners loggen in via Discord op `/dashboard/`. Een profiel is standaard privé; inwoners kunnen per profielveld openbaar delen instellen. Evenementaanmeldingen, sollicitaties en persoonlijke meldingen zijn alleen met de eigenaarssessie beschikbaar. Nieuwe communitypagina’s zijn `/events/`, `/solliciteren/` en `/helpcentrum/`; openbare profielen staan op `/profiel/?id=...`.
 
 De shopinstellingen worden gedeeld opgeslagen zodat categorieën, productnamen en Tebex-package-ID's op de apparaten van bezoekers gelijk zijn. De overige FiveM-velden blijven lokale browserinstellingen.
 
@@ -44,7 +46,7 @@ Log eerst in op `/admin.html`, vul bij **Tebex + hl-tebexwrapper** de publieke H
 
 ## Controles
 
-- `npm run test:cms` controleert lokale login, oorsprongsbeveiliging, serverrechten, nieuws publiceren, staffrechten en onveranderbare APV-versies.
+- `npm run test:cms` controleert lokale login, oorsprongsbeveiliging, serverrechten, communityprofielprivacy, formulier- en sollicitatietoegang, evenementcapaciteit, reacties/moderatie, nieuws publiceren, staffrechten en onveranderbare APV-versies.
 - `npm run test:server-status` en `npm run test:server-statistics` controleren de live statusroute en de pagina met serverstatistieken.
 - FiveM-status, live Discord OAuth en gedeelde Vercel-opslag vragen externe hostingtoegang en secrets; die zijn niet met de lokale workflowtest geverifieerd.
 "# heerlenrpweb" 

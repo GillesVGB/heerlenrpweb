@@ -88,9 +88,32 @@ export function discordRoleIds() {
 
 export function permissionsForRoleIds(roleIds) {
   const roles = new Set(roleIds || []);
-  if (roles.has(ADMIN_ROLE_ID)) return ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read', 'users:manage'];
-  if (roles.has(STAFF_ROLE_ID)) return ['staff:read'];
-  return [];
+  const permissions = new Set();
+  if (roles.has(ADMIN_ROLE_ID)) [
+    'admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read',
+    'rules:write', 'audit:read', 'discord:read', 'users:manage',
+    'events:manage', 'jobs:manage', 'forms:manage', 'applications:read',
+    'applications:review', 'help:manage', 'comments:moderate',
+    'achievements:manage', 'profiles:moderate', 'notifications:manage'
+  ].forEach(permission => permissions.add(permission));
+  if (roles.has(STAFF_ROLE_ID)) permissions.add('staff:read');
+  const rolePermissions = [
+    ['DISCORD_EVENTS_ROLE_ID', 'events:manage'],
+    ['DISCORD_JOBS_ROLE_ID', 'jobs:manage'],
+    ['DISCORD_FORMS_ROLE_ID', 'forms:manage'],
+    ['DISCORD_APPLICATIONS_READ_ROLE_ID', 'applications:read'],
+    ['DISCORD_APPLICATIONS_REVIEW_ROLE_ID', 'applications:review'],
+    ['DISCORD_HELP_ROLE_ID', 'help:manage'],
+    ['DISCORD_COMMENTS_ROLE_ID', 'comments:moderate'],
+    ['DISCORD_ACHIEVEMENTS_ROLE_ID', 'achievements:manage'],
+    ['DISCORD_PROFILES_ROLE_ID', 'profiles:moderate'],
+    ['DISCORD_NOTIFICATIONS_ROLE_ID', 'notifications:manage']
+  ];
+  rolePermissions.forEach(([key, permission]) => {
+    const roleId = process.env[key];
+    if (roleId && roles.has(roleId)) permissions.add(permission);
+  });
+  return Array.from(permissions);
 }
 
 export function hasPermission(user, permission) {

@@ -6,6 +6,7 @@ import { vercelHandler } from '../server/vercel-adapter.mjs';
 
 const attempts = new Map();
 const maxPasswordAttempts = 8;
+const allowedApplicationStatuses = new Set(['received', 'reviewing', 'interview', 'approved', 'rejected']);
 
 function limiterKey(request) {
   return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 'anonymous';
@@ -37,6 +38,10 @@ function cleanRecord(type, raw) {
     author: cleanText(raw.author || 'Heerlen Roleplay', 80, 'Auteur'),
     updatedAt: new Date().toISOString()
   };
+  if (type === 'news') {
+    if (raw.commentsEnabled !== undefined && typeof raw.commentsEnabled !== 'boolean') throw new Error('Ongeldige reactie-instelling.');
+    common.commentsEnabled = raw.commentsEnabled === true;
+  }
   if (type === 'changelog') common.version = cleanText(raw.version || 'Update', 60, 'Versie');
   return common;
 }
@@ -57,6 +62,144 @@ function cleanStaff(raw) {
     active: raw.active !== false,
     updatedAt: new Date().toISOString()
   };
+}
+
+function cleanFormQuestion(raw, index) {
+  const types = new Set(['short', 'long', 'number', 'date', 'choice', 'multiple', 'dropdown', 'boolean', 'file', 'info']);
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error(`Ongeldige vraag ${index + 1}.`);
+  const id = cleanText(raw.id, 60, `Vraag-ID ${index + 1}`);
+  if (!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(id)) throw new Error(`Ongeldige vraag-ID: ${id}`);
+  if (!types.has(raw.type)) throw new Error(`Kies een geldig vraagtype voor "${raw.title}".`);
+  if (raw.required !== undefined && typeof raw.required !== 'boolean') throw new Error('Ongeldige verplicht-instelling.');
+  const question = {
+    id,
+    title: cleanText(raw.title, 160, 'Vraag'),
+    type: raw.type,
+    required: raw.required === true,
+    description: cleanText(raw.description || '', 500, 'Vraagtoelichting', true)
+  };
+  if (raw.sectionId !== undefined && raw.sectionId !== '') question.sectionId = cleanText(raw.sectionId, 60, 'Formulieronderdeel');
+  if (['choice', 'multiple', 'dropdown'].includes(question.type)) {
+    if (!Array.isArray(raw.options) || raw.options.length < 2 || raw.options.length > 100) throw new Error(`Voeg 2 tot 100 antwoordopties toe aan "${question.title}".`);
+    question.options = raw.options.map((option, optionIndex) => cleanText(option, 120, `Optie ${optionIndex + 1}`));
+  }
+  if (question.type === 'file') {
+    question.allowedFiles = ['application/pdf', 'image/png', 'image/jpeg', 'image/webp'];
+    question.maxFileBytes = 400000;
+  }
+  for (const [key, max] of [['minLength', 5000], ['maxLength', 5000]]) {
+    if (raw[key] !== undefined) {
+      if (!Number.isInteger(Number(raw[key])) || Number(raw[key]) < (key === 'minLength' ? 0 : 1) || Number(raw[key]) > max) throw new Error(`Ongeldige ${key} bij "${question.title}".`);
+      question[key] = Number(raw[key]);
+    }
+  }
+  if (question.minLength && question.maxLength && question.minLength > question.maxLength) throw new Error(`De minimale lengte is groter dan de maximale lengte bij "${question.title}".`);
+  if (raw.conditions !== undefined) {
+    if (!Array.isArray(raw.conditions) || raw.conditions.length > 10) throw new Error(`Ongeldige voorwaarden bij "${question.title}".`);
+    question.conditions = raw.conditions.map(condition => ({
+      questionId: cleanText(condition?.questionId, 60, 'Voorwaardevraag'),
+      value: cleanText(condition?.value, 240, 'Voorwaardeantwoord', true)
+    }));
+    question.conditionMode = raw.conditionMode === 'any' ? 'any' : 'all';
+  }
+  return question;
+}
+
+function cleanCommunityRecord(type, raw, current) {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Ongeldig community-item.');
+  const id = cleanText(raw.id || randomUUID(), 80, 'ID');
+  if (!/^[a-z0-9][a-z0-9_-]{0,79}$/.test(id)) throw new Error('Gebruik een geldige ID.');
+  const status = raw.status === 'published' ? 'published' : 'draft';
+  const updatedAt = new Date().toISOString();
+  if (type === 'events') {
+    const capacity = raw.capacity === '' || raw.capacity === undefined ? 0 : Number(raw.capacity);
+    if (!Number.isInteger(capacity) || capacity < 0 || capacity > 10000) throw new Error('Vul een geldige capaciteit in.');
+    const startsAt = cleanDate(raw.startsAt);
+    const endsAt = cleanDate(raw.endsAt);
+    if (!startsAt) throw new Error('Vul een startdatum in.');
+    if (endsAt && Date.parse(endsAt) < Date.parse(startsAt)) throw new Error('De einddatum kan niet voor de startdatum liggen.');
+    for (const field of ['featured', 'cancelled']) if (raw[field] !== undefined && typeof raw[field] !== 'boolean') throw new Error('Ongeldige evenementinstelling.');
+    return {
+      id, title: cleanText(raw.title, 120, 'Titel'), excerpt: cleanText(raw.excerpt || '', 600, 'Intro', true),
+      description: cleanText(raw.description || '', 12000, 'Beschrijving', true), image: cleanImage(raw.image),
+      location: cleanText(raw.location || '', 160, 'Locatie', true), organizer: cleanText(raw.organizer || '', 100, 'Organisator', true),
+      startsAt, endsAt, capacity, featured: raw.featured === true, cancelled: raw.cancelled === true,
+      status, updatedAt, ...(current?.createdAt ? { createdAt: current.createdAt } : { createdAt: updatedAt })
+    };
+  }
+  if (type === 'jobs') {
+    for (const field of ['closed', 'allowMultiple']) if (raw[field] !== undefined && typeof raw[field] !== 'boolean') throw new Error('Ongeldige vacature-instelling.');
+    const opensAt = cleanDate(raw.opensAt);
+    const closesAt = cleanDate(raw.closesAt);
+    if (opensAt && closesAt && Date.parse(closesAt) <= Date.parse(opensAt)) throw new Error('De sluitingsdatum moet na de openingsdatum liggen.');
+    return {
+      id, title: cleanText(raw.title, 120, 'Titel'), excerpt: cleanText(raw.excerpt || '', 600, 'Intro', true),
+      description: cleanText(raw.description || '', 12000, 'Beschrijving', true), image: cleanImage(raw.image),
+      requirements: cleanText(raw.requirements || '', 6000, 'Vereisten', true),
+      responsibilities: cleanText(raw.responsibilities || '', 6000, 'Verantwoordelijkheden', true),
+      information: cleanText(raw.information || '', 6000, 'Informatie', true),
+      formId: cleanText(raw.formId, 80, 'Sollicitatieformulier'), opensAt, closesAt,
+      allowMultiple: raw.allowMultiple === true, closed: raw.closed === true, status, updatedAt,
+      ...(current?.createdAt ? { createdAt: current.createdAt } : { createdAt: updatedAt })
+    };
+  }
+  if (type === 'applicationForms') {
+    if (!Array.isArray(raw.questions) || raw.questions.length < 1 || raw.questions.length > 100) throw new Error('Een formulier heeft 1 tot 100 vragen nodig.');
+    if (raw.sections !== undefined && (!Array.isArray(raw.sections) || raw.sections.length > 30)) throw new Error('Een formulier kan maximaal 30 onderdelen bevatten.');
+    const sections = (raw.sections || []).map((section, index) => ({
+      id: cleanText(section?.id || `section-${index + 1}`, 60, 'Onderdeel-ID'),
+      title: cleanText(section?.title || `Onderdeel ${index + 1}`, 120, 'Onderdeeltitel'),
+      description: cleanText(section?.description || '', 500, 'Onderdeelinformatie', true)
+    }));
+    const sectionIds = new Set();
+    for (const section of sections) {
+      if (!/^[a-z0-9][a-z0-9_-]{0,59}$/.test(section.id) || sectionIds.has(section.id)) throw new Error(`Ongeldige of dubbele formulieronderdeel-ID: ${section.id}`);
+      sectionIds.add(section.id);
+    }
+    const questions = raw.questions.map(cleanFormQuestion);
+    const questionIds = new Set();
+    for (const question of questions) {
+      if (questionIds.has(question.id)) throw new Error(`De vraag-ID "${question.id}" komt meerdere keren voor.`);
+      questionIds.add(question.id);
+    }
+    for (const question of questions) {
+      if (question.sectionId && !sectionIds.has(question.sectionId)) throw new Error(`Ongeldig formulieronderdeel bij "${question.title}".`);
+      for (const condition of question.conditions || []) {
+        if (!questionIds.has(condition.questionId) || condition.questionId === question.id) throw new Error(`Ongeldige vraagvoorwaarde bij "${question.title}".`);
+      }
+    }
+    const description = cleanText(raw.description || '', 600, 'Formulierintro', true);
+    const unchanged = current && JSON.stringify(current.questions) === JSON.stringify(questions) &&
+      JSON.stringify(current.sections || []) === JSON.stringify(sections) && current.title === raw.title && current.description === description;
+    return {
+      id, title: cleanText(raw.title, 120, 'Formuliertitel'), description,
+      sections, questions, status, version: unchanged ? (current.version || 1) : (current?.version || 0) + 1,
+      updatedAt, ...(current?.createdAt ? { createdAt: current.createdAt } : { createdAt: updatedAt })
+    };
+  }
+  if (type === 'helpCategories') return {
+    id, name: cleanText(raw.name, 80, 'Categorienaam'), description: cleanText(raw.description || '', 300, 'Beschrijving', true),
+    order: Math.max(0, Math.min(9999, Number(raw.order) || 0)), updatedAt
+  };
+  if (type === 'helpArticles') return {
+    id, title: cleanText(raw.title, 160, 'Titel'), category: cleanText(raw.category, 80, 'Categorie'),
+    keywords: Array.isArray(raw.keywords) ? raw.keywords.slice(0, 20).map(value => cleanText(value, 40, 'Zoekwoord')) : [],
+    excerpt: cleanText(raw.excerpt || '', 600, 'Intro', true), content: cleanText(raw.content, 12000, 'Artikel'),
+    image: cleanImage(raw.image), featured: raw.featured === true, publishAt: cleanDate(raw.publishAt), status, updatedAt
+  };
+  throw new Error('Onbekend community-item.');
+}
+
+function addAdminNotification(state, discordId, type, title, message, key) {
+  state.notifications ||= [];
+  if (key && state.notifications.some(item => item.discordId === discordId && item.key === key)) return;
+  state.notifications.push({ id: randomUUID(), discordId, type, title: title.slice(0, 100), message: message.slice(0, 300), key: key || '', readAt: '', createdAt: new Date().toISOString() });
+  const items = state.notifications.filter(item => item.discordId === discordId);
+  if (items.length > 100) {
+    const removeIds = new Set(items.slice(0, items.length - 100).map(item => item.id));
+    state.notifications = state.notifications.filter(item => !removeIds.has(item.id));
+  }
+  if (state.notifications.length > 10000) state.notifications = state.notifications.slice(-10000);
 }
 
 async function currentSession(request) {
@@ -115,7 +258,8 @@ async function handler(request) {
     const current = await currentSession(request);
     if (!current.user) return json({ ok: false, error: current.error }, current.status);
     const session = current.user;
-    if (!hasPermission(session, 'admin:site') && !hasPermission(session, 'staff:read')) return json({ ok: false }, 403);
+    const viewPermissions = ['admin:site', 'staff:read', 'users:manage', 'events:manage', 'jobs:manage', 'forms:manage', 'applications:read', 'applications:review', 'help:manage', 'comments:moderate', 'profiles:moderate', 'notifications:manage', 'achievements:manage'];
+    if (!viewPermissions.some(permission => hasPermission(session, permission))) return json({ ok: false }, 403);
     try {
       const content = await readContent();
       const view = {
@@ -125,10 +269,18 @@ async function handler(request) {
         rulesDraft: hasPermission(session, 'rules:write') ? content.rulesDraft : undefined,
         rulesVersions: hasPermission(session, 'audit:read') ? content.rulesVersions : undefined,
         auditLog: hasPermission(session, 'audit:read') ? content.auditLog : undefined,
-        achievements: hasPermission(session, 'users:manage') ? (content.achievements || []) : undefined,
-        achievementAwards: hasPermission(session, 'users:manage') ? (content.achievementAwards || []) : undefined,
-        residentProfiles: hasPermission(session, 'users:manage') ? (content.residentProfiles || []) : undefined,
+        achievements: hasPermission(session, 'users:manage') || hasPermission(session, 'achievements:manage') ? (content.achievements || []) : undefined,
+        achievementAwards: hasPermission(session, 'users:manage') || hasPermission(session, 'achievements:manage') ? (content.achievementAwards || []) : undefined,
+        residentProfiles: hasPermission(session, 'users:manage') || hasPermission(session, 'profiles:moderate') ? (content.residentProfiles || []) : undefined,
         residentNotices: hasPermission(session, 'users:manage') ? (content.residentNotices || []) : undefined,
+        events: hasPermission(session, 'events:manage') ? (content.events || []) : undefined,
+        eventRsvps: hasPermission(session, 'events:manage') ? (content.eventRsvps || []) : undefined,
+        jobs: hasPermission(session, 'jobs:manage') ? (content.jobs || []) : undefined,
+        applicationForms: hasPermission(session, 'forms:manage') ? (content.applicationForms || []) : undefined,
+        applications: hasPermission(session, 'applications:read') || hasPermission(session, 'applications:review') ? (content.applications || []) : undefined,
+        helpArticles: hasPermission(session, 'help:manage') ? (content.helpArticles || []) : undefined,
+        helpCategories: hasPermission(session, 'help:manage') ? (content.helpCategories || []) : undefined,
+        newsComments: hasPermission(session, 'comments:moderate') ? (content.newsComments || []) : undefined,
         siteSettings: hasPermission(session, 'admin:site') ? (content.siteSettings || {}) : undefined,
         storeSettings: hasPermission(session, 'admin:site') ? (content.storeSettings || {}) : undefined
       };
@@ -151,7 +303,7 @@ async function handler(request) {
     if (!constantTimeEqual(body.password, expected)) return json({ error: 'Inloggen is niet gelukt.' }, 401);
     try {
       attempts.delete(limiterKey(request));
-      const permissions = ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read', 'users:manage'];
+      const permissions = ['admin:site', 'news:write', 'changelog:write', 'staff:write', 'staff:read', 'rules:write', 'audit:read', 'discord:read', 'users:manage', 'events:manage', 'jobs:manage', 'forms:manage', 'applications:read', 'applications:review', 'help:manage', 'comments:moderate', 'achievements:manage', 'profiles:moderate', 'notifications:manage'];
       const session = makeSession({ id: 'password-admin', username: 'Beheerder', roles: ['password-admin'], permissions, provider: 'password' });
       return json({ ok: true, user: { id: 'password-admin', username: 'Beheerder', permissions } }, 200, { 'Set-Cookie': sessionCookie(session, request) });
     } catch (error) { return json({ error: error.message }, 503); }
@@ -291,8 +443,169 @@ async function handler(request) {
       return json(result);
     }
 
+    if (body.action === 'save-community-record' || body.action === 'delete-community-record') {
+      const collections = new Set(['events', 'jobs', 'applicationForms', 'helpArticles', 'helpCategories']);
+      if (!collections.has(body.type)) return json({ error: 'Onbekend community-onderdeel.' }, 400);
+      const permission = body.type === 'events' ? 'events:manage'
+        : body.type === 'jobs' ? 'jobs:manage'
+          : body.type === 'applicationForms' ? 'forms:manage' : 'help:manage';
+      if (!hasPermission(user, permission)) return json({ error: 'Je hebt geen rechten voor dit onderdeel.' }, 403);
+      const raw = body.item;
+      if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return json({ error: 'Ongeldig community-item.' }, 400);
+      const id = cleanText(raw.id, 80, 'ID');
+      const result = await updateContent(state => {
+        state[body.type] ||= [];
+        const index = state[body.type].findIndex(item => item.id === id);
+        if (body.action === 'delete-community-record') {
+          if (body.type === 'jobs' && index >= 0) {
+            state.jobs[index].status = 'draft';
+            state.jobs[index].closed = true;
+            state.jobs[index].updatedAt = new Date().toISOString();
+            appendAudit(state, user, 'gesloten', 'vacature', state.jobs[index].title);
+            return { ok: true, archived: true };
+          }
+          if (body.type === 'events' && index >= 0) {
+            const event = state.events[index];
+            (state.eventRsvps || []).filter(rsvp => rsvp.eventId === id).forEach(rsvp => {
+              addAdminNotification(state, rsvp.discordId, 'event', 'Evenement verwijderd', `Het evenement "${event.title}" is verwijderd.`, `event:${id}:deleted`);
+            });
+          }
+          if (index >= 0) state[body.type].splice(index, 1);
+          if (body.type === 'events') state.eventRsvps = (state.eventRsvps || []).filter(rsvp => rsvp.eventId !== id);
+          appendAudit(state, user, 'verwijderd', body.type, raw.title || id);
+          return { ok: true };
+        }
+        const currentRecord = index >= 0 ? state[body.type][index] : null;
+        const record = cleanCommunityRecord(body.type, raw, currentRecord);
+        if (body.type === 'jobs' && record.status === 'published' && !state.applicationForms?.some(form => form.id === record.formId && form.status === 'published')) {
+          throw new Error('Publiceer eerst het gekoppelde sollicitatieformulier.');
+        }
+        if (body.type === 'events' && currentRecord) {
+          const scheduleChanged = currentRecord.startsAt !== record.startsAt || currentRecord.endsAt !== record.endsAt ||
+            currentRecord.location !== record.location || currentRecord.title !== record.title ||
+            currentRecord.cancelled !== record.cancelled || currentRecord.status !== record.status;
+          if (scheduleChanged) {
+            const cancelled = record.cancelled || record.status !== 'published';
+            const title = cancelled ? 'Evenement geannuleerd' : 'Evenement bijgewerkt';
+            const message = cancelled
+              ? `Het evenement "${record.title}" is geannuleerd.`
+              : `Het evenement "${record.title}" is bijgewerkt. Nieuwe starttijd: ${new Date(record.startsAt).toLocaleString('nl-NL')}${record.location ? ` · ${record.location}` : ''}.`;
+            (state.eventRsvps || []).filter(rsvp => rsvp.eventId === id).forEach(rsvp => {
+              addAdminNotification(state, rsvp.discordId, 'event', title, message, `event:${id}:${record.updatedAt}`);
+            });
+          }
+        }
+        if (index >= 0) state[body.type][index] = record;
+        else {
+          if (state[body.type].length >= (body.type === 'applicationForms' ? 100 : 500)) throw new Error('Je hebt de maximale hoeveelheid items bereikt.');
+          state[body.type].push(record);
+        }
+        if (body.type === 'events' && record.status === 'published' && !record.cancelled) {
+          state.eventRsvps ||= [];
+          const eventRsvps = state.eventRsvps.filter(rsvp => rsvp.eventId === id);
+          const going = eventRsvps.filter(rsvp => rsvp.status === 'going')
+            .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+          if (record.capacity > 0 && going.length > record.capacity) {
+            going.slice(record.capacity).forEach(rsvp => {
+              rsvp.status = 'waitlist';
+              addAdminNotification(state, rsvp.discordId, 'event', 'Evenementcapaciteit aangepast', `Je staat op de wachtlijst voor "${record.title}" omdat de capaciteit is aangepast.`, `event:${id}:capacity:${record.updatedAt}:${rsvp.id}`);
+            });
+          }
+          const remaining = eventRsvps.filter(rsvp => rsvp.status === 'going').length;
+          const waitlist = eventRsvps.filter(rsvp => rsvp.status === 'waitlist')
+            .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+          const available = record.capacity === 0 ? waitlist.length : Math.max(0, record.capacity - remaining);
+          waitlist.slice(0, available).forEach(rsvp => {
+            rsvp.status = 'going';
+            addAdminNotification(state, rsvp.discordId, 'event', 'Je hebt een plek bij het evenement', `Je bent aangemeld voor "${record.title}".`, `event:${id}:capacity:${record.updatedAt}:${rsvp.id}`);
+          });
+        }
+        appendAudit(state, user, index >= 0 ? 'aangepast' : 'aangemaakt', body.type, record.title || record.name || record.id);
+        return { ok: true, item: record };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'review-application') {
+      if (!hasPermission(user, 'applications:review')) return json({ error: 'Je mag sollicitaties niet beoordelen.' }, 403);
+      const id = cleanText(body.id, 80, 'Sollicitatie-ID');
+      if (!allowedApplicationStatuses.has(body.status)) return json({ error: 'Kies een geldige sollicitatiestatus.' }, 400);
+      const publicMessage = cleanText(body.message || '', 500, 'Bericht voor de sollicitant', true);
+      const internalNote = cleanText(body.note || '', 2000, 'Interne notitie', true);
+      const result = await updateContent(state => {
+        const application = (state.applications || []).find(item => item.id === id);
+        if (!application) throw new Error('Deze sollicitatie bestaat niet.');
+        application.status = body.status;
+        application.updatedAt = new Date().toISOString();
+        application.history ||= [];
+        application.history.push({
+          status: body.status, public: !!publicMessage, message: publicMessage,
+          at: application.updatedAt, reviewer: cleanText(user.username || 'Staff', 80, 'Beoordelaar')
+        });
+        if (internalNote) {
+          application.notes ||= [];
+          application.notes.push({ id: randomUUID(), author: cleanText(user.username || 'Staff', 80, 'Beoordelaar'), content: internalNote, createdAt: application.updatedAt });
+          application.notes = application.notes.slice(-100);
+        }
+        if (application.history.length > 100) application.history = application.history.slice(-100);
+        if (publicMessage) addAdminNotification(state, application.discordId, 'application', 'Update over je sollicitatie', publicMessage, `application:${application.id}:${application.updatedAt}`);
+        appendAudit(state, user, 'beoordeeld', 'sollicitatie', `${application.jobTitle} · ${application.username}`);
+        return { ok: true, application };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'moderate-comment') {
+      if (!hasPermission(user, 'comments:moderate')) return json({ error: 'Je mag reacties niet modereren.' }, 403);
+      if (typeof body.hidden !== 'boolean') return json({ error: 'Ongeldige moderatiestatus.' }, 400);
+      const id = cleanText(body.id, 80, 'Reactie-ID');
+      const result = await updateContent(state => {
+        const comment = (state.newsComments || []).find(item => item.id === id);
+        if (!comment) throw new Error('Deze reactie bestaat niet.');
+        comment.hidden = body.hidden;
+        appendAudit(state, user, body.hidden ? 'verborgen' : 'zichtbaar gemaakt', 'nieuwsreactie', comment.username);
+        return { ok: true };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'moderate-profile') {
+      if (!hasPermission(user, 'profiles:moderate')) return json({ error: 'Je mag inwonerprofielen niet modereren.' }, 403);
+      if (body.isPublic !== false) return json({ error: 'Beheerders kunnen een profiel verbergen, maar niet zonder toestemming openbaar maken.' }, 400);
+      const discordId = cleanText(body.discordId, 22, 'Discord-ID');
+      if (!/^\d{17,22}$/.test(discordId)) return json({ error: 'Ongeldig Discord-ID.' }, 400);
+      const result = await updateContent(state => {
+        const profile = (state.residentProfiles || []).find(item => item.discordId === discordId);
+        if (!profile) throw new Error('Dit profiel bestaat niet.');
+        profile.isPublic = body.isPublic;
+        profile.updatedAt = new Date().toISOString();
+        appendAudit(state, user, body.isPublic ? 'profiel zichtbaar' : 'profiel verborgen', 'inwoner', profile.username);
+        if (!body.isPublic) addAdminNotification(state, discordId, 'profile', 'Je profiel is verborgen', 'Een beheerder heeft je profiel tijdelijk verborgen. Neem contact op met het team voor meer informatie.', `profile:${discordId}:${profile.updatedAt}`);
+        return { ok: true };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'send-resident-notification') {
+      if (!hasPermission(user, 'notifications:manage')) return json({ error: 'Je mag inwonersmeldingen niet versturen.' }, 403);
+      const title = cleanText(body.title, 100, 'Titel');
+      const message = cleanText(body.message, 300, 'Bericht');
+      const target = body.discordId === 'all' ? 'all' : cleanText(body.discordId, 22, 'Discord-ID');
+      if (target !== 'all' && !/^\d{17,22}$/.test(target)) return json({ error: 'Ongeldig Discord-ID.' }, 400);
+      const result = await updateContent(state => {
+        const recipients = target === 'all'
+          ? [...new Set((state.residentProfiles || []).map(profile => profile.discordId).filter(id => /^\d{17,22}$/.test(String(id || ''))))]
+          : [target];
+        if (recipients.length > 10000) throw new Error('Er zijn te veel ontvangers voor één melding.');
+        recipients.forEach(discordId => addAdminNotification(state, discordId, 'announcement', title, message, `broadcast:${randomUUID()}`));
+        appendAudit(state, user, 'verstuurd', 'inwonersmelding', `${title} · ${recipients.length} ontvangers`);
+        return { ok: true, recipients: recipients.length };
+      });
+      return json(result);
+    }
+
     if (body.action === 'save-achievement') {
-      if (!hasPermission(user, 'users:manage')) return json({ error: 'Je mag onderscheidingen niet beheren.' }, 403);
+      if (!hasPermission(user, 'users:manage') && !hasPermission(user, 'achievements:manage')) return json({ error: 'Je mag onderscheidingen niet beheren.' }, 403);
       const item = body.item;
       if (!item || typeof item !== 'object' || Array.isArray(item)) return json({ error: 'Ongeldige onderscheiding.' }, 400);
       if (typeof item.id !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(item.id)) return json({ error: 'Gebruik een geldige onderscheiding-ID.' }, 400);
@@ -301,8 +614,11 @@ async function handler(request) {
         title: cleanText(item.title, 60, 'Naam'),
         description: cleanText(item.description, 240, 'Beschrijving', true),
         icon: cleanText(item.icon || '✦', 8, 'Icoon'),
+        image: cleanImage(item.image || ''),
+        archived: item.archived === true,
         updatedAt: new Date().toISOString()
       };
+      if (item.archived !== undefined && typeof item.archived !== 'boolean') return json({ error: 'Ongeldige archiefinstelling.' }, 400);
       const result = await updateContent(state => {
         state.achievements ||= [];
         const index = state.achievements.findIndex(entry => entry.id === achievement.id);
@@ -318,7 +634,7 @@ async function handler(request) {
     }
 
     if (body.action === 'award-achievement') {
-      if (!hasPermission(user, 'users:manage')) return json({ error: 'Je mag onderscheidingen niet toekennen.' }, 403);
+      if (!hasPermission(user, 'users:manage') && !hasPermission(user, 'achievements:manage')) return json({ error: 'Je mag onderscheidingen niet toekennen.' }, 403);
       if (typeof body.discordId !== 'string' || !/^\d{17,22}$/.test(body.discordId)) return json({ error: 'Vul een geldig Discord-ID in.' }, 400);
       if (typeof body.achievementId !== 'string' || !/^[a-z0-9][a-z0-9-]{0,39}$/.test(body.achievementId)) return json({ error: 'Kies een geldige onderscheiding.' }, 400);
       if (body.revoke !== undefined && typeof body.revoke !== 'boolean') return json({ error: 'Ongeldige actie.' }, 400);
@@ -332,6 +648,7 @@ async function handler(request) {
           appendAudit(state, user, 'ingetrokken', 'onderscheiding', `${achievement.title} · ${body.discordId}`);
           return { ok: true, awarded: false };
         }
+        if (achievement.archived === true) throw new Error('Deze onderscheiding is gearchiveerd.');
         if (index >= 0) return { ok: true, awarded: true };
         if (state.achievementAwards.length >= 10000) throw new Error('Het aantal onderscheidingen heeft de beheerlimiet bereikt.');
         state.achievementAwards.push({

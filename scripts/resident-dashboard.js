@@ -4,6 +4,7 @@
   var profileForm = document.getElementById("residentProfileForm");
   var loginError = document.getElementById("residentLoginError");
   var saveState = document.getElementById("profileSaveState");
+  var savedBanner = "";
 
   function node(tag, className, text) {
     var item = document.createElement(tag);
@@ -37,6 +38,15 @@
       document.getElementById("residentAvatarFallback").hidden = true;
     }
     profileForm.elements.inGameName.value = profile.inGameName || "";
+    profileForm.elements.bio.value = profile.bio || "";
+    savedBanner = profile.banner || "";
+    profileForm.elements.banner.value = profile.banner && profile.banner.indexOf("data:") !== 0 ? profile.banner : "";
+    profileForm.elements.isPublic.checked = profile.isPublic === true;
+    profileForm.elements.showBio.checked = profile.showBio !== false;
+    profileForm.elements.showInGameName.checked = profile.showInGameName !== false;
+    profileForm.elements.showAchievements.checked = profile.showAchievements !== false;
+    var profileLink = document.getElementById("publicProfileLink");
+    profileLink.textContent = profile.isPublic && profile.slug ? "Je openbare profiel: " + location.origin + "/profiel/?id=" + profile.slug : "Je profiel is privé en wordt niet openbaar getoond.";
 
     var achievements = Array.isArray(data.achievements) ? data.achievements : [];
     document.getElementById("achievementCount").textContent = String(achievements.length);
@@ -45,6 +55,13 @@
     if (!achievements.length) achievementList.appendChild(node("p", "resident-empty", "Je hebt nog geen onderscheidingen. Behaalde mijlpalen verschijnen hier."));
     achievements.forEach(function (achievement) {
       var card = node("article", "resident-achievement");
+      if (achievement.image) {
+        var image = node("img", "resident-achievement-image");
+        image.src = achievement.image;
+        image.alt = "";
+        image.loading = "lazy";
+        card.appendChild(image);
+      }
       card.appendChild(node("span", "resident-achievement-icon", achievement.icon || "✦"));
       card.appendChild(node("h3", "", achievement.title));
       card.appendChild(node("p", "", achievement.description || ""));
@@ -61,6 +78,48 @@
       card.appendChild(node("h3", "", notice.title));
       card.appendChild(node("p", "", notice.message));
       noticeList.appendChild(card);
+    });
+
+    function renderRows(targetId, rows, emptyText, titleFor, detailFor) {
+      var target = document.getElementById(targetId);
+      target.replaceChildren();
+      if (!rows.length) target.appendChild(node("p", "resident-empty", emptyText));
+      rows.forEach(function (row) {
+        var card = node("article", "resident-notice");
+        card.appendChild(node("h3", "", titleFor(row)));
+        card.appendChild(node("p", "", detailFor(row)));
+        target.appendChild(card);
+      });
+    }
+    renderRows("residentRsvps", data.rsvps || [], "Je hebt je nog niet aangemeld voor een evenement.",
+      function (item) { return item.title; },
+      function (item) { return (item.status === "cancelled" ? "Geannuleerd" : item.status === "waitlist" ? "Wachtlijst" : "Aangemeld") + " · " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "long", timeStyle: "short" }).format(new Date(item.startsAt)); });
+    renderRows("residentApplications", data.applications || [], "Je hebt nog geen sollicitaties ingediend.",
+      function (item) { return item.jobTitle; },
+      function (item) { return "Status: " + item.status + " · ingediend op " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" }).format(new Date(item.submittedAt)); });
+    var notifications = Array.isArray(data.notifications) ? data.notifications : [];
+    var notificationList = document.getElementById("residentNotifications");
+    notificationList.replaceChildren();
+    if (!notifications.length) notificationList.appendChild(node("p", "resident-empty", "Je hebt geen persoonlijke meldingen."));
+    notifications.forEach(function (notification) {
+      var card = node("article", "resident-notice");
+      card.appendChild(node("h3", "", notification.title));
+      card.appendChild(node("p", "", notification.message));
+      if (!notification.readAt) {
+        var read = node("button", "btn btn-ghost", "Gelezen");
+        read.type = "button";
+        read.addEventListener("click", function () {
+          fetch("/api/community", {
+            method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "notification-read", id: notification.id })
+          }).then(function (response) {
+            if (!response.ok) throw new Error("Melding kon niet worden bijgewerkt.");
+            read.disabled = true; read.textContent = "Gelezen";
+          }).catch(function (error) { saveState.textContent = error.message; });
+        });
+        card.appendChild(read);
+      }
+      notificationList.appendChild(card);
     });
   }
 
@@ -93,15 +152,28 @@
       method: "POST",
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "save-profile", inGameName: profileForm.elements.inGameName.value })
+      body: JSON.stringify({ action: "save-profile", profile: {
+        inGameName: profileForm.elements.inGameName.value,
+        bio: profileForm.elements.bio.value,
+        banner: profileForm.elements.banner.value || savedBanner,
+        isPublic: profileForm.elements.isPublic.checked,
+        showBio: profileForm.elements.showBio.checked,
+        showInGameName: profileForm.elements.showInGameName.checked,
+        showAchievements: profileForm.elements.showAchievements.checked
+      } })
     }).then(function (response) {
       return response.json().then(function (data) {
         if (!response.ok) throw new Error(data.error || "Opslaan is niet gelukt.");
         return data;
       });
-    }).then(function () {
+    }).then(function (result) {
+      savedBanner = profileForm.elements.banner.value || savedBanner;
       saveState.textContent = "Je profiel is opgeslagen.";
       document.getElementById("profileCreatedAt").textContent = new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" }).format(new Date());
+      var link = document.getElementById("publicProfileLink");
+      link.textContent = profileForm.elements.isPublic.checked && result.profile && result.profile.slug
+        ? "Je openbare profiel: " + location.origin + "/profiel/?id=" + result.profile.slug
+        : "Je profiel is privé en wordt niet openbaar getoond.";
     }).catch(function (error) {
       saveState.textContent = error.message;
     });
