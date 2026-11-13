@@ -50,7 +50,9 @@
       ["adminOverviewPublished", published],
       ["adminOverviewStaff", Array.isArray(content.staff) ? content.staff.length : null],
       ["adminOverviewResidents", Array.isArray(content.residentProfiles) ? content.residentProfiles.length : null],
-      ["adminOverviewAchievements", Array.isArray(content.achievements) ? content.achievements.length : null]
+      ["adminOverviewAchievements", Array.isArray(content.achievements) ? content.achievements.length : null],
+      ["adminOverviewApplications", Array.isArray(content.applications) ? content.applications.filter(function (application) { return ["received", "reviewing", "interview"].includes(application.status); }).length : null],
+      ["adminOverviewSupport", Array.isArray(content.supportTickets) ? content.supportTickets.filter(function (ticket) { return ticket.status !== "closed"; }).length : null]
     ].forEach(function (entry) {
       var target = document.getElementById(entry[0]);
       if (target) target.textContent = entry[1] === null ? "—" : String(entry[1]);
@@ -69,15 +71,24 @@
       });
     }).then(function (data) {
       if (data && data.online === true && Number.isFinite(Number(data.clients)) && Number(data.clients) >= 0) {
-        status.textContent = "Online";
+        status.textContent = data.stale ? "Online · laatst bekend" : "Online";
         var clients = Math.floor(Number(data.clients));
         playerCount.textContent = String(clients);
-        players.textContent = Number(data.max) > 0 ? "Capaciteit · " + Math.floor(Number(data.max)) + " slots" : "Server is bereikbaar";
+        var details = Number(data.max) > 0 ? clients + " / " + Math.floor(Number(data.max)) + " spelers" : clients + " spelers";
+        if (data.hostname) details += " · " + data.hostname;
+        if (data.lastCheckedAt) {
+          var checkedAt = new Date(data.lastCheckedAt);
+          if (!Number.isNaN(checkedAt.getTime())) {
+            details += " · gecontroleerd " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "short", timeStyle: "short" }).format(checkedAt);
+          }
+        }
+        players.textContent = details;
         card.dataset.state = "online";
       } else if (data && data.online === false) {
-        status.textContent = "Offline";
+        status.textContent = data.stale ? "Offline · laatst bekend" : "Offline";
         playerCount.textContent = "0";
-        players.textContent = "Server is momenteel niet bereikbaar";
+        players.textContent = "Server is momenteel niet bereikbaar" +
+          (data.lastCheckedAt ? " · laatste meting " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "short", timeStyle: "short" }).format(new Date(data.lastCheckedAt)) : "");
         card.dataset.state = "offline";
       } else {
         throw new Error("Ongeldige serverstatus");
@@ -93,7 +104,7 @@
   function accessTabs() {
     document.querySelectorAll("#cmsTabs [data-section]").forEach(function (button) {
       var section = button.getAttribute("data-section");
-      var permitted = section === "overview" || ((section === "settings" || section === "shop") && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write")) || (section === "residents" && (can("users:manage") || can("achievements:manage") || can("profiles:moderate"))) || (section === "community" && ["events:manage", "jobs:manage", "forms:manage", "applications:read", "applications:review", "help:manage", "comments:moderate", "notifications:manage"].some(can));
+      var permitted = section === "overview" || ((section === "settings" || section === "shop") && can("admin:site")) || (section === "audit" && can("audit:read")) || (section === "news" && can("news:write")) || (section === "changelog" && can("changelog:write")) || (section === "staff" && can("staff:write")) || (section === "rules" && can("rules:write")) || (section === "residents" && (can("users:manage") || can("achievements:manage") || can("profiles:moderate"))) || (section === "community" && ["events:manage", "jobs:manage", "forms:manage", "applications:read", "applications:review", "help:manage", "comments:moderate", "notifications:manage", "support:manage"].some(can));
       button.hidden = !permitted;
     });
     document.querySelectorAll("[data-dashboard-link]").forEach(function (link) {
@@ -108,7 +119,7 @@
     if (!can("staff:write")) document.querySelector('[data-admin-section="staff"]')?.setAttribute("hidden", "");
     if (!can("rules:write")) document.querySelector('[data-admin-section="rules"]')?.setAttribute("hidden", "");
     if (!(can("users:manage") || can("achievements:manage") || can("profiles:moderate"))) document.querySelector('[data-admin-section="residents"]')?.setAttribute("hidden", "");
-    if (!(["events:manage", "jobs:manage", "forms:manage", "applications:read", "applications:review", "help:manage", "comments:moderate", "notifications:manage"].some(can))) document.querySelector('[data-admin-section="community"]')?.setAttribute("hidden", "");
+    if (!(["events:manage", "jobs:manage", "forms:manage", "applications:read", "applications:review", "help:manage", "comments:moderate", "notifications:manage", "support:manage"].some(can))) document.querySelector('[data-admin-section="community"]')?.setAttribute("hidden", "");
   }
   function newItem(type) {
     var base = { id: "", title: "", category: type === "staff" ? "Moderatie" : "Nieuwe functies", excerpt: "", content: "", image: "", publishAt: new Date().toISOString(), status: "draft", featured: false, author: currentUser.username || "Staff", version: "", name: "", username: "", role: "", bio: "", discordId: "", order: 0, active: true, joinedAt: "" };
@@ -291,7 +302,7 @@
       accessTabs();
       renderOverviewSummary(result);
       document.querySelectorAll("[data-stat-permission]").forEach(function (stat) {
-        stat.hidden = !can(stat.getAttribute("data-stat-permission"));
+        stat.hidden = !stat.getAttribute("data-stat-permission").split(/\s+/).some(can);
       });
       var activeTab = document.querySelector("#cmsTabs [data-section].is-active");
       if (!activeTab || activeTab.hidden) {

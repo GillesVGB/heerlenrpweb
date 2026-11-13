@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const expected = ['Home', 'Store', 'Regels', 'FAQ', 'Nieuws', 'Updates'];
+const expected = ['Home', 'Store', 'Regels', 'Helpcentrum', 'Nieuws', 'Updates'];
 
 async function htmlFiles(dir) {
   const out = [];
@@ -31,6 +31,7 @@ assert.ok(checked >= 10, 'expected to check all pages with a navigation bar');
 
 const navJs = await readFile(path.join(root, 'scripts/nav.js'), 'utf8');
 assert.doesNotMatch(navJs, /\["Staff",\s*"\/staff\/"\]/, 'shared nav.js must not add Staff');
+assert.match(navJs, /\["Helpcentrum",\s*"\/helpcentrum\/"\]/, 'shared navigation uses Helpcentrum instead of FAQ');
 assert.doesNotMatch(navJs, /<a href="\/staff\/">/, 'shared footer must not link to Staff');
 assert.match(navJs, /window\.vaq\s*=\s*window\.vaq\s*\|\|\s*\[\]/, 'Vercel Analytics should queue calls before its script loads');
 assert.match(navJs, /script\.src\s*=\s*"\/_vercel\/insights\/script\.js"/, 'Public pages should load the Vercel Analytics script');

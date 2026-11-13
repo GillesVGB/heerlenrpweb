@@ -245,14 +245,15 @@
     playersEl.textContent = Math.max(0, Math.floor(n)) + " / " + (Number(max) > 0 ? Math.floor(Number(max)) : 64);
   }
 
-  function setStatus(state, message, clients, max) {
+  function setStatus(state, message, clients, max, stale) {
     if (statusEl) {
       statusEl.dataset.state = state;
       statusEl.classList.remove("is-online", "is-offline", "is-unknown");
       statusEl.classList.add("is-" + state);
     }
     if (statusLabel) {
-      statusLabel.textContent = message || (state === "online" ? "Online" : state === "offline" ? "Offline" : "Status onbekend");
+      statusLabel.textContent = (message || (state === "online" ? "Online" : state === "offline" ? "Offline" : "Status onbekend")) +
+        (stale ? " · laatst bekend" : "");
     }
     if (state === "online") setPlayers(clients, max);
     else if (playersEl) {
@@ -285,12 +286,12 @@
       })
       .then(function (data) {
         if (data && data.online === false) {
-          setStatus("offline", "Offline", 0, data.max);
+          setStatus("offline", "Offline", 0, data.max, data.stale);
           return;
         }
         var clients = Number(data && data.clients);
         if (!data || !Number.isFinite(clients)) throw new Error("Ongeldige status");
-        setStatus("online", "Online", clients, data.max);
+        setStatus("online", "Online", clients, data.max, data.stale);
       })
       .catch(function () { setStatus("unknown", "Status niet beschikbaar"); })
       .then(function () {

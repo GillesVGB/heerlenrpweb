@@ -4,7 +4,9 @@
   var profileForm = document.getElementById("residentProfileForm");
   var loginError = document.getElementById("residentLoginError");
   var saveState = document.getElementById("profileSaveState");
+  var supportForm = document.getElementById("supportTicketForm");
   var savedBanner = "";
+  var currentData = null;
 
   function node(tag, className, text) {
     var item = document.createElement(tag);
@@ -22,6 +24,7 @@
   function render(data) {
     var user = data.user;
     var profile = data.profile || {};
+    currentData = data;
     workspace.hidden = false;
     login.hidden = true;
     document.getElementById("residentUsername").textContent = user.username;
@@ -36,6 +39,10 @@
       avatar.src = user.avatar;
       avatar.hidden = false;
       document.getElementById("residentAvatarFallback").hidden = true;
+    } else {
+      document.getElementById("residentAvatar").hidden = true;
+      document.getElementById("residentAvatarFallback").hidden = false;
+      document.getElementById("residentAvatarFallback").textContent = (user.username || "H").trim().charAt(0).toLocaleUpperCase("nl-NL");
     }
     profileForm.elements.inGameName.value = profile.inGameName || "";
     profileForm.elements.bio.value = profile.bio || "";
@@ -50,6 +57,12 @@
 
     var achievements = Array.isArray(data.achievements) ? data.achievements : [];
     document.getElementById("achievementCount").textContent = String(achievements.length);
+    var applicationCount = (data.applications || []).filter(function (item) { return ["received", "reviewing", "interview"].includes(item.status); }).length;
+    var rsvpCount = (data.rsvps || []).filter(function (item) { return item.status === "going" || item.status === "waitlist"; }).length;
+    var supportCount = (data.supportTickets || []).filter(function (item) { return item.status !== "closed"; }).length;
+    document.getElementById("residentApplicationCount").textContent = String(applicationCount);
+    document.getElementById("residentRsvpCount").textContent = String(rsvpCount);
+    document.getElementById("residentSupportCount").textContent = String(supportCount);
     var achievementList = document.getElementById("residentAchievements");
     achievementList.replaceChildren();
     if (!achievements.length) achievementList.appendChild(node("p", "resident-empty", "Je hebt nog geen onderscheidingen. Behaalde mijlpalen verschijnen hier."));
@@ -97,6 +110,55 @@
     renderRows("residentApplications", data.applications || [], "Je hebt nog geen sollicitaties ingediend.",
       function (item) { return item.jobTitle; },
       function (item) { return "Status: " + item.status + " · ingediend op " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" }).format(new Date(item.submittedAt)); });
+    var supportList = document.getElementById("residentSupportTickets");
+    supportList.replaceChildren();
+    var tickets = Array.isArray(data.supportTickets) ? data.supportTickets : [];
+    if (!tickets.length) supportList.appendChild(node("p", "resident-empty", "Je hebt nog geen supporttickets."));
+    tickets.forEach(function (ticket) {
+      var card = node("article", "resident-notice");
+      var statusLabels = { open: "Open", in_progress: "In behandeling", waiting: "Wacht op support", closed: "Gesloten" };
+      card.appendChild(node("h3", "", ticket.subject + " · " + (statusLabels[ticket.status] || "Open")));
+      card.appendChild(node("p", "resident-muted", ticket.category + " · geopend op " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" }).format(new Date(ticket.createdAt))));
+      (ticket.messages || []).forEach(function (message) {
+        var paragraph = node("p", "", (message.authorRole === "staff" ? "Supportteam" : "Jij") + " · " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "short", timeStyle: "short" }).format(new Date(message.createdAt)) + "\n" + message.content);
+        paragraph.style.whiteSpace = "pre-wrap";
+        card.appendChild(paragraph);
+      });
+      if (ticket.status !== "closed") {
+        var replyForm = node("form", "resident-profile-form");
+        var label = node("label");
+        label.appendChild(node("span", "", "Bericht toevoegen"));
+        var reply = node("textarea");
+        reply.name = "content";
+        reply.rows = 3;
+        reply.maxLength = 4000;
+        reply.required = true;
+        label.appendChild(reply);
+        replyForm.appendChild(label);
+        var submit = node("button", "btn btn-ghost", "Bericht versturen");
+        submit.type = "submit";
+        replyForm.appendChild(submit);
+        var state = node("p", "resident-muted");
+        state.setAttribute("role", "status");
+        replyForm.appendChild(state);
+        replyForm.addEventListener("submit", function (event) {
+          event.preventDefault();
+          state.textContent = "Versturen…";
+          fetch("/api/portal", {
+            method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "reply-support-ticket", ticketId: ticket.id, content: reply.value })
+          }).then(function (response) {
+            return response.json().then(function (result) {
+              if (!response.ok) throw new Error(result.error || "Bericht kon niet worden verstuurd.");
+              return result;
+            });
+          }).then(function () { return loadDashboard(); })
+            .catch(function (error) { state.textContent = error.message; });
+        });
+        card.appendChild(replyForm);
+      }
+      supportList.appendChild(card);
+    });
     var notifications = Array.isArray(data.notifications) ? data.notifications : [];
     var notificationList = document.getElementById("residentNotifications");
     notificationList.replaceChildren();
@@ -123,7 +185,8 @@
     });
   }
 
-  fetch("/api/portal", { credentials: "same-origin", cache: "no-store" })
+  function loadDashboard() {
+    return fetch("/api/portal", { credentials: "same-origin", cache: "no-store" })
     .then(function (response) {
       if (response.status === 401) {
         var reason = new URLSearchParams(location.search).get("login");
@@ -141,9 +204,39 @@
       return response.json();
     })
     .then(function (data) {
-      if (data) render(data);
+      if (data) { render(data); return data; }
+      return null;
     })
-    .catch(function () { showLogin("Je dashboard kan tijdelijk niet worden geladen. Probeer het later opnieuw."); });
+    .catch(function (error) {
+      if (!currentData) showLogin("Je dashboard kan tijdelijk niet worden geladen. Probeer het later opnieuw.");
+      else saveState.textContent = error.message;
+      return null;
+    });
+  }
+  loadDashboard();
+
+  supportForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var output = document.getElementById("supportTicketState");
+    var form = event.currentTarget;
+    output.textContent = "Versturen…";
+    fetch("/api/portal", {
+      method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "create-support-ticket", subject: form.elements.subject.value,
+        category: form.elements.category.value, content: form.elements.content.value
+      })
+    }).then(function (response) {
+      return response.json().then(function (result) {
+        if (!response.ok) throw new Error(result.error || "Supportticket kon niet worden aangemaakt.");
+        return result;
+      });
+    }).then(function () {
+      form.reset();
+      output.textContent = "Je supportticket is verstuurd.";
+      return loadDashboard();
+    }).catch(function (error) { output.textContent = error.message; });
+  });
 
   profileForm.addEventListener("submit", function (event) {
     event.preventDefault();

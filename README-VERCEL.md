@@ -44,7 +44,7 @@ The homepage and `/server-statistieken/` read status from `/api/players`. The ro
 
 `/dashboard/` uses the existing Discord OAuth app and requires membership in the configured Discord guild. The signed, HttpOnly dashboard session is separate from the Cfx.re/Tebex shop login. An authenticated resident can save an optional in-game name; admins can manage dashboard distinctions, grant them by Discord ID, publish community notices, and inspect saved profile IDs in the **Inwoners** admin tab. These private profile fields and award assignments are returned only from authenticated APIs. The public `/staff/` directory uses active profiles managed in the existing **Staff** admin tab and does not expose their Discord IDs. No additional polling service or database table is introduced; resident data uses the existing shared content store.
 
-The searchable player FAQ is available at `/faq/`. Whitelist details are kept linked to the current Discord instructions because the repository does not contain authoritative application requirements.
+The searchable player Helpcentrum is available at `/helpcentrum/`; the former `/faq/` route redirects there. Whitelist details are kept linked to the current Discord instructions because the repository does not contain authoritative application requirements.
 
 ## Generate a SESSION_SECRET in Windows PowerShell
 

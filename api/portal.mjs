@@ -4,6 +4,8 @@ import { clearSessionCookie, hasPermission, readSession, verifyOrigin } from '..
 import { appendAudit, badMethod, cleanImage, cleanText, json, readJson } from '../server/http.mjs';
 import { vercelHandler } from '../server/vercel-adapter.mjs';
 
+const supportAttempts = new Map();
+
 function currentResident(request) {
   const user = readSession(request);
   if (!user || user.provider !== 'discord' || !/^\d{17,22}$/.test(String(user.id || ''))) return null;
@@ -48,6 +50,14 @@ async function handler(request) {
           id: item.id, jobId: item.jobId, jobTitle: item.jobTitle, status: item.status, submittedAt: item.submittedAt,
           history: (item.history || []).filter(entry => entry.public === true).map(entry => ({ status: entry.status, message: entry.message, at: entry.at }))
         })),
+        supportTickets: (state.supportTickets || []).filter(item => item.discordId === user.id).slice(-50).reverse().map(item => ({
+          id: item.id, subject: item.subject, category: item.category, status: item.status,
+          createdAt: item.createdAt, updatedAt: item.updatedAt,
+          messages: (item.messages || []).slice(-100).map(message => ({
+            author: message.authorRole === 'staff' ? 'Supportteam' : 'Jij',
+            authorRole: message.authorRole, content: message.content, createdAt: message.createdAt
+          }))
+        })),
         notifications: (state.notifications || []).filter(item => item.discordId === user.id).slice(-100).reverse()
       });
     } catch (error) {
@@ -65,6 +75,55 @@ async function handler(request) {
 
   const user = currentResident(request);
   if (!user) return json({ error: 'Je Discord-sessie is verlopen. Log opnieuw in.' }, 401);
+  if (body.action === 'create-support-ticket' || body.action === 'reply-support-ticket') {
+    const now = Date.now();
+    const lastAttempt = supportAttempts.get(user.id) || 0;
+    if (now - lastAttempt < 10000) return json({ error: 'Wacht even voordat je een nieuw supportbericht verstuurt.' }, 429);
+    if (supportAttempts.size >= 5000) {
+      for (const [id, at] of supportAttempts) if (now - at >= 10 * 60 * 1000) supportAttempts.delete(id);
+      if (supportAttempts.size >= 5000) return json({ error: 'Support is momenteel druk. Probeer het later opnieuw.' }, 429);
+    }
+    supportAttempts.set(user.id, now);
+    try {
+      const content = cleanText(body.content, 4000, 'Bericht');
+      const result = await updateContent(state => {
+        state.supportTickets ||= [];
+        const at = new Date().toISOString();
+        if (body.action === 'create-support-ticket') {
+          if (state.supportTickets.filter(ticket => ticket.discordId === user.id && ticket.status !== 'closed').length >= 10) {
+            throw new Error('Je hebt al 10 open supporttickets. Reageer op een bestaand ticket of wacht op antwoord.');
+          }
+          if (state.supportTickets.length >= 20000) throw new Error('Support kan tijdelijk geen nieuwe tickets aannemen.');
+          const ticket = {
+            id: randomUUID(), discordId: user.id,
+            username: cleanText(user.username || 'Inwoner', 80, 'Discord-naam'),
+            subject: cleanText(body.subject, 120, 'Onderwerp'),
+            category: cleanText(body.category || 'Overig', 40, 'Categorie'),
+            status: 'open', createdAt: at, updatedAt: at,
+            messages: [{ id: randomUUID(), authorId: user.id, authorName: cleanText(user.username || 'Inwoner', 80, 'Discord-naam'), authorRole: 'resident', content, createdAt: at }]
+          };
+          state.supportTickets.push(ticket);
+          return { ok: true, ticketId: ticket.id };
+        }
+        const ticketId = cleanText(body.ticketId, 80, 'Ticket-ID');
+        const ticket = state.supportTickets.find(item => item.id === ticketId && item.discordId === user.id);
+        if (!ticket) throw new Error('Dit supportticket is niet gevonden.');
+        if (ticket.status === 'closed') throw new Error('Dit supportticket is gesloten. Maak een nieuw ticket als je nog hulp nodig hebt.');
+        ticket.messages ||= [];
+        if (ticket.messages.length >= 200) throw new Error('Dit ticket bevat te veel berichten. Maak een nieuw ticket voor een vervolgvraag.');
+        ticket.messages.push({
+          id: randomUUID(), authorId: user.id, authorName: cleanText(user.username || 'Inwoner', 80, 'Discord-naam'),
+          authorRole: 'resident', content, createdAt: at
+        });
+        ticket.updatedAt = at;
+        if (ticket.status === 'waiting') ticket.status = 'open';
+        return { ok: true, ticketId: ticket.id };
+      });
+      return json(result, body.action === 'create-support-ticket' ? 201 : 200);
+    } catch (error) {
+      return json({ error: error.message || 'Je supportbericht kon niet worden opgeslagen.' }, 400);
+    }
+  }
   if (body.action !== 'save-profile') return json({ error: 'Onbekende dashboardactie.' }, 400);
 
   const input = body.profile && typeof body.profile === 'object' && !Array.isArray(body.profile) ? body.profile : body;

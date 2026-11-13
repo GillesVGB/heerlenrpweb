@@ -4,7 +4,8 @@ const originalFetch = globalThis.fetch;
 const originalEnv = {
   host: process.env.FIVEM_SERVER_HOST,
   port: process.env.FIVEM_SERVER_PORT,
-  code: process.env.CFX_JOIN_CODE
+  code: process.env.CFX_JOIN_CODE,
+  cache: process.env.FIVEM_STATUS_CACHE_SECONDS
 };
 const calls = [];
 
@@ -12,6 +13,7 @@ try {
   delete process.env.FIVEM_SERVER_HOST;
   delete process.env.FIVEM_SERVER_PORT;
   delete process.env.CFX_JOIN_CODE;
+  delete process.env.FIVEM_STATUS_CACHE_SECONDS;
   globalThis.fetch = async (url) => {
     calls.push(String(url));
     return new Response(JSON.stringify({ Data: { clients: 7, sv_maxclients: 64, hostname: 'Heerlen' } }), {
@@ -20,14 +22,34 @@ try {
     });
   };
   const { default: handler } = await import('../api/players.mjs');
-  let response = await handler(new Request('https://site.test/api/players?host=127.0.0.1&code=attacker'));
+  globalThis.fetch = async () => { throw new Error('upstream unavailable before first check'); };
+  let response = await handler(new Request('https://site.test/api/players'));
   let data = await response.json();
+  assert.equal(response.status, 502, 'An upstream error before the first successful check must remain an error');
+  assert.equal(data.online, null);
+  assert.equal(data.lastCheckedAt, null);
+
+  calls.length = 0;
+  process.env.FIVEM_STATUS_CACHE_SECONDS = '42';
+  globalThis.fetch = async (url) => {
+    calls.push(String(url));
+    return new Response(JSON.stringify({ Data: { clients: 7, sv_maxclients: 64, hostname: 'Heerlen' } }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    });
+  };
+  response = await handler(new Request('https://site.test/api/players?host=127.0.0.1&code=attacker'));
+  data = await response.json();
   assert.equal(response.status, 200);
   assert.equal(data.online, true);
   assert.equal(data.clients, 7);
+  assert.equal(data.stale, false);
+  assert.ok(data.lastCheckedAt, 'A successful status check includes its timestamp');
+  assert.equal(response.headers.get('Cache-Control'), 'public, s-maxage=42, stale-while-revalidate=84');
   assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/j48ry5k', 'Browser query parameters must not select a host or CFX code');
 
   calls.length = 0;
+  delete process.env.FIVEM_STATUS_CACHE_SECONDS;
   process.env.CFX_JOIN_CODE = '5oayqbr';
   response = await handler(new Request('https://site.test/api/players'));
   data = await response.json();
@@ -56,6 +78,7 @@ try {
   assert.equal(data.online, true, 'A reachable server with zero players is still online');
   assert.equal(data.clients, 0);
   assert.equal(data.max, 64);
+  assert.equal(data.stale, false);
   assert.equal(calls[0], 'https://frontend.cfx-services.net/api/servers/single/j48ry5k');
 
   calls.length = 0;
@@ -87,8 +110,10 @@ try {
   globalThis.fetch = async () => { throw new Error('upstream unavailable'); };
   response = await handler(new Request('https://site.test/api/players'));
   data = await response.json();
-  assert.equal(response.status, 502);
-  assert.equal(data.online, null, 'An upstream error must not be reported as offline');
+  assert.equal(response.status, 200);
+  assert.equal(data.online, false, 'A temporary upstream error retains the last explicitly known state');
+  assert.equal(data.stale, true, 'A retained status is marked stale');
+  assert.ok(data.lastCheckedAt, 'A retained status shows when it was last successfully checked');
 
   response = await handler(new Request('https://site.test/api/players', { method: 'POST' }));
   assert.equal(response.status, 405);
@@ -101,4 +126,6 @@ try {
   else process.env.FIVEM_SERVER_PORT = originalEnv.port;
   if (originalEnv.code === undefined) delete process.env.CFX_JOIN_CODE;
   else process.env.CFX_JOIN_CODE = originalEnv.code;
+  if (originalEnv.cache === undefined) delete process.env.FIVEM_STATUS_CACHE_SECONDS;
+  else process.env.FIVEM_STATUS_CACHE_SECONDS = originalEnv.cache;
 }
