@@ -3,9 +3,13 @@ import { readContent, updateContent } from './content-store.mjs';
 
 export const automationTriggers = {
   news_published: 'Nieuw nieuwsbericht',
+  site_update_published: 'Nieuwe website-update',
+  notice_published: 'Nieuwe communitymededeling',
   event_published: 'Evenement gepubliceerd',
   event_changed: 'Evenement bijgewerkt',
   event_cancelled: 'Evenement geannuleerd',
+  application_submitted: 'Nieuwe sollicitatie',
+  application_status_changed: 'Sollicitatiestatus gewijzigd',
   ticket_opened: 'Nieuw supportticket'
 };
 

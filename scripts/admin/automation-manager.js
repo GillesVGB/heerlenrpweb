@@ -1,6 +1,6 @@
 (function(){
   "use strict";
-  var labels={news_published:"Nieuws gepubliceerd",event_published:"Evenement gepubliceerd",event_changed:"Evenement bijgewerkt",event_cancelled:"Evenement geannuleerd",ticket_opened:"Supportticket geopend"};
+  var labels={news_published:"Nieuws gepubliceerd",site_update_published:"Website-update gepubliceerd",notice_published:"Communitymededeling gepubliceerd",event_published:"Evenement gepubliceerd",event_changed:"Evenement bijgewerkt",event_cancelled:"Evenement geannuleerd",application_submitted:"Nieuwe sollicitatie",application_status_changed:"Sollicitatiestatus gewijzigd",ticket_opened:"Supportticket geopend"};
   var list=document.getElementById("discordAutomationList"),history=document.getElementById("discordAutomationHistory");
   if(!list||!history)return;
   var controls=document.getElementById("discordAutomationControls");

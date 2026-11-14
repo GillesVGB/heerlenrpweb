@@ -383,18 +383,22 @@
         </section>
         <section class="admin-card" id="supportTicketPanel">
           <h3>Supporttickets</h3>
+          <div id="supportTicketStats" class="support-ticket-stats" aria-live="polite"></div>
           <label><span>Ticket</span><select id="supportTicketSelect"><option value="">Selecteer een ticket</option></select></label>
           <div id="supportTicketDetail" class="community-admin-detail" aria-live="polite"></div>
           <form id="supportReplyForm">
             <input type="hidden" name="id">
             <label><span>Status</span><select name="status"><option value="open">Open</option><option value="in_progress">In behandeling</option><option value="waiting">Wacht op inwoner</option><option value="closed">Gesloten</option></select></label>
+            <label><span>Toegewezen aan</span><input name="assignedTo" maxlength="80" placeholder="Naam medewerker (optioneel)"></label>
+            <label><span>Doorsturen naar categorie</span><select name="categoryId"><option value="">Huidige categorie behouden</option></select></label>
             <label><span>Antwoord (optioneel bij alleen statuswijziging)</span><textarea name="message" rows="4" maxlength="4000"></textarea></label>
-            <button type="submit" class="btn btn-blue">Antwoord/status opslaan</button>
+            <label><span>Interne notitie (alleen zichtbaar voor support)</span><textarea name="internalNote" rows="3" maxlength="2000"></textarea></label>
+            <button type="submit" class="btn btn-blue">Ticket bijwerken</button>
             <p id="supportReplyState" class="cms-message" role="status"></p>
           </form>
           <hr>
           <h3>Ticketcategorieën en formulier</h3>
-          <p class="hint">Stel per categorie de vragen in die inwoners bij een nieuw ticket beantwoorden. De antwoorden blijven alleen zichtbaar voor de inwoner en bevoegde supportmedewerkers.</p>
+          <p class="hint">Stel per categorie de vragen in die inwoners bij een nieuw ticket beantwoorden. Kies ook bestandsbijlage voor maximaal 2 PDF-, PNG-, JPEG- of WebP-bestanden van 400 KB per stuk. Antwoorden en bijlagen blijven privé voor de inwoner en bevoegde supportmedewerkers.</p>
           <div id="supportCategoryEditor" class="cms-list"></div>
           <div class="cms-actions"><button type="button" class="btn btn-ghost" id="supportCategoryAdd">Categorie toevoegen</button><button type="button" class="btn btn-blue" id="supportCategorySave">Formulieren opslaan</button><span id="supportCategoryState" class="cms-message" role="status"></span></div>
           <hr>

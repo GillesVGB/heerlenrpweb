@@ -4,6 +4,7 @@ import { clearSessionCookie, hasPermission, readSession, verifyOrigin } from '..
 import { appendAudit, badMethod, cleanImage, cleanText, json, readJson } from '../server/http.mjs';
 import { vercelHandler } from '../server/vercel-adapter.mjs';
 import { dispatchAutomation, enqueueAutomation } from '../server/community-automation.mjs';
+import { findSupportAttachment, inspectSupportUpload, supportAttachmentList } from '../server/support-files.mjs';
 
 const supportAttempts = new Map();
 
@@ -50,7 +51,7 @@ async function handler(request) {
           description: String(item.description || '').slice(0, 240),
           questions: (Array.isArray(item.questions) ? item.questions : []).slice(0, 20).map(question => ({
             id: String(question.id || '').slice(0, 40), label: String(question.label || '').slice(0, 120),
-            type: ['short', 'long', 'choice', 'dropdown'].includes(question.type) ? question.type : 'short',
+            type: ['short', 'long', 'choice', 'dropdown', 'file'].includes(question.type) ? question.type : 'short',
             required: question.required === true,
             options: Array.isArray(question.options) ? question.options.slice(0, 20).map(option => String(option).slice(0, 80)) : []
           }))
@@ -66,6 +67,7 @@ async function handler(request) {
         supportTickets: (state.supportTickets || []).filter(item => item.discordId === user.id).slice(-50).reverse().map(item => ({
           id: item.id, subject: item.subject, category: item.category, status: item.status,
           createdAt: item.createdAt, updatedAt: item.updatedAt,
+          attachments: supportAttachmentList(item),
           messages: (item.messages || []).slice(-100).map(message => ({
             author: message.authorRole === 'staff' ? 'Supportteam' : 'Jij',
             authorRole: message.authorRole, content: message.content, createdAt: message.createdAt
@@ -82,12 +84,24 @@ async function handler(request) {
   if (!verifyOrigin(request)) return json({ error: 'Ongeldige herkomst van het verzoek.' }, 403);
 
   let body;
-  try { body = await readJson(request, 16_000); }
+  try { body = await readJson(request, 1_200_000); }
   catch (error) { return json({ error: error.message }, 400); }
   if (body.action === 'logout') return json({ ok: true }, 200, { 'Set-Cookie': clearSessionCookie(request) });
 
   const user = currentResident(request);
   if (!user) return json({ error: 'Je Discord-sessie is verlopen. Log opnieuw in.' }, 401);
+  if (body.action === 'download-support-attachment') {
+    try {
+      const ticketId = cleanText(body.id, 80, 'Ticket-ID');
+      const questionId = cleanText(body.questionId, 40, 'Vraag-ID');
+      const state = await readContent();
+      const ticket = (state.supportTickets || []).find(item => item.id === ticketId && item.discordId === user.id);
+      if (!ticket) return json({ error: 'Dit supportticket is niet gevonden.' }, 404);
+      const attachment = findSupportAttachment(ticket, questionId);
+      if (!attachment) return json({ error: 'Deze bijlage is niet beschikbaar.' }, 404);
+      return json({ attachment: { name: attachment.name, mime: attachment.mime, dataUrl: attachment.dataUrl } });
+    } catch (error) { return json({ error: error.message || 'De bijlage kon niet worden geladen.' }, 400); }
+  }
   if (body.action === 'create-game-link') {
     try {
       const code = randomBytes(5).toString('hex').toUpperCase();
@@ -144,10 +158,17 @@ async function handler(request) {
           if (!category) throw new Error('Kies een beschikbare supportcategorie.');
           const inputFields = body.fields && typeof body.fields === 'object' && !Array.isArray(body.fields) ? body.fields : {};
           const answers = {};
-          for (const question of (Array.isArray(category.questions) ? category.questions : []).slice(0, 20)) {
+          const questions = (Array.isArray(category.questions) ? category.questions : []).slice(0, 20);
+          let attachmentCount = 0;
+          for (const question of questions) {
             const raw = inputFields[question.id];
             if ((raw === undefined || raw === '') && question.required) throw new Error(`Vul in: ${question.label}`);
             if (raw === undefined || raw === '') continue;
+            if (question.type === 'file') {
+              if (++attachmentCount > 2) throw new Error('Je kunt maximaal 2 bijlagen aan een supportticket toevoegen.');
+              answers[question.id] = inspectSupportUpload(raw);
+              continue;
+            }
             if (question.type === 'choice' || question.type === 'dropdown') {
               const options = Array.isArray(question.options) ? question.options.map(String) : [];
               if (!options.includes(String(raw))) throw new Error(`Kies een geldige optie bij: ${question.label}`);
@@ -160,6 +181,7 @@ async function handler(request) {
             subject: cleanText(body.subject, 120, 'Onderwerp'),
             category: category.name.slice(0, 80), categoryId,
             answers,
+            questionSnapshot: questions.map(question => ({ id: String(question.id || '').slice(0, 40), label: String(question.label || '').slice(0, 120), type: question.type })),
             status: 'open', createdAt: at, updatedAt: at,
             messages: [{ id: randomUUID(), authorId: user.id, authorName: cleanText(user.username || 'Inwoner', 80, 'Discord-naam'), authorRole: 'resident', content, createdAt: at }]
           };

@@ -35,6 +35,18 @@
 .community-status { min-height: 1.4em; color: var(--muted, #a5ada6); }
 .community-admin-detail { max-height: 520px; overflow: auto; overflow-wrap: anywhere; padding: 14px; border: 1px solid var(--line, rgba(255,255,255,.1)); border-radius: 14px; background: color-mix(in srgb,var(--card,#191d19) 82%,#000); color: var(--ink,#f2f4f1); }
 .support-admin-summary { display: grid; gap: 4px; padding: 3px 2px 14px; border-bottom: 1px solid var(--line,rgba(255,255,255,.1)); }
+.support-ticket-stats { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 9px; margin: 14px 0; }
+.support-ticket-stat { display: grid; gap: 4px; min-width: 0; padding: 12px; border: 1px solid var(--line,rgba(255,255,255,.1)); border-radius: 12px; background: var(--card,#191d19); }
+.support-ticket-stat strong { color: var(--blue,#5aaefd); font: 700 1.1rem "Space Grotesk",sans-serif; }
+.support-ticket-stat span { color: var(--muted,#a5ada6); font-size: .78rem; }
+.support-admin-note { display: grid; gap: 6px; margin-top: 10px; padding: 12px 14px; border: 1px solid rgba(255,190,90,.32); border-radius: 12px; background: rgba(255,190,90,.07); }
+.support-admin-note p { margin: 0; white-space: pre-wrap; }
+.support-admin-note time { color: var(--muted,#a5ada6); font-size: .78rem; }
+.support-admin-file { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px; }
+.support-admin-file .btn { flex:0 0 auto; }
+.resident-ticket-attachment { display:flex; align-items:center; flex-wrap:wrap; gap:8px 12px; padding:10px 12px; margin:10px 0; border:1px solid var(--line); border-radius:10px; background:var(--surface); }
+.resident-ticket-attachment > span:first-child { flex:1 1 220px; overflow-wrap:anywhere; color:var(--ink); font-weight:600; }
+.resident-ticket-attachment .resident-muted { flex:1 0 100%; margin:0; }
 .support-admin-summary strong { font: 700 1rem "Space Grotesk",Figtree,sans-serif; }
 .support-admin-summary span,.support-admin-message time { color: var(--muted,#a5ada6); font-size: .78rem; }
 .support-admin-transcript { display: grid; gap: 10px; padding-top: 13px; }
@@ -50,5 +62,6 @@
   .community-toolbar { display: grid; }
   .community-toolbar select { width: 100%; }
   .community-card, .community-panel { padding: 17px; }
+  .support-ticket-stats { grid-template-columns: repeat(2,minmax(0,1fr)); }
 }
 html[data-theme="light"] .community-toolbar select option, html[data-theme="light"] .community-form select option { background: #fff; color: #18202a; }

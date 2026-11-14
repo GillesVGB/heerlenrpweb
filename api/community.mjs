@@ -3,6 +3,7 @@ import { readContent, updateContent } from '../server/content-store.mjs';
 import { clearSessionCookie, readSession, verifyOrigin } from '../server/security.mjs';
 import { badMethod, cleanImage, cleanText, json, readJson } from '../server/http.mjs';
 import { vercelHandler } from '../server/vercel-adapter.mjs';
+import { dispatchAutomation, enqueueAutomation } from '../server/community-automation.mjs';
 
 const commentAttempts = new Map();
 const allowedApplicationStatuses = new Set(['received', 'reviewing', 'interview', 'approved', 'rejected']);
@@ -316,12 +317,16 @@ async function handler(request) {
           submittedAt: new Date().toISOString()
         };
         state.applications.push(application);
+        const applicationWebhook = state.discordAutomations?.application_submitted?.webhookUrl || '';
+        const automationId = applicationWebhook && applicationWebhook === job.webhookUrl ? '' : enqueueAutomation(state, 'application_submitted', { sourceId: application.id, createdAt: application.submittedAt, title: 'Nieuwe sollicitatie', summary: `${job.title} · referentie ${application.id}`, url: '/admin.html', actor: 'Inwoner' });
         return {
           application: { id: application.id, submittedAt: application.submittedAt },
           webhookUrl: job.webhookUrl || '',
-          webhookApplication: job.webhookUrl ? structuredClone(application) : null
+          webhookApplication: job.webhookUrl ? structuredClone(application) : null,
+          automationId
         };
       });
+      if (result.automationId) await dispatchAutomation(result.automationId).catch(error => console.error('[community] Application notification could not be dispatched', error?.message));
       let webhook = null;
       if (result.webhookUrl) {
         try {

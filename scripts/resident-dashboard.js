@@ -17,6 +17,25 @@
     return item;
   }
 
+  function readTicketUpload(file) {
+    return new Promise(function (resolve, reject) {
+      if (!file || file.size > 400 * 1024 || !/^(application\/pdf|image\/(png|jpeg|webp))$/.test(file.type)) return reject(new Error("Kies een PDF, PNG, JPEG of WebP-bestand tot 400 KB."));
+      var reader = new FileReader();
+      reader.onload = function () { resolve({ name: file.name, type: file.type, dataUrl: String(reader.result || "") }); };
+      reader.onerror = function () { reject(new Error("De bijlage kon niet worden gelezen.")); };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function downloadPrivateFile(attachment, ticketId, questionId, state) {
+    state.textContent = "Bijlage laden…";
+    fetch("/api/portal", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "download-support-attachment", id: ticketId, questionId: questionId }) })
+      .then(function (response) { return response.json().then(function (result) { if (!response.ok) throw new Error(result.error || "Bijlage niet beschikbaar."); return result.attachment; }); })
+      .then(function (file) { return fetch(file.dataUrl).then(function (response) { return response.blob(); }).then(function (blob) { return { blob: blob, name: file.name }; }); })
+      .then(function (file) { var url = URL.createObjectURL(file.blob); var link = document.createElement("a"); link.href = url; link.download = file.name; document.body.appendChild(link); link.click(); link.remove(); setTimeout(function () { URL.revokeObjectURL(url); }, 1000); state.textContent = "Download gestart."; })
+      .catch(function (error) { state.textContent = error.message; });
+  }
+
   function showLogin(message) {
     login.hidden = false;
     workspace.hidden = true;
@@ -144,6 +163,14 @@
       ticketHead.appendChild(node("span", "resident-ticket-status", statusLabels[ticket.status] || "Open"));
       card.appendChild(ticketHead);
       card.appendChild(node("p", "resident-muted", ticket.category + " · geopend op " + new Intl.DateTimeFormat("nl-NL", { dateStyle: "long" }).format(new Date(ticket.createdAt))));
+      (ticket.attachments || []).forEach(function (attachment) {
+        var fileRow = node("div", "resident-ticket-attachment");
+        fileRow.appendChild(node("span", "", attachment.label + " · " + attachment.name));
+        var downloadState = node("span", "resident-muted", "");
+        var download = node("button", "btn btn-ghost", "Bijlage downloaden"); download.type = "button";
+        download.addEventListener("click", function () { downloadPrivateFile(attachment, ticket.id, attachment.questionId, downloadState); });
+        fileRow.append(download, downloadState); card.appendChild(fileRow);
+      });
       var conversation = node("div", "resident-conversation");
       (ticket.messages || []).forEach(function (message) {
         var bubble = node("article", "resident-message" + (message.authorRole === "staff" ? " is-staff" : " is-resident"));
@@ -228,12 +255,14 @@
       label.appendChild(caption);
       var input;
       if (question.type === "long") { input = node("textarea"); input.rows = 3; input.maxLength = 2000; }
+      else if (question.type === "file") { input = node("input"); input.type = "file"; input.accept = ".pdf,.png,.jpg,.jpeg,.webp,application/pdf,image/png,image/jpeg,image/webp"; }
       else if (question.type === "choice" || question.type === "dropdown") {
         input = node("select"); input.add(new Option("Kies een optie", ""));
         (question.options || []).forEach(function (option) { input.add(new Option(option, option)); });
       } else { input = node("input"); input.type = "text"; input.maxLength = 300; }
       input.name = "ticketField_" + question.id;
       input.dataset.ticketField = question.id;
+      if (question.type === "file") input.dataset.ticketFile = "true";
       input.required = question.required === true;
       label.appendChild(input);
       supportDynamicFields.appendChild(label);
@@ -308,14 +337,21 @@
     var form = event.currentTarget;
     output.textContent = "Versturen…";
     var fields = {};
-    supportDynamicFields.querySelectorAll("[data-ticket-field]").forEach(function (input) { fields[input.dataset.ticketField] = input.value; });
-    fetch("/api/portal", {
+    var inputs = Array.from(supportDynamicFields.querySelectorAll("[data-ticket-field]"));
+    Promise.all(inputs.map(function (input) {
+      if (input.dataset.ticketFile === "true") {
+        var file = input.files && input.files[0];
+        return file ? readTicketUpload(file).then(function (upload) { fields[input.dataset.ticketField] = upload; }) : Promise.resolve();
+      }
+      fields[input.dataset.ticketField] = input.value;
+      return Promise.resolve();
+    })).then(function () { return fetch("/api/portal", {
       method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "create-support-ticket", subject: form.elements.subject.value,
         category: form.elements.category.value, content: form.elements.content.value, fields: fields
       })
-    }).then(function (response) {
+    }); }).then(function (response) {
       return response.json().then(function (result) {
         if (!response.ok) throw new Error(result.error || "Supportticket kon niet worden aangemaakt.");
         return result;

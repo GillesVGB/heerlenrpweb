@@ -461,7 +461,7 @@ export function publicContent(state) {
       description: String(item.description || '').slice(0, 240),
       questions: (Array.isArray(item.questions) ? item.questions : []).slice(0, 20).map(question => ({
         id: String(question.id || '').slice(0, 40), label: String(question.label || '').slice(0, 120),
-        type: ['short', 'long', 'choice', 'dropdown'].includes(question.type) ? question.type : 'short',
+        type: ['short', 'long', 'choice', 'dropdown', 'file'].includes(question.type) ? question.type : 'short',
         required: question.required === true,
         options: Array.isArray(question.options) ? question.options.slice(0, 20).map(option => String(option).slice(0, 80)) : []
       }))

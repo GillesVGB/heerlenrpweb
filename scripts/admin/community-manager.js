@@ -12,6 +12,7 @@
   var supportSelect = document.getElementById("supportTicketSelect");
   var supportDetail = document.getElementById("supportTicketDetail");
   var supportForm = document.getElementById("supportReplyForm");
+  var supportStats = document.getElementById("supportTicketStats");
   var supportCategoryEditor = document.getElementById("supportCategoryEditor");
   var supportCategoryDraft = [];
   if (!typeSelect || !list || !editor) return;
@@ -26,6 +27,13 @@
   function request(body) {
     return fetch("/api/admin", { method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) })
       .then(function (response) { return response.json().then(function (result) { if (!response.ok) throw new Error(result.error || "Actie is niet gelukt."); return result; }); });
+  }
+  function downloadPrivateFile(attachment) {
+    return fetch(attachment.dataUrl).then(function (response) { return response.blob(); }).then(function (blob) {
+      var url = URL.createObjectURL(blob); var link = document.createElement("a");
+      link.href = url; link.download = attachment.name || "bijlage"; document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    });
   }
   function show(message) {
     var toast = document.getElementById("toast");
@@ -178,10 +186,21 @@
   function renderSupportTickets() {
     if (!supportSelect || !supportDetail || !supportForm) return;
     var tickets = Array.isArray(content.supportTickets) ? content.supportTickets : [];
+    if (supportStats) {
+      supportStats.replaceChildren();
+      var closed = tickets.filter(function (ticket) { return ticket.status === "closed" && ticket.closedAt && Date.parse(ticket.createdAt) && Date.parse(ticket.closedAt) >= Date.parse(ticket.createdAt); });
+      var average = closed.length ? closed.reduce(function (sum, ticket) { return sum + Date.parse(ticket.closedAt) - Date.parse(ticket.createdAt); }, 0) / closed.length : 0;
+      [["Open", tickets.filter(function (ticket) { return ticket.status !== "closed"; }).length], ["Wacht op inwoner", tickets.filter(function (ticket) { return ticket.status === "waiting"; }).length], ["Afgerond", tickets.filter(function (ticket) { return ticket.status === "closed"; }).length], ["Gem. afhandeltijd", average ? Math.max(1, Math.round(average / 3600000)) + " uur" : "Nog geen data"]].forEach(function (metric) {
+        var card = document.createElement("div"); card.className = "support-ticket-stat";
+        var value = document.createElement("strong"); value.textContent = metric[1];
+        var label = document.createElement("span"); label.textContent = metric[0];
+        card.append(value, label); supportStats.appendChild(card);
+      });
+    }
     var selected = supportSelect.value;
     supportSelect.replaceChildren(new Option("Selecteer een ticket", ""));
     tickets.slice().sort(function (a, b) { return String(b.updatedAt || "").localeCompare(String(a.updatedAt || "")); }).forEach(function (ticket) {
-      supportSelect.appendChild(new Option(ticket.subject + " · " + ticket.username + " · " + ticket.status, ticket.id));
+      supportSelect.appendChild(new Option(ticket.subject + " · " + ticket.username + " · " + ticket.status + (ticket.assignedTo ? " · " + ticket.assignedTo : ""), ticket.id));
     });
     if (tickets.some(function (ticket) { return ticket.id === selected; })) supportSelect.value = selected;
     var ticket = tickets.find(function (item) { return item.id === supportSelect.value; });
@@ -198,9 +217,24 @@
     summary.append(title, meta); supportDetail.appendChild(summary);
     var ticketCategory = (content.supportCategories || []).find(function (item) { return item.id === ticket.categoryId; });
     Object.entries(ticket.answers || {}).forEach(function (entry) {
-      var answer = document.createElement("p"); answer.className = "support-admin-answer";
-      var question = (ticketCategory && ticketCategory.questions || []).find(function (item) { return item.id === entry[0]; });
-      answer.textContent = (question ? question.label : entry[0]) + ": " + String(entry[1]); supportDetail.appendChild(answer);
+      var question = (ticket.questionSnapshot || []).find(function (item) { return item.id === entry[0]; }) || (ticketCategory && ticketCategory.questions || []).find(function (item) { return item.id === entry[0]; });
+      var label = question ? question.label : entry[0];
+      if (entry[1] && typeof entry[1] === "object" && entry[1].attachment === true) {
+        var attachment = document.createElement("div"); attachment.className = "support-admin-answer support-admin-file";
+        var details = document.createElement("span"); details.textContent = label + ": " + entry[1].name + " · " + Math.max(1, Math.ceil((Number(entry[1].size) || 0) / 1024)) + " KB";
+        var download = document.createElement("button"); download.type = "button"; download.className = "btn btn-ghost"; download.textContent = "Bijlage downloaden"; download.dataset.supportAttachment = entry[0]; download.dataset.ticketId = ticket.id;
+        attachment.append(details, download); supportDetail.appendChild(attachment);
+      } else {
+        var answer = document.createElement("p"); answer.className = "support-admin-answer";
+        answer.textContent = label + ": " + (Array.isArray(entry[1]) ? entry[1].join(", ") : String(entry[1])); supportDetail.appendChild(answer);
+      }
+    });
+    (ticket.internalNotes || []).forEach(function (entry) {
+      var note = document.createElement("article"); note.className = "support-admin-note";
+      var author = document.createElement("strong"); author.textContent = "Interne notitie · " + (entry.authorName || "Support");
+      var body = document.createElement("p"); body.textContent = entry.content; body.style.whiteSpace = "pre-wrap";
+      var date = document.createElement("time"); var parsed = new Date(entry.createdAt); date.textContent = Number.isNaN(parsed.getTime()) ? "" : new Intl.DateTimeFormat("nl-NL", { dateStyle: "short", timeStyle: "short" }).format(parsed);
+      note.append(author, body, date); supportDetail.appendChild(note);
     });
     var transcript = document.createElement("div"); transcript.className = "support-admin-transcript";
     (ticket.messages || []).forEach(function (message) {
@@ -215,8 +249,17 @@
     });
     supportDetail.appendChild(transcript);
     supportForm.elements.status.value = ticket.status;
+    supportForm.elements.assignedTo.value = ticket.assignedTo || "";
+    var categorySelect = supportForm.elements.categoryId;
+    var selectedCategory = ticket.categoryId || "";
+    categorySelect.replaceChildren(new Option("Huidige categorie behouden", ""));
+    (content.supportCategories || []).forEach(function (category) { categorySelect.add(new Option(category.name, category.id)); });
+    categorySelect.value = selectedCategory;
     supportForm.elements.status.disabled = !can("support:manage");
+    supportForm.elements.assignedTo.disabled = !can("support:manage");
+    categorySelect.disabled = !can("support:manage");
     supportForm.elements.message.disabled = !can("support:manage");
+    supportForm.elements.internalNote.disabled = !can("support:manage");
     supportForm.querySelector("button[type=submit]").hidden = !can("support:manage");
   }
   function renderSupportCategories() {
@@ -238,7 +281,7 @@
         var qid = document.createElement("input"); qid.value = question.id || ""; qid.placeholder = "vraag-id"; qid.dataset.questionId = index + ":" + questionIndex;
         var label = document.createElement("input"); label.value = question.label || ""; label.placeholder = "Vraag"; label.dataset.questionLabel = index + ":" + questionIndex;
         var type = document.createElement("select"); type.dataset.questionType = index + ":" + questionIndex;
-        [["short", "Korte tekst"], ["long", "Lange tekst"], ["choice", "Keuze"], ["dropdown", "Keuzelijst"]].forEach(function (option) { var el = new Option(option[1], option[0]); type.add(el); }); type.value = question.type || "short";
+        [["short", "Korte tekst"], ["long", "Lange tekst"], ["choice", "Keuze"], ["dropdown", "Keuzelijst"], ["file", "Bestandsbijlage (PDF/afbeelding)"]].forEach(function (option) { var el = new Option(option[1], option[0]); type.add(el); }); type.value = question.type || "short";
         var requiredLabel = document.createElement("label"); requiredLabel.className = "check";
         var required = document.createElement("input"); required.type = "checkbox"; required.checked = question.required === true; required.dataset.questionRequired = index + ":" + questionIndex;
         requiredLabel.append(required, document.createTextNode("Verplicht"));
@@ -292,6 +335,15 @@
   document.getElementById("communityNew").addEventListener("click", function () { openEditor(typeSelect.value, newItem(typeSelect.value)); });
   appSelect.addEventListener("change", renderApplications);
   if (supportSelect) supportSelect.addEventListener("change", renderSupportTickets);
+  if (supportDetail) supportDetail.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-support-attachment]");
+    if (!button) return;
+    button.disabled = true; button.textContent = "Laden…";
+    request({ action: "download-support-attachment", id: button.dataset.ticketId, questionId: button.dataset.supportAttachment })
+      .then(function (result) { return downloadPrivateFile(result.attachment); })
+      .catch(function (error) { button.textContent = error.message; })
+      .finally(function () { button.disabled = false; if (button.textContent === "Laden…") button.textContent = "Bijlage downloaden"; });
+  });
   if (supportForm) supportForm.addEventListener("submit", function (event) {
     event.preventDefault();
     var output = document.getElementById("supportReplyState");
@@ -300,9 +352,13 @@
       action: "manage-support-ticket",
       id: supportForm.elements.id.value,
       status: supportForm.elements.status.value,
-      message: supportForm.elements.message.value
+      message: supportForm.elements.message.value,
+      assignedTo: supportForm.elements.assignedTo.value,
+      categoryId: supportForm.elements.categoryId.value,
+      internalNote: supportForm.elements.internalNote.value
     }).then(function () {
       supportForm.elements.message.value = "";
+      supportForm.elements.internalNote.value = "";
       output.textContent = "Supportticket bijgewerkt.";
       return refresh();
     }).catch(function (error) { output.textContent = error.message; });

@@ -4,6 +4,7 @@ import { clearSessionCookie, constantTimeEqual, hasPermission, makeSession, perm
 import { appendAudit, badMethod, cleanDate, cleanImage, cleanText, json, readJson } from '../server/http.mjs';
 import { vercelHandler } from '../server/vercel-adapter.mjs';
 import { automationTriggers, dispatchAutomation, enqueueAutomation, safeAutomationHistory, safeAutomationSettings } from '../server/community-automation.mjs';
+import { findSupportAttachment, supportTicketView } from '../server/support-files.mjs';
 
 const attempts = new Map();
 const webhookTests = new Map();
@@ -296,7 +297,7 @@ async function handler(request) {
         applications: hasPermission(session, 'applications:read') || hasPermission(session, 'applications:review') ? (content.applications || []) : undefined,
         helpArticles: hasPermission(session, 'help:manage') ? (content.helpArticles || []) : undefined,
         helpCategories: hasPermission(session, 'help:manage') ? (content.helpCategories || []) : undefined,
-        supportTickets: hasPermission(session, 'support:manage') ? (content.supportTickets || []) : undefined,
+        supportTickets: hasPermission(session, 'support:manage') ? (content.supportTickets || []).map(ticket => supportTicketView(ticket)) : undefined,
         supportCategories: hasPermission(session, 'support:manage') ? (content.supportCategories || []) : undefined,
         discordAutomations: hasPermission(session, 'notifications:manage') ? safeAutomationSettings(content) : undefined,
         automationHistory: hasPermission(session, 'notifications:manage') ? safeAutomationHistory(content) : undefined,
@@ -335,6 +336,18 @@ async function handler(request) {
   if (!user) return json({ error: current.error }, current.status);
 
   try {
+    if (body.action === 'download-support-attachment') {
+      if (!hasPermission(user, 'support:manage')) return json({ error: 'Je mag supportbijlagen niet bekijken.' }, 403);
+      const id = cleanText(body.id, 80, 'Ticket-ID');
+      const questionId = cleanText(body.questionId, 40, 'Vraag-ID');
+      const content = await readContent();
+      const ticket = (content.supportTickets || []).find(item => item.id === id);
+      if (!ticket) return json({ error: 'Dit supportticket bestaat niet.' }, 404);
+      const attachment = findSupportAttachment(ticket, questionId);
+      if (!attachment) return json({ error: 'Deze bijlage is niet beschikbaar.' }, 404);
+      return json({ attachment: { name: attachment.name, mime: attachment.mime, dataUrl: attachment.dataUrl } });
+    }
+
     if (body.action === 'save-discord-automation') {
       if (!hasPermission(user, 'notifications:manage')) return json({ error: 'Je mag Discord-meldingen niet beheren.' }, 403);
       const type = cleanText(body.type, 40, 'Type melding');
@@ -655,6 +668,7 @@ async function handler(request) {
       const result = await updateContent(state => {
         const application = (state.applications || []).find(item => item.id === id);
         if (!application) throw new Error('Deze sollicitatie bestaat niet.');
+        const previousStatus = application.status;
         application.status = body.status;
         application.updatedAt = new Date().toISOString();
         application.history ||= [];
@@ -670,8 +684,13 @@ async function handler(request) {
         if (application.history.length > 100) application.history = application.history.slice(-100);
         if (publicMessage) addAdminNotification(state, application.discordId, 'application', 'Update over je sollicitatie', publicMessage, `application:${application.id}:${application.updatedAt}`);
         appendAudit(state, user, 'beoordeeld', 'sollicitatie', `${application.jobTitle} · ${application.username}`);
-        return { ok: true, application };
+        const automationId = previousStatus !== application.status
+          ? enqueueAutomation(state, 'application_status_changed', { sourceId: application.id, version: application.updatedAt, title: 'Sollicitatiestatus gewijzigd', summary: `${application.jobTitle} · ${previousStatus} → ${application.status} · referentie ${application.id}`, url: '/admin.html', actor: user.username })
+          : '';
+        return { ok: true, automationId };
       });
+      const automationId = result.automationId; delete result.automationId;
+      if (automationId) await dispatchAutomation(automationId).catch(error => console.error('[admin] Application notification could not be dispatched', error?.message));
       return json(result);
     }
 
@@ -681,13 +700,29 @@ async function handler(request) {
       const status = body.status;
       if (!['open', 'in_progress', 'waiting', 'closed'].includes(status)) return json({ error: 'Kies een geldige ticketstatus.' }, 400);
       const message = cleanText(body.message || '', 4000, 'Antwoord', true);
+      const internalNote = cleanText(body.internalNote || '', 2000, 'Interne notitie', true);
+      const assignedTo = cleanText(body.assignedTo || '', 80, 'Toegewezen medewerker', true);
+      const categoryId = cleanText(body.categoryId || '', 40, 'Ticketcategorie', true);
       const result = await updateContent(state => {
         const ticket = (state.supportTickets || []).find(item => item.id === id);
         if (!ticket) throw new Error('Dit supportticket bestaat niet.');
         if (ticket.status === 'closed' && status !== 'closed' && !message) throw new Error('Voeg een antwoord toe om het ticket te heropenen.');
         const at = new Date().toISOString();
+        if (categoryId) {
+          const category = (state.supportCategories || []).find(item => item.id === categoryId);
+          if (!category) throw new Error('Kies een bestaande ticketcategorie.');
+          ticket.categoryId = category.id; ticket.category = category.name;
+        }
+        ticket.assignedTo = assignedTo;
         ticket.status = status;
         ticket.updatedAt = at;
+        if (status === 'closed') ticket.closedAt = at;
+        else delete ticket.closedAt;
+        if (internalNote) {
+          ticket.internalNotes ||= [];
+          if (ticket.internalNotes.length >= 200) throw new Error('Dit ticket bevat te veel interne notities.');
+          ticket.internalNotes.push({ id: randomUUID(), authorId: String(user.id || ''), authorName: cleanText(user.username || 'Support', 80, 'Supportnaam'), content: internalNote, createdAt: at });
+        }
         if (message) {
           ticket.messages ||= [];
           if (ticket.messages.length >= 200) throw new Error('Dit ticket bevat te veel berichten. Sluit het ticket en vraag de inwoner een nieuw ticket te openen.');
@@ -697,8 +732,8 @@ async function handler(request) {
           });
           addAdminNotification(state, ticket.discordId, 'support', 'Antwoord van support', `Er is een nieuw antwoord op je ticket: ${ticket.subject}`, `support:${ticket.id}:${at}`);
         }
-        appendAudit(state, user, message ? 'beantwoord' : 'status gewijzigd', 'supportticket', ticket.subject);
-        return { ok: true };
+        appendAudit(state, user, message ? 'beantwoord' : 'bijgewerkt', 'supportticket', ticket.subject);
+        return { ok: true, assignedTo: ticket.assignedTo, status: ticket.status };
       });
       return json(result);
     }
@@ -717,11 +752,13 @@ async function handler(request) {
         if (!Array.isArray(raw.questions || []) || (raw.questions || []).length > 20) return json({ error: `Categorie ${id} mag maximaal 20 vragen bevatten.` }, 400);
         const questionIds = new Set();
         const questions = [];
+        let fileQuestionCount = 0;
         for (const [questionIndex, question] of (raw.questions || []).entries()) {
           const qid = cleanText(question?.id, 40, 'Vraag-ID');
           const type = question?.type;
           if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(qid) || questionIds.has(qid)) return json({ error: `Ongeldig of dubbel vraag-ID in ${id}.` }, 400);
-          if (!['short', 'long', 'choice', 'dropdown'].includes(type)) return json({ error: `Niet-ondersteund vraagtype bij vraag ${questionIndex + 1}.` }, 400);
+          if (!['short', 'long', 'choice', 'dropdown', 'file'].includes(type)) return json({ error: `Niet-ondersteund vraagtype bij vraag ${questionIndex + 1}.` }, 400);
+          if (type === 'file' && ++fileQuestionCount > 2) return json({ error: `Categorie ${id} mag maximaal 2 bestandsvragen bevatten.` }, 400);
           if (question.required !== undefined && typeof question.required !== 'boolean') return json({ error: `Ongeldige verplicht-instelling bij ${qid}.` }, 400);
           questionIds.add(qid);
           const item = { id: qid, label: cleanText(question.label, 120, 'Vraag'), type, required: question.required === true };
@@ -867,14 +904,20 @@ async function handler(request) {
       const result = await updateContent(state => {
         state.residentNotices ||= [];
         const index = state.residentNotices.findIndex(item => item.id === id);
+        const previous = index >= 0 ? state.residentNotices[index] : null;
         if (index >= 0) state.residentNotices[index] = cleanNotice;
         else {
           if (state.residentNotices.length >= 50) throw new Error('Je kunt maximaal 50 inwonersmeldingen beheren.');
           state.residentNotices.push(cleanNotice);
         }
         appendAudit(state, user, index >= 0 ? 'aangepast' : 'aangemaakt', 'inwonersmelding', cleanNotice.title);
-        return { ok: true, notice: cleanNotice };
+        const automationId = cleanNotice.active && (!previous || previous.active !== true)
+          ? enqueueAutomation(state, 'notice_published', { sourceId: id, version: cleanNotice.updatedAt, title: cleanNotice.title, summary: cleanNotice.message, url: '/dashboard/', actor: user.username })
+          : '';
+        return { ok: true, notice: cleanNotice, automationId };
       });
+      const automationId = result.automationId; delete result.automationId;
+      if (automationId) await dispatchAutomation(automationId).catch(error => console.error('[admin] Community notice could not be dispatched', error?.message));
       return json(result);
     }
 
@@ -887,15 +930,19 @@ async function handler(request) {
         item = { ...item, username: item.username || profile.username, avatar: item.avatar || profile.avatar };
       }
       const result = await updateContent(state => {
-        const previous = body.type === 'news' ? (state.news || []).find(record => record.id === item?.id) : null;
+        const sourceKey = body.type === 'staff' ? 'staff' : body.type === 'news' ? 'news' : 'changelog';
+        const previous = (state[sourceKey] || []).find(record => record.id === item?.id) || null;
         const saved = recordAction(state, user, body.type, body.action, item);
         if (body.type === 'news' && body.action === 'save' && item?.status === 'published' && previous?.status !== 'published') {
           saved.automationId = enqueueAutomation(state, 'news_published', { sourceId: item.id, version: item.updatedAt, title: item.title, summary: item.excerpt, url: '/nieuws/', actor: user.username });
         }
+        if (body.type === 'changelog' && body.action === 'save' && item?.status === 'published') {
+          if (!previous || previous.status !== 'published') saved.automationId = enqueueAutomation(state, 'site_update_published', { sourceId: item.id, version: item.updatedAt, title: item.title, summary: item.excerpt, url: '/updates/', actor: user.username });
+        }
         return saved;
       });
       const automationId = result.automationId; delete result.automationId;
-      if (automationId) await dispatchAutomation(automationId).catch(error => console.error('[admin] News notification could not be dispatched', error?.message));
+      if (automationId) await dispatchAutomation(automationId).catch(error => console.error('[admin] Content notification could not be dispatched', error?.message));
       return json(result);
     }
 

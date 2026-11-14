@@ -59,8 +59,12 @@ assert.match(adminClient, /gecontroleerd /, 'The admin dashboard displays the se
 assert.match(adminPage, /id="supportTicketPanel"/, 'The admin dashboard provides a private support inbox');
 assert.match(adminPage, /id="adminOverviewSupport"/, 'Support managers see open ticket counts in the admin overview');
 assert.match(communityAdminClient, /manage-support-ticket/, 'Support staff can reply and update ticket status');
+assert.match(communityAdminClient, /supportTicketStats/, 'support managers see ticket summary and resolution metrics');
+assert.match(communityAdminClient, /internalNote/, 'support managers can add private ticket notes');
+assert.match(communityAdminClient, /download-support-attachment/, 'support managers can download authorized ticket attachments');
 assert.match(dashboardPage, /id="supportTicketForm"/, 'Residents can submit support requests from their dashboard');
 assert.match(dashboardClient, /create-support-ticket/, 'Resident support requests use the authenticated dashboard API');
+assert.match(dashboardClient, /readTicketUpload/, 'residents can attach validated files to support tickets');
 assert.match(fivemResource, /https:\/\/heerlenrp\.nl\/api\/fivem\/link/, 'the FiveM resource uses the canonical non-www API address');
 assert.match(fivemResource, /status == 401[\s\S]*FIVEM_LINK_SECRET/, 'the FiveM resource reports secret mismatches instead of calling them invalid codes');
 assert.match(fivemResource, /status == 409/, 'only actual code or account conflicts are reported as invalid/used codes');
@@ -154,7 +158,19 @@ try {
     assert.equal(announcedNews.status, 200, 'publishing news queues and sends one Discord notification');
     const unchangedNews = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'automation-news', title: 'Community update', category: 'Nieuws', excerpt: 'Een openbare update', content: 'Zoekbare community aankondiging', status: 'published', publishAt: '2025-01-01T00:00:00.000Z' } }, cookie);
     assert.equal(unchangedNews.status, 200, 'an already published news item can be edited without another publish notification');
-    assert.equal(automationMessages, 1, 'publication notifications are not duplicated on subsequent edits');
+    for (const type of ['site_update_published', 'notice_published']) {
+      const configured = await run(admin, 'POST', { action: 'save-discord-automation', type, enabled: true, webhookUrl: automationHook, template: '{title}: {summary}' }, cookie);
+      assert.equal(configured.status, 200, `authorized administrators can configure the ${type} webhook`);
+    }
+    const publishedUpdate = await run(admin, 'POST', { action: 'save', type: 'changelog', item: { id: 'automation-update', title: 'Nieuwe zoekfunctie', category: 'Website', excerpt: 'Zoeken is beschikbaar.', content: 'De communityzoekfunctie is toegevoegd.', status: 'published' } }, cookie);
+    assert.equal(publishedUpdate.status, 200, 'publishing a changelog entry sends a site update notification');
+    const editedUpdate = await run(admin, 'POST', { action: 'save', type: 'changelog', item: { id: 'automation-update', title: 'Nieuwe zoekfunctie', category: 'Website', excerpt: 'Zoeken is beschikbaar.', content: 'De communityzoekfunctie is toegevoegd.', status: 'published' } }, cookie);
+    assert.equal(editedUpdate.status, 200, 'editing a published changelog entry remains available');
+    const savedNotice = await run(admin, 'POST', { action: 'save-resident-notice', notice: { id: 'automation-notice', title: 'Communityavond', message: 'Vrijdag om 20:00.', active: true } }, cookie);
+    assert.equal(savedNotice.status, 200, 'publishing a community notice sends its Discord notification');
+    const editedNotice = await run(admin, 'POST', { action: 'save-resident-notice', notice: { id: 'automation-notice', title: 'Communityavond', message: 'Vrijdag om 20:00.', active: true } }, cookie);
+    assert.equal(editedNotice.status, 200, 'active notice edits do not create another announcement');
+    assert.equal(automationMessages, 3, 'news, site update, and notice triggers each send once and do not duplicate on edits');
     const automationData = await (await run(admin, 'GET', undefined, cookie)).json();
     assert.equal(automationData.content.discordAutomations.news_published.configured, true, 'the admin can see whether a webhook is configured');
     assert.equal(JSON.stringify(automationData.content.automationHistory).includes(automationHook), false, 'automation history never returns the webhook secret');
@@ -214,16 +230,43 @@ try {
   assert.equal(publicProfileSave.status, 200, 'residents can select public profile visibility and field-level privacy');
   const otherResidentCookie = sessionCookie(makeSession({ id: '22345678901234567', username: 'AndereInwoner', provider: 'discord', roles: [], permissions: [] }), { url: base + '/api/portal' }).split(';')[0];
   const thirdResidentCookie = sessionCookie(makeSession({ id: '32345678901234567', username: 'DerdeInwoner', provider: 'discord', roles: [], permissions: [] }), { url: base + '/api/portal' }).split(';')[0];
-  const supportCreated = await runPortal('POST', { action: 'create-support-ticket', subject: 'Bestelling controleren', category: 'Aankoop', content: 'Mijn bestelling is niet zichtbaar.' }, residentCookie);
+  const supportCategoriesSaved = await run(admin, 'POST', { action: 'save-support-categories', categories: [
+    { id: 'algemeen', name: 'Algemeen', enabled: true, questions: [] },
+    { id: 'technisch', name: 'Technisch', enabled: true, questions: [] },
+    { id: 'aankoop', name: 'Aankoop', enabled: true, questions: [{ id: 'bewijs', label: 'Bewijs van aankoop', type: 'file', required: false }] },
+    { id: 'melding', name: 'Melding', enabled: true, questions: [] },
+    { id: 'overig', name: 'Overig', enabled: true, questions: [] }
+  ] }, cookie);
+  assert.equal(supportCategoriesSaved.status, 200, 'support categories can configure a file attachment question');
+  const samplePdf = 'data:application/pdf;base64,' + Buffer.from('%PDF-1.4\nTest').toString('base64');
+  const ticketAutomationHook = 'https://discord.com/api/webhooks/22345678901234567/abcdefghijklmnopqrstuvwxyz1234567890';
+  const ticketTrigger = await run(admin, 'POST', { action: 'save-discord-automation', type: 'ticket_opened', enabled: true, webhookUrl: ticketAutomationHook, template: '{title}: {summary}' }, cookie);
+  assert.equal(ticketTrigger.status, 200, 'admins can configure a private support ticket notification');
+  const originalTicketFetch = globalThis.fetch;
+  let ticketNotificationBody = '';
+  globalThis.fetch = async (url, options) => { assert.equal(String(url), ticketAutomationHook); ticketNotificationBody = options.body; return new Response(null, { status: 204 }); };
+  let supportCreated;
+  try {
+    supportCreated = await runPortal('POST', { action: 'create-support-ticket', subject: 'Bestelling controleren', category: 'aankoop', content: 'Mijn bestelling is niet zichtbaar.', fields: { bewijs: { name: 'bewijs.pdf', type: 'application/pdf', dataUrl: samplePdf } } }, residentCookie);
+  } finally { globalThis.fetch = originalTicketFetch; }
   assert.equal(supportCreated.status, 201, 'residents can create a private support ticket');
+  assert.equal(JSON.stringify(JSON.parse(ticketNotificationBody)).includes('12345678901234567'), false, 'support notifications do not expose resident Discord IDs');
+  assert.equal(JSON.parse(ticketNotificationBody).allowed_mentions.parse.length, 0, 'support notifications cannot trigger Discord mentions');
   const supportTicketId = (await supportCreated.json()).ticketId;
   const ownerTickets = (await (await runPortal('GET', undefined, residentCookie)).json()).supportTickets;
   assert.equal(ownerTickets.length, 1, 'ticket owners can read their own support conversation');
   assert.equal(ownerTickets[0].messages[0].content, 'Mijn bestelling is niet zichtbaar.');
+  assert.equal(ownerTickets[0].attachments[0].name, 'bewijs.pdf', 'ticket owners can see attachment metadata');
+  assert.equal(ownerTickets[0].attachments[0].questionId, 'bewijs', 'attachment metadata is linked to its form field');
+  const ownerAttachment = await runPortal('POST', { action: 'download-support-attachment', id: supportTicketId, questionId: 'bewijs' }, residentCookie);
+  assert.equal(ownerAttachment.status, 200, 'ticket owners can download their own private attachments');
+  assert.equal((await ownerAttachment.json()).attachment.dataUrl, samplePdf, 'ticket downloads require ownership validation');
   assert.equal('discordId' in ownerTickets[0], false, 'resident ticket views omit account identifiers');
   assert.equal('authorId' in ownerTickets[0].messages[0], false, 'resident ticket messages omit account identifiers');
   const otherResidentTickets = (await (await runPortal('GET', undefined, otherResidentCookie)).json()).supportTickets;
   assert.equal(otherResidentTickets.length, 0, 'residents cannot read another account support tickets');
+  const crossAccountAttachment = await runPortal('POST', { action: 'download-support-attachment', id: supportTicketId, questionId: 'bewijs' }, otherResidentCookie);
+  assert.equal(crossAccountAttachment.status, 404, 'residents cannot download attachments from another account ticket');
   const crossAccountReply = await runPortal('POST', { action: 'reply-support-ticket', ticketId: supportTicketId, content: 'Ongeautoriseerde reactie' }, otherResidentCookie);
   assert.equal(crossAccountReply.status, 400, 'residents cannot reply to another account support ticket');
   const supportRoleOnlyCookie = sessionCookie(makeSession({ id: 'support-staff', username: 'SupportStaff', permissions: ['support:manage'], provider: 'test' }), { url: base + '/api/admin' }).split(';')[0];
@@ -231,18 +274,29 @@ try {
   assert.equal(supportAdminData.status, 200, 'support-only staff can read the support inbox');
   const supportAdminBody = await supportAdminData.json();
   assert.equal(supportAdminBody.content.supportTickets[0].id, supportTicketId);
+  assert.equal(supportAdminBody.content.supportTickets[0].answers.bewijs.attachment, true, 'support staff see attachment metadata in the inbox');
+  assert.equal('dataUrl' in supportAdminBody.content.supportTickets[0].answers.bewijs, false, 'the support inbox does not preload private file contents');
+  const staffAttachment = await run(admin, 'POST', { action: 'download-support-attachment', id: supportTicketId, questionId: 'bewijs' }, supportRoleOnlyCookie);
+  assert.equal(staffAttachment.status, 200, 'authorized support staff can download attachments on demand');
   assert.equal(supportAdminBody.content.applications, undefined, 'support-only staff cannot read unrelated application data');
   const regularStaffCookie = sessionCookie(makeSession({ id: 'regular-staff', username: 'RegularStaff', permissions: ['staff:read'], provider: 'test' }), { url: base + '/api/admin' }).split(';')[0];
+  const deniedStaffAttachment = await run(admin, 'POST', { action: 'download-support-attachment', id: supportTicketId, questionId: 'bewijs' }, regularStaffCookie);
+  assert.equal(deniedStaffAttachment.status, 403, 'staff without support permission cannot download ticket attachments');
   const regularStaffData = await run(admin, 'GET', undefined, regularStaffCookie);
   assert.equal(regularStaffData.status, 200);
   assert.equal((await regularStaffData.json()).content.supportTickets, undefined, 'staff without support permission cannot access support conversations');
   const deniedSupportReply = await run(admin, 'POST', { action: 'manage-support-ticket', id: supportTicketId, status: 'waiting', message: 'Geen rechten' }, regularStaffCookie);
   assert.equal(deniedSupportReply.status, 403, 'staff without support permission cannot answer tickets');
-  const supportReply = await run(admin, 'POST', { action: 'manage-support-ticket', id: supportTicketId, status: 'waiting', message: 'Kun je je bestelnummer sturen?' }, supportRoleOnlyCookie);
+  const supportReply = await run(admin, 'POST', { action: 'manage-support-ticket', id: supportTicketId, status: 'waiting', message: 'Kun je je bestelnummer sturen?', assignedTo: 'SupportStaff', categoryId: 'technisch', internalNote: 'Controleer de Tebex-betaling.' }, supportRoleOnlyCookie);
   assert.equal(supportReply.status, 200, 'support staff can reply and change ticket status');
   const updatedResidentTickets = (await (await runPortal('GET', undefined, residentCookie)).json()).supportTickets;
   assert.equal(updatedResidentTickets[0].status, 'waiting', 'staff ticket status is reflected in the resident dashboard');
   assert.equal(updatedResidentTickets[0].messages[1].author, 'Supportteam', 'staff responses are visible to the ticket owner');
+  assert.equal('internalNotes' in updatedResidentTickets[0], false, 'internal ticket notes are never visible to residents');
+  const managedTicket = (await (await run(admin, 'GET', undefined, supportRoleOnlyCookie)).json()).content.supportTickets[0];
+  assert.equal(managedTicket.assignedTo, 'SupportStaff', 'support managers can assign a ticket to a staff member');
+  assert.equal(managedTicket.categoryId, 'technisch', 'support managers can route a ticket to another department');
+  assert.equal(managedTicket.internalNotes[0].content, 'Controleer de Tebex-betaling.', 'internal notes are retained for authorized support staff');
   assert.equal((await (await runPortal('GET', undefined, residentCookie)).json()).notifications[0].type, 'support', 'staff responses create a private resident notification');
   const supportAudit = (await (await run(admin, 'GET', undefined, cookie)).json()).content.auditLog;
   assert.equal(supportAudit[0].itemType, 'supportticket', 'support replies are added to the protected activity log');
@@ -285,6 +339,9 @@ try {
     id: 'helper-job', title: 'Communityhelper', description: 'Help nieuwe spelers.', formId: 'helper-form', status: 'published', webhookUrl
   } }, cookie);
   assert.equal(savedWebhook.status, 200, 'job managers can connect a Discord webhook to a vacancy');
+  const applicationTriggerHook = 'https://discord.com/api/webhooks/32345678901234567/abcdefghijklmnopqrstuvwxyz1234567890';
+  const applicationTrigger = await run(admin, 'POST', { action: 'save-discord-automation', type: 'application_submitted', enabled: true, webhookUrl: applicationTriggerHook, template: '{title}: {summary}' }, cookie);
+  assert.equal(applicationTrigger.status, 200, 'admins can configure a private new-application notification');
   const eventSaved = await run(admin, 'POST', { action: 'save-community-record', type: 'events', item: {
     id: 'community-event', title: 'Communityavond', startsAt: new Date(Date.now() + 86400000).toISOString(), capacity: 1, status: 'published'
   } }, cookie);
@@ -298,9 +355,11 @@ try {
   assert.equal('privateKey' in featureFeedBody.applicationForms[0].questions[0], false, 'public application forms use a strict question-field allowlist');
   assert.equal(featureFeedBody.applicationForms[0].questions[0].sectionId, 'about', 'public application forms preserve sanitized question-section relationships');
   let webhookRequest;
+  const webhookRequests = [];
   const originalWebhookFetch = globalThis.fetch;
   globalThis.fetch = async (url, options) => {
     webhookRequest = { url: String(url), body: options.body };
+    webhookRequests.push(webhookRequest);
     return new Response(null, { status: 204 });
   };
   let submittedApplication;
@@ -314,6 +373,10 @@ try {
   }
   assert.equal(submittedApplication.status, 201, 'residents can submit valid applications');
   assert.equal((await submittedApplication.clone().json()).webhook.delivered, true, 'successful Discord webhook deliveries are reported');
+  assert.deepEqual(webhookRequests.map(item => item.url), [applicationTriggerHook, webhookUrl], 'new application notification and job-specific answers reach their separately configured webhooks once');
+  const applicationNotice = JSON.parse(webhookRequests[0].body);
+  assert.equal(JSON.stringify(applicationNotice).includes('12345678901234567'), false, 'general application notifications do not disclose resident IDs or answers');
+  assert.deepEqual(applicationNotice.allowed_mentions, { parse: [] }, 'application status workflows cannot trigger Discord mentions');
   assert.equal(webhookRequest.url, webhookUrl, 'application submission posts only to the configured Discord webhook');
   const webhookPayload = JSON.parse(webhookRequest.body.get('payload_json'));
   assert.deepEqual(webhookPayload.allowed_mentions, { parse: [] }, 'application webhooks cannot trigger Discord mentions');
@@ -362,8 +425,22 @@ try {
   assert.equal(moderatedComment.status, 200, 'admins can moderate a news comment');
   communityFeed = await (await content(new Request(base + '/api/content'))).json();
   assert.equal(communityFeed.news[0].comments.length, 0, 'hidden comments are excluded from the public feed');
-  const review = await run(admin, 'POST', { action: 'review-application', id: residentCommunityBody.applications[0].id, status: 'interview', message: 'We nodigen je uit voor een gesprek.', note: 'Sterke motivatie.' }, cookie);
+  const applicationStatusHook = 'https://discord.com/api/webhooks/42345678901234567/abcdefghijklmnopqrstuvwxyz1234567890';
+  const applicationStatusTrigger = await run(admin, 'POST', { action: 'save-discord-automation', type: 'application_status_changed', enabled: true, webhookUrl: applicationStatusHook, template: '{summary}' }, cookie);
+  assert.equal(applicationStatusTrigger.status, 200, 'admins can configure application status notifications');
+  const originalStatusFetch = globalThis.fetch;
+  let statusNotificationCount = 0;
+  let statusNotificationBody = '';
+  globalThis.fetch = async (url, options) => { assert.equal(String(url), applicationStatusHook); statusNotificationCount++; statusNotificationBody = options.body; return new Response(null, { status: 204 }); };
+  let review;
+  try {
+    review = await run(admin, 'POST', { action: 'review-application', id: residentCommunityBody.applications[0].id, status: 'interview', message: 'We nodigen je uit voor een gesprek.', note: 'Sterke motivatie.' }, cookie);
+    const repeatedReview = await run(admin, 'POST', { action: 'review-application', id: residentCommunityBody.applications[0].id, status: 'interview', message: 'We nodigen je uit voor een gesprek.', note: 'Sterke motivatie.' }, cookie);
+    assert.equal(repeatedReview.status, 200, 're-saving an application decision remains supported');
+  } finally { globalThis.fetch = originalStatusFetch; }
   assert.equal(review.status, 200, 'admins can review applications and send an applicant-facing status update: ' + JSON.stringify(await review.clone().json()));
+  assert.equal(statusNotificationCount, 1, 'application status notifications are sent only when the status changes');
+  assert.equal(JSON.stringify(JSON.parse(statusNotificationBody)).includes('12345678901234567'), false, 'status notification payloads do not disclose applicant IDs');
   const updatedResident = await runCommunity('GET', undefined, residentCookie);
   const updatedResidentBody = await updatedResident.json();
   assert.equal(updatedResidentBody.applications[0].status, 'interview', 'application status updates are visible to the applicant');
@@ -403,7 +480,7 @@ try {
   const residentAfter = await runPortal('GET', undefined, residentCookie);
   const residentDashboard = await residentAfter.json();
   assert.equal(residentDashboard.achievements[0].id, 'community-helper', 'only the signed-in resident receives their own awards');
-  assert.equal(residentDashboard.notices[0].id, 'community-update', 'active resident notices appear on the dashboard');
+  assert.ok(residentDashboard.notices.some((notice) => notice.id === 'community-update'), 'active resident notices appear on the dashboard');
   const otherDashboard = await runPortal('GET', undefined, otherResidentCookie);
   assert.deepEqual((await otherDashboard.json()).achievements, [], 'achievement data is not visible to other residents');
   const residentList = await run(admin, 'GET', undefined, cookie);
