@@ -23,6 +23,8 @@ const apiModules = {
   "/api/community": "api/community.mjs",
   "/api/players": "api/players.mjs",
   "/api/content": "api/content.mjs",
+  "/api/search": "api/search.mjs",
+  "/api/community-stats": "api/community-stats.mjs",
   "/api/auth/discord": "api/auth/discord.mjs",
   "/api/auth/callback": "api/auth/callback.mjs"
 };

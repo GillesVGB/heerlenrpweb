@@ -4,6 +4,13 @@ import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const initialContent = JSON.parse(await readFile(path.join(root, 'data', 'initial-content.json'), 'utf8'));
+const defaultSupportCategories = [
+  { id: 'algemeen', name: 'Algemene ondersteuning', description: 'Algemene vragen over de community.', enabled: true, questions: [] },
+  { id: 'technisch', name: 'Technisch probleem', description: 'Meld een technisch probleem.', enabled: true, questions: [] },
+  { id: 'aankoop', name: 'Aankoop of pakketvraag', description: 'Vraag over een aankoop of pakket.', enabled: true, questions: [] },
+  { id: 'melding', name: 'Spelersmelding', description: 'Een melding over een speler.', enabled: true, questions: [] },
+  { id: 'overig', name: 'Overig', description: 'Andere vragen.', enabled: true, questions: [] }
+];
 const localPath = process.env.CONTENT_STORE_PATH || path.join(root, 'data', 'local-content.json');
 const blobPath = 'fantasy-roleplay/content-v1.json';
 const useSupabase = !!(process.env.SUPABASE_URL || process.env.SUPABASE_SERVICE_ROLE_KEY);
@@ -49,13 +56,16 @@ async function initialState() {
   state.notifications ||= [];
   state.newsComments ||= [];
   state.supportTickets ||= [];
+  state.supportCategories ||= structuredClone(defaultSupportCategories);
   state.gameLinkRequests ||= [];
   state.gameLinks ||= [];
   return state;
 }
 
 function parseStored(value) {
-  return typeof value === 'string' ? JSON.parse(value) : value;
+  const state = typeof value === 'string' ? JSON.parse(value) : value;
+  if (state && typeof state === 'object' && !Array.isArray(state)) state.supportCategories ||= structuredClone(defaultSupportCategories);
+  return state;
 }
 
 function publicImage(value) {
@@ -446,6 +456,16 @@ export function publicContent(state) {
     applicationForms,
     helpCategories,
     helpArticles,
+    supportCategories: (state.supportCategories || []).filter(item => item && item.enabled !== false).slice(0, 30).map(item => ({
+      id: String(item.id || '').slice(0, 40), name: String(item.name || '').slice(0, 80),
+      description: String(item.description || '').slice(0, 240),
+      questions: (Array.isArray(item.questions) ? item.questions : []).slice(0, 20).map(question => ({
+        id: String(question.id || '').slice(0, 40), label: String(question.label || '').slice(0, 120),
+        type: ['short', 'long', 'choice', 'dropdown'].includes(question.type) ? question.type : 'short',
+        required: question.required === true,
+        options: Array.isArray(question.options) ? question.options.slice(0, 20).map(option => String(option).slice(0, 80)) : []
+      }))
+    })).filter(item => item.id && item.name),
     rulesVersions: (state.rulesVersions || []).filter(version => version.status === 'published').sort((a, b) => Date.parse(b.publishedAt) - Date.parse(a.publishedAt)),
     siteSettings,
     storeSettings: {

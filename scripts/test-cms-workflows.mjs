@@ -11,8 +11,8 @@ process.env.FIVEM_LINK_SECRET = 'cms-workflow-test-fivem-link-secret-32-characte
 process.env.CONTENT_STORE_PATH = path.join(tmpdir(), `heerlen-cms-test-${process.pid}.json`);
 const originalPublicOrigin = process.env.PUBLIC_ORIGIN;
 
-const [{ default: admin }, { default: content }, { default: avatar }, { default: donations }, { default: portal }, { default: community }, { default: discordCallback }, { default: account }, { makeSession, permissionsForRoleIds, readSession, sessionCookie, setOAuthState, validateOAuthState, verifyOrigin }] = await Promise.all([
-  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../api/donations.mjs'), import('../api/portal.mjs'), import('../api/community.mjs'), import('../api/auth/callback.mjs'), import('../api/account.mjs'), import('../server/security.mjs')
+const [{ default: admin }, { default: content }, { default: avatar }, { default: donations }, { default: portal }, { default: community }, { default: discordCallback }, { default: account }, { default: search }, { default: communityStats }, { makeSession, permissionsForRoleIds, readSession, sessionCookie, setOAuthState, validateOAuthState, verifyOrigin }] = await Promise.all([
+  import('../api/admin.mjs'), import('../api/content.mjs'), import('../api/avatar.mjs'), import('../api/donations.mjs'), import('../api/portal.mjs'), import('../api/community.mjs'), import('../api/auth/callback.mjs'), import('../api/account.mjs'), import('../api/search.mjs'), import('../api/community-stats.mjs'), import('../server/security.mjs')
 ]);
 const fivemLink = (await import('../api/fivem/link.mjs')).default;
 const base = 'http://127.0.0.1:8765';
@@ -46,6 +46,7 @@ const applicationsPage = await readFile(new URL('../solliciteren/index.html', im
 const helpPage = await readFile(new URL('../helpcentrum/index.html', import.meta.url), 'utf8');
 const faqPage = await readFile(new URL('../faq/index.html', import.meta.url), 'utf8');
 const profilePage = await readFile(new URL('../profiel/index.html', import.meta.url), 'utf8');
+const fivemResource = await readFile(new URL('../fivem-resource/hlrp_account_link/server.lua', import.meta.url), 'utf8');
 assert.match(adminPage, /data-admin-section="overview"/, 'The admin panel opens on a dashboard overview');
 assert.match(adminPage, /data-admin-section="settings" hidden/, 'The site settings stay hidden until selected so they cannot overlap the overview');
 assert.match(adminPage, /class="admin-overview-profile"/, 'The overview has the Heerlen identity header');
@@ -60,6 +61,9 @@ assert.match(adminPage, /id="adminOverviewSupport"/, 'Support managers see open 
 assert.match(communityAdminClient, /manage-support-ticket/, 'Support staff can reply and update ticket status');
 assert.match(dashboardPage, /id="supportTicketForm"/, 'Residents can submit support requests from their dashboard');
 assert.match(dashboardClient, /create-support-ticket/, 'Resident support requests use the authenticated dashboard API');
+assert.match(fivemResource, /https:\/\/heerlenrp\.nl\/api\/fivem\/link/, 'the FiveM resource uses the canonical non-www API address');
+assert.match(fivemResource, /status == 401[\s\S]*FIVEM_LINK_SECRET/, 'the FiveM resource reports secret mismatches instead of calling them invalid codes');
+assert.match(fivemResource, /status == 409/, 'only actual code or account conflicts are reported as invalid/used codes');
 assert.match(adminPage, /data-section="community"/, 'the admin panel exposes community management');
 assert.match(communityAdminClient, /save-community-record/, 'community admins can manage content through the CMS');
 assert.match(communityAdminClient, /review-application/, 'authorized staff can review applications');
@@ -139,6 +143,23 @@ try {
 
   const created = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'test-news', title: 'Testbericht', category: 'Nieuws', excerpt: 'Intro', content: 'Eerste alinea', status: 'published', commentsEnabled: true, publishAt: new Date(Date.now() - 1000).toISOString() } }, cookie);
   assert.equal(created.status, 200, 'news can be created: ' + JSON.stringify(await created.clone().json()));
+  const automationHook = 'https://discord.com/api/webhooks/12345678901234567/abcdefghijklmnopqrstuvwxyz1234567890';
+  const savedAutomation = await run(admin, 'POST', { action: 'save-discord-automation', type: 'news_published', enabled: true, webhookUrl: automationHook, template: '{title}: {summary}' }, cookie);
+  assert.equal(savedAutomation.status, 200, 'authorized administrators can configure a private publication webhook');
+  const originalAutomationFetch = globalThis.fetch;
+  let automationMessages = 0;
+  try {
+    globalThis.fetch = async (url) => { assert.equal(String(url), automationHook, 'the configured Discord webhook receives the event'); automationMessages++; return new Response(null, { status: 204 }); };
+    const announcedNews = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'automation-news', title: 'Community update', category: 'Nieuws', excerpt: 'Een openbare update', content: 'Zoekbare community aankondiging', status: 'published', publishAt: '2025-01-01T00:00:00.000Z' } }, cookie);
+    assert.equal(announcedNews.status, 200, 'publishing news queues and sends one Discord notification');
+    const unchangedNews = await run(admin, 'POST', { action: 'save', type: 'news', item: { id: 'automation-news', title: 'Community update', category: 'Nieuws', excerpt: 'Een openbare update', content: 'Zoekbare community aankondiging', status: 'published', publishAt: '2025-01-01T00:00:00.000Z' } }, cookie);
+    assert.equal(unchangedNews.status, 200, 'an already published news item can be edited without another publish notification');
+    assert.equal(automationMessages, 1, 'publication notifications are not duplicated on subsequent edits');
+    const automationData = await (await run(admin, 'GET', undefined, cookie)).json();
+    assert.equal(automationData.content.discordAutomations.news_published.configured, true, 'the admin can see whether a webhook is configured');
+    assert.equal(JSON.stringify(automationData.content.automationHistory).includes(automationHook), false, 'automation history never returns the webhook secret');
+    assert.equal(automationData.content.automationHistory[0].status, 'sent', 'the webhook result is logged');
+  } finally { globalThis.fetch = originalAutomationFetch; }
   const staffProfile = await run(admin, 'POST', { action: 'save', type: 'staff', item: { id: 'test-staff', name: 'Test Staff', username: 'teststaff', category: 'Support', role: 'Support', bio: 'Helpt inwoners.', discordId: '12345678901234567', order: 1, active: true, joinedAt: '2025-01-15T00:00:00.000Z' } }, cookie);
   assert.equal(staffProfile.status, 200, 'admins can manage a public staff profile');
   const publicData = await content(new Request(base + '/api/content'));
@@ -149,6 +170,12 @@ try {
   assert.equal(publicBody.staff[0].id, 'test-staff', 'active profiles are returned in staff display order');
   assert.equal(publicBody.staff[0].joinedAt, '2025-01-15T00:00:00.000Z', 'the public staff directory includes the optional join date');
   assert.equal('discordId' in publicBody.staff[0], false, 'public staff data never exposes Discord account IDs');
+  const publicSearch = await search(new Request(base + '/api/search?q=community+aankondiging&type=news'));
+  assert.equal(publicSearch.status, 200, 'public search indexes published news');
+  assert.equal((await publicSearch.json()).results[0].title, 'Community update', 'public search returns a matching news page');
+  const publicStats = await communityStats(new Request(base + '/api/community-stats'));
+  assert.equal(publicStats.status, 200, 'public community statistics load');
+  assert.equal((await publicStats.json()).stats.publishedNews, 2, 'community stats count published news records');
 
   const residentSession = makeSession({ id: '12345678901234567', username: 'InwonerTest', avatar: 'https://cdn.discordapp.com/avatars/12345678901234567/test.png', roles: [], permissions: [], provider: 'discord' });
   const residentCookie = sessionCookie(residentSession, { url: base + '/api/portal' }).split(';')[0];

@@ -392,6 +392,18 @@
             <button type="submit" class="btn btn-blue">Antwoord/status opslaan</button>
             <p id="supportReplyState" class="cms-message" role="status"></p>
           </form>
+          <hr>
+          <h3>Ticketcategorieën en formulier</h3>
+          <p class="hint">Stel per categorie de vragen in die inwoners bij een nieuw ticket beantwoorden. De antwoorden blijven alleen zichtbaar voor de inwoner en bevoegde supportmedewerkers.</p>
+          <div id="supportCategoryEditor" class="cms-list"></div>
+          <div class="cms-actions"><button type="button" class="btn btn-ghost" id="supportCategoryAdd">Categorie toevoegen</button><button type="button" class="btn btn-blue" id="supportCategorySave">Formulieren opslaan</button><span id="supportCategoryState" class="cms-message" role="status"></span></div>
+          <hr>
+          <div id="discordAutomationControls" hidden>
+            <h3>Discord-meldingen en workflowlog</h3>
+            <p class="hint">Stel per publicatie-trigger een Discord-webhook in. Gebruik voor tickets uitsluitend een besloten staffkanaal. Webhookadressen worden server-side bewaard en nooit teruggestuurd naar de browser. Herhalen kan alleen handmatig na een fout.</p>
+            <div id="discordAutomationList" class="cms-list"></div>
+            <h4>Verzendgeschiedenis</h4><div id="discordAutomationHistory" class="cms-list"></div>
+          </div>
         </section>
         <section class="admin-card">
           <h3>Inwonersmelding versturen</h3>
@@ -429,6 +441,6 @@
 <script src="/scripts/nav.js?v=20261112-2"></script>
 <script src="/scripts/admin.js?v=20261112-1"></script>
 <script src="/scripts/admin/content-manager.js?v=20261113-2"></script>
-<script src="/scripts/admin/community-manager.js" defer></script>
+<script src="/scripts/admin/community-manager.js" defer></script><script src="/scripts/admin/automation-manager.js" defer></script>
 </body>
 </html>

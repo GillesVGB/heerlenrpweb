@@ -3,6 +3,7 @@ import { readContent, updateContent } from '../server/content-store.mjs';
 import { clearSessionCookie, hasPermission, readSession, verifyOrigin } from '../server/security.mjs';
 import { appendAudit, badMethod, cleanImage, cleanText, json, readJson } from '../server/http.mjs';
 import { vercelHandler } from '../server/vercel-adapter.mjs';
+import { dispatchAutomation, enqueueAutomation } from '../server/community-automation.mjs';
 
 const supportAttempts = new Map();
 
@@ -44,6 +45,16 @@ async function handler(request) {
         gameLink: gameLink ? { linked: true, name: gameLink.name, linkedAt: gameLink.linkedAt } : { linked: false },
         achievements: awards,
         notices: (state.residentNotices || []).filter(notice => notice.active !== false).slice(0, 20),
+        supportCategories: (state.supportCategories || []).filter(item => item && item.enabled !== false).slice(0, 30).map(item => ({
+          id: String(item.id || '').slice(0, 40), name: String(item.name || '').slice(0, 80),
+          description: String(item.description || '').slice(0, 240),
+          questions: (Array.isArray(item.questions) ? item.questions : []).slice(0, 20).map(question => ({
+            id: String(question.id || '').slice(0, 40), label: String(question.label || '').slice(0, 120),
+            type: ['short', 'long', 'choice', 'dropdown'].includes(question.type) ? question.type : 'short',
+            required: question.required === true,
+            options: Array.isArray(question.options) ? question.options.slice(0, 20).map(option => String(option).slice(0, 80)) : []
+          }))
+        })).filter(item => item.id && item.name),
         rsvps: (state.eventRsvps || []).filter(item => item.discordId === user.id).map(item => {
           const event = (state.events || []).find(row => row.id === item.eventId);
           return event ? { eventId: event.id, title: event.title, startsAt: event.startsAt, status: event.cancelled || event.status !== 'published' ? 'cancelled' : item.status } : null;
@@ -126,16 +137,35 @@ async function handler(request) {
             throw new Error('Je hebt al 10 open supporttickets. Reageer op een bestaand ticket of wacht op antwoord.');
           }
           if (state.supportTickets.length >= 20000) throw new Error('Support kan tijdelijk geen nieuwe tickets aannemen.');
+          const categoryId = cleanText(body.category, 40, 'Categorie');
+          const legacyCategoryIds = { Account: 'algemeen', Whitelist: 'algemeen', Aankoop: 'aankoop', 'Speler of straf': 'melding', 'Technisch probleem': 'technisch', Overig: 'overig' };
+          const category = (state.supportCategories || []).find(item => item.enabled !== false &&
+            (item.id === categoryId || item.id === legacyCategoryIds[categoryId] || String(item.name || '').toLocaleLowerCase('nl-NL') === categoryId.toLocaleLowerCase('nl-NL')));
+          if (!category) throw new Error('Kies een beschikbare supportcategorie.');
+          const inputFields = body.fields && typeof body.fields === 'object' && !Array.isArray(body.fields) ? body.fields : {};
+          const answers = {};
+          for (const question of (Array.isArray(category.questions) ? category.questions : []).slice(0, 20)) {
+            const raw = inputFields[question.id];
+            if ((raw === undefined || raw === '') && question.required) throw new Error(`Vul in: ${question.label}`);
+            if (raw === undefined || raw === '') continue;
+            if (question.type === 'choice' || question.type === 'dropdown') {
+              const options = Array.isArray(question.options) ? question.options.map(String) : [];
+              if (!options.includes(String(raw))) throw new Error(`Kies een geldige optie bij: ${question.label}`);
+              answers[question.id] = String(raw);
+            } else answers[question.id] = cleanText(raw, question.type === 'long' ? 2000 : 300, question.label || 'Antwoord');
+          }
           const ticket = {
             id: randomUUID(), discordId: user.id,
             username: cleanText(user.username || 'Inwoner', 80, 'Discord-naam'),
             subject: cleanText(body.subject, 120, 'Onderwerp'),
-            category: cleanText(body.category || 'Overig', 40, 'Categorie'),
+            category: category.name.slice(0, 80), categoryId,
+            answers,
             status: 'open', createdAt: at, updatedAt: at,
             messages: [{ id: randomUUID(), authorId: user.id, authorName: cleanText(user.username || 'Inwoner', 80, 'Discord-naam'), authorRole: 'resident', content, createdAt: at }]
           };
           state.supportTickets.push(ticket);
-          return { ok: true, ticketId: ticket.id };
+          const automationId = enqueueAutomation(state, 'ticket_opened', { sourceId: ticket.id, createdAt: at, title: 'Nieuw supportticket', summary: `Categorie: ${category.name} · ticketnummer ${ticket.id}`, url: '/admin.html', actor: 'Inwoner' });
+          return { ok: true, ticketId: ticket.id, automationId };
         }
         const ticketId = cleanText(body.ticketId, 80, 'Ticket-ID');
         const ticket = state.supportTickets.find(item => item.id === ticketId && item.discordId === user.id);
@@ -151,6 +181,8 @@ async function handler(request) {
         if (ticket.status === 'waiting') ticket.status = 'open';
         return { ok: true, ticketId: ticket.id };
       });
+      const automationId = result.automationId; delete result.automationId;
+      if (automationId) await dispatchAutomation(automationId).catch(error => console.error('[portal] Support notification could not be dispatched', error?.message));
       return json(result, body.action === 'create-support-ticket' ? 201 : 200);
     } catch (error) {
       return json({ error: error.message || 'Je supportbericht kon niet worden opgeslagen.' }, 400);

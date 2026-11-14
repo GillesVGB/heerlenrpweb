@@ -126,7 +126,8 @@
           <p class="resident-muted">Berichten zijn alleen zichtbaar voor jou en bevoegde supportmedewerkers. Deel geen wachtwoorden of betaalgegevens.</p>
           <form id="supportTicketForm" class="resident-profile-form">
             <label><span>Onderwerp</span><input name="subject" maxlength="120" required></label>
-            <label><span>Categorie</span><select name="category"><option value="Account">Account</option><option value="Whitelist">Whitelist</option><option value="Aankoop">Aankoop</option><option value="Speler of straf">Speler of straf</option><option value="Technisch probleem">Technisch probleem</option><option value="Overig">Overig</option></select></label>
+            <label><span>Categorie</span><select name="category" id="supportCategorySelect" required></select></label>
+            <div id="supportDynamicFields" class="resident-profile-form"></div>
             <label><span>Bericht</span><textarea name="content" rows="5" maxlength="4000" required></textarea></label>
             <button type="submit" class="btn btn-primary">Supportticket versturen</button>
             <p id="supportTicketState" class="resident-muted" role="status"></p>

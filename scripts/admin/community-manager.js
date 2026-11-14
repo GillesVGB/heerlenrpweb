@@ -12,6 +12,8 @@
   var supportSelect = document.getElementById("supportTicketSelect");
   var supportDetail = document.getElementById("supportTicketDetail");
   var supportForm = document.getElementById("supportReplyForm");
+  var supportCategoryEditor = document.getElementById("supportCategoryEditor");
+  var supportCategoryDraft = [];
   if (!typeSelect || !list || !editor) return;
   var labels = { events: "evenement", jobs: "vacature", applicationForms: "sollicitatieformulier", helpCategories: "helpcategorie", helpArticles: "helpartikel" };
   function can(permission) { return Array.isArray(user.permissions) && user.permissions.includes(permission); }
@@ -194,6 +196,12 @@
     var title = document.createElement("strong"); title.textContent = ticket.subject;
     var meta = document.createElement("span"); meta.textContent = ticket.username + " · " + ticket.category + " · " + ticket.discordId;
     summary.append(title, meta); supportDetail.appendChild(summary);
+    var ticketCategory = (content.supportCategories || []).find(function (item) { return item.id === ticket.categoryId; });
+    Object.entries(ticket.answers || {}).forEach(function (entry) {
+      var answer = document.createElement("p"); answer.className = "support-admin-answer";
+      var question = (ticketCategory && ticketCategory.questions || []).find(function (item) { return item.id === entry[0]; });
+      answer.textContent = (question ? question.label : entry[0]) + ": " + String(entry[1]); supportDetail.appendChild(answer);
+    });
     var transcript = document.createElement("div"); transcript.className = "support-admin-transcript";
     (ticket.messages || []).forEach(function (message) {
       var bubble = document.createElement("article"); bubble.className = "support-admin-message" + (message.authorRole === "staff" ? " is-staff" : "");
@@ -210,6 +218,49 @@
     supportForm.elements.status.disabled = !can("support:manage");
     supportForm.elements.message.disabled = !can("support:manage");
     supportForm.querySelector("button[type=submit]").hidden = !can("support:manage");
+  }
+  function renderSupportCategories() {
+    if (!supportCategoryEditor) return;
+    supportCategoryEditor.replaceChildren();
+    supportCategoryDraft.forEach(function (category, index) {
+      var card = document.createElement("article"); card.className = "cms-list-item is-static";
+      var head = document.createElement("div"); head.className = "cms-actions";
+      var name = document.createElement("input"); name.value = category.name || ""; name.placeholder = "Categorienaam"; name.dataset.categoryName = index;
+      var id = document.createElement("input"); id.value = category.id || ""; id.placeholder = "id-zonder-spaties"; id.dataset.categoryId = index;
+      var enabledLabel = document.createElement("label"); enabledLabel.className = "check";
+      var enabled = document.createElement("input"); enabled.type = "checkbox"; enabled.checked = category.enabled !== false; enabled.dataset.categoryEnabled = index;
+      var enabledText = document.createElement("span"); enabledText.textContent = "Actief"; enabledLabel.append(enabled, enabledText);
+      var removeCategory = document.createElement("button"); removeCategory.type = "button"; removeCategory.className = "btn btn-danger"; removeCategory.textContent = "Categorie verwijderen"; removeCategory.dataset.removeCategory = index;
+      head.append(name, id, enabledLabel, removeCategory); card.appendChild(head);
+      var description = document.createElement("input"); description.value = category.description || ""; description.placeholder = "Korte toelichting"; description.dataset.categoryDescription = index; card.appendChild(description);
+      (category.questions || []).forEach(function (question, questionIndex) {
+        var row = document.createElement("div"); row.className = "cms-actions";
+        var qid = document.createElement("input"); qid.value = question.id || ""; qid.placeholder = "vraag-id"; qid.dataset.questionId = index + ":" + questionIndex;
+        var label = document.createElement("input"); label.value = question.label || ""; label.placeholder = "Vraag"; label.dataset.questionLabel = index + ":" + questionIndex;
+        var type = document.createElement("select"); type.dataset.questionType = index + ":" + questionIndex;
+        [["short", "Korte tekst"], ["long", "Lange tekst"], ["choice", "Keuze"], ["dropdown", "Keuzelijst"]].forEach(function (option) { var el = new Option(option[1], option[0]); type.add(el); }); type.value = question.type || "short";
+        var requiredLabel = document.createElement("label"); requiredLabel.className = "check";
+        var required = document.createElement("input"); required.type = "checkbox"; required.checked = question.required === true; required.dataset.questionRequired = index + ":" + questionIndex;
+        requiredLabel.append(required, document.createTextNode("Verplicht"));
+        var options = document.createElement("input"); options.value = Array.isArray(question.options) ? question.options.join(", ") : ""; options.placeholder = "Opties, komma-gescheiden"; options.dataset.questionOptions = index + ":" + questionIndex; options.hidden = !["choice", "dropdown"].includes(type.value);
+        type.addEventListener("change", function () { options.hidden = !["choice", "dropdown"].includes(type.value); });
+        var removeQuestion = document.createElement("button"); removeQuestion.type = "button"; removeQuestion.className = "btn btn-ghost"; removeQuestion.textContent = "Vraag verwijderen"; removeQuestion.dataset.removeQuestion = index + ":" + questionIndex;
+        row.append(qid, label, type, requiredLabel, options, removeQuestion); card.appendChild(row);
+      });
+      var addQuestion = document.createElement("button"); addQuestion.type = "button"; addQuestion.className = "btn btn-ghost"; addQuestion.textContent = "Vraag toevoegen"; addQuestion.dataset.addQuestion = index; card.appendChild(addQuestion);
+      supportCategoryEditor.appendChild(card);
+    });
+  }
+  function readSupportCategoryInputs() {
+    supportCategoryEditor.querySelectorAll("[data-category-name]").forEach(function (input) { supportCategoryDraft[Number(input.dataset.categoryName)].name = input.value; });
+    supportCategoryEditor.querySelectorAll("[data-category-id]").forEach(function (input) { supportCategoryDraft[Number(input.dataset.categoryId)].id = input.value; });
+    supportCategoryEditor.querySelectorAll("[data-category-enabled]").forEach(function (input) { supportCategoryDraft[Number(input.dataset.categoryEnabled)].enabled = input.checked; });
+    supportCategoryEditor.querySelectorAll("[data-category-description]").forEach(function (input) { supportCategoryDraft[Number(input.dataset.categoryDescription)].description = input.value; });
+    supportCategoryEditor.querySelectorAll("[data-question-id]").forEach(function (input) { var p = input.dataset.questionId.split(":").map(Number); supportCategoryDraft[p[0]].questions[p[1]].id = input.value; });
+    supportCategoryEditor.querySelectorAll("[data-question-label]").forEach(function (input) { var p = input.dataset.questionLabel.split(":").map(Number); supportCategoryDraft[p[0]].questions[p[1]].label = input.value; });
+    supportCategoryEditor.querySelectorAll("[data-question-type]").forEach(function (input) { var p = input.dataset.questionType.split(":").map(Number); supportCategoryDraft[p[0]].questions[p[1]].type = input.value; });
+    supportCategoryEditor.querySelectorAll("[data-question-required]").forEach(function (input) { var p = input.dataset.questionRequired.split(":").map(Number); supportCategoryDraft[p[0]].questions[p[1]].required = input.checked; });
+    supportCategoryEditor.querySelectorAll("[data-question-options]").forEach(function (input) { var p = input.dataset.questionOptions.split(":").map(Number); supportCategoryDraft[p[0]].questions[p[1]].options = input.value.split(",").map(function (v) { return v.trim(); }).filter(Boolean); });
   }
   function renderComments() {
     var target = document.getElementById("commentModerationList");
@@ -277,9 +328,25 @@
     document.getElementById("applicationReviewForm").closest("section").hidden = !can("applications:read") && !can("applications:review");
     var supportPanel = document.getElementById("supportTicketPanel");
     if (supportPanel) supportPanel.hidden = !can("support:manage");
+    supportCategoryDraft = (content.supportCategories || []).map(function (category) { return Object.assign({}, category, { questions: (category.questions || []).map(function (question) { return Object.assign({}, question); }) }); });
     document.getElementById("residentBroadcastForm").closest("section").hidden = !can("notifications:manage");
     document.getElementById("commentModerationList").closest("section").hidden = !can("comments:moderate");
-    renderRecords(); renderApplications(); renderSupportTickets(); renderComments();
+    renderRecords(); renderApplications(); renderSupportTickets(); renderSupportCategories(); renderComments();
+  }
+  if (supportCategoryEditor) {
+    supportCategoryEditor.addEventListener("input", readSupportCategoryInputs);
+    supportCategoryEditor.addEventListener("change", readSupportCategoryInputs);
+    supportCategoryEditor.addEventListener("click", function (event) {
+      var target = event.target;
+      if (target.dataset.addQuestion !== undefined) { readSupportCategoryInputs(); supportCategoryDraft[Number(target.dataset.addQuestion)].questions.push({ id: "vraag-" + (supportCategoryDraft[Number(target.dataset.addQuestion)].questions.length + 1), label: "", type: "short", required: false }); renderSupportCategories(); }
+      if (target.dataset.removeQuestion) { readSupportCategoryInputs(); var q = target.dataset.removeQuestion.split(":").map(Number); supportCategoryDraft[q[0]].questions.splice(q[1], 1); renderSupportCategories(); }
+      if (target.dataset.removeCategory !== undefined) { readSupportCategoryInputs(); supportCategoryDraft.splice(Number(target.dataset.removeCategory), 1); renderSupportCategories(); }
+    });
+    document.getElementById("supportCategoryAdd").addEventListener("click", function () { readSupportCategoryInputs(); supportCategoryDraft.push({ id: "categorie-" + (supportCategoryDraft.length + 1), name: "Nieuwe categorie", description: "", enabled: true, questions: [] }); renderSupportCategories(); });
+    document.getElementById("supportCategorySave").addEventListener("click", function () {
+      readSupportCategoryInputs(); var output = document.getElementById("supportCategoryState"); output.textContent = "Opslaan…";
+      request({ action: "save-support-categories", categories: supportCategoryDraft }).then(function () { output.textContent = "Ticketcategorieën opgeslagen."; refresh(); }).catch(function (error) { output.textContent = error.message; });
+    });
   }
   window.addEventListener("heerlen:admin-loaded", function (event) { update(event.detail || {}); });
   if (window.HeerlenAdminState) update(window.HeerlenAdminState);

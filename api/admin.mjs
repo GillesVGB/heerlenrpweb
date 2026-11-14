@@ -3,6 +3,7 @@ import { readContent, updateContent } from '../server/content-store.mjs';
 import { clearSessionCookie, constantTimeEqual, hasPermission, makeSession, permissionsForRoleIds, readSession, safeUser, sessionCookie, verifyOrigin } from '../server/security.mjs';
 import { appendAudit, badMethod, cleanDate, cleanImage, cleanText, json, readJson } from '../server/http.mjs';
 import { vercelHandler } from '../server/vercel-adapter.mjs';
+import { automationTriggers, dispatchAutomation, enqueueAutomation, safeAutomationHistory, safeAutomationSettings } from '../server/community-automation.mjs';
 
 const attempts = new Map();
 const webhookTests = new Map();
@@ -296,6 +297,9 @@ async function handler(request) {
         helpArticles: hasPermission(session, 'help:manage') ? (content.helpArticles || []) : undefined,
         helpCategories: hasPermission(session, 'help:manage') ? (content.helpCategories || []) : undefined,
         supportTickets: hasPermission(session, 'support:manage') ? (content.supportTickets || []) : undefined,
+        supportCategories: hasPermission(session, 'support:manage') ? (content.supportCategories || []) : undefined,
+        discordAutomations: hasPermission(session, 'notifications:manage') ? safeAutomationSettings(content) : undefined,
+        automationHistory: hasPermission(session, 'notifications:manage') ? safeAutomationHistory(content) : undefined,
         newsComments: hasPermission(session, 'comments:moderate') ? (content.newsComments || []) : undefined,
         siteSettings: hasPermission(session, 'admin:site') ? (content.siteSettings || {}) : undefined,
         storeSettings: hasPermission(session, 'admin:site') ? (content.storeSettings || {}) : undefined
@@ -331,6 +335,58 @@ async function handler(request) {
   if (!user) return json({ error: current.error }, current.status);
 
   try {
+    if (body.action === 'save-discord-automation') {
+      if (!hasPermission(user, 'notifications:manage')) return json({ error: 'Je mag Discord-meldingen niet beheren.' }, 403);
+      const type = cleanText(body.type, 40, 'Type melding');
+      if (!Object.hasOwn(automationTriggers, type)) return json({ error: 'Kies een geldig meldingstype.' }, 400);
+      if (typeof body.enabled !== 'boolean') return json({ error: 'Geef aan of de melding actief is.' }, 400);
+      const template = cleanText(body.template || '', 900, 'Berichtsjabloon', true);
+      let webhookUrl = '';
+      if (body.webhookUrl) {
+        try { webhookUrl = cleanDiscordWebhook(body.webhookUrl); }
+        catch (error) { return json({ error: error.message }, 400); }
+      }
+      const result = await updateContent(state => {
+        state.discordAutomations ||= {};
+        const current = state.discordAutomations[type] || {};
+        state.discordAutomations[type] = { enabled: body.enabled, template, webhookUrl: webhookUrl || current.webhookUrl || '' };
+        appendAudit(state, user, 'aangepast', 'Discord-melding', automationTriggers[type]);
+        return { ok: true, configured: !!state.discordAutomations[type].webhookUrl };
+      });
+      return json(result);
+    }
+    if (body.action === 'test-discord-automation') {
+      if (!hasPermission(user, 'notifications:manage')) return json({ error: 'Je mag Discord-meldingen niet beheren.' }, 403);
+      let webhookUrl = '';
+      try {
+        if (body.webhookUrl) webhookUrl = cleanDiscordWebhook(body.webhookUrl);
+        else if (Object.hasOwn(automationTriggers, body.type)) webhookUrl = (await readContent()).discordAutomations?.[body.type]?.webhookUrl || '';
+        if (!webhookUrl) throw new Error('Stel eerst een webhook in en sla de trigger op.');
+      }
+      catch (error) { return json({ error: error.message }, 400); }
+      const now = Date.now();
+      const lastTest = webhookTests.get(user.id) || 0;
+      if (now - lastTest < 15_000) return json({ error: 'Wacht even voordat je opnieuw een testbericht verstuurt.' }, 429);
+      webhookTests.set(user.id, now);
+      if (webhookTests.size > 5000) for (const [id, testedAt] of webhookTests) if (now - testedAt > 60 * 60 * 1000) webhookTests.delete(id);
+      const response = await fetch(webhookUrl, { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(6000), headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ content: '', allowed_mentions: { parse: [] }, embeds: [{ title: 'Heerlen Roleplay · testmelding', description: 'De Discord-koppeling werkt. Sla de trigger op om meldingen te activeren.', color: 0x3987e8, timestamp: new Date().toISOString() }] }) });
+      if (!response.ok) return json({ error: `Discord weigerde de testmelding (HTTP ${response.status}).` }, 502);
+      return json({ ok: true });
+    }
+    if (body.action === 'retry-discord-automation') {
+      if (!hasPermission(user, 'notifications:manage')) return json({ error: 'Je mag Discord-meldingen niet beheren.' }, 403);
+      const id = cleanText(body.id, 80, 'Verzend-ID');
+      const result = await updateContent(state => {
+        const run = (state.automationRuns || []).find(item => item.id === id && item.status === 'failed');
+        if (!run) throw new Error('Alleen mislukte verzendingen kun je opnieuw proberen.');
+        if ((Number(run.attempts) || 0) >= 3) throw new Error('Deze melding is al drie keer geprobeerd.');
+        run.status = 'pending'; run.updatedAt = new Date().toISOString();
+        appendAudit(state, user, 'opnieuw geprobeerd', 'Discord-melding', run.label);
+        return { ok: true };
+      });
+      await dispatchAutomation(id);
+      return json(result);
+    }
     if (body.action === 'admin-unlink-game-account') {
       if (!hasPermission(user, 'users:manage')) return json({ error: 'Je mag in-game accounts niet beheren.' }, 403);
       const discordId = cleanText(body.discordId, 22, 'Discord-ID');
@@ -511,6 +567,7 @@ async function handler(request) {
       const result = await updateContent(state => {
         state[body.type] ||= [];
         const index = state[body.type].findIndex(item => item.id === id);
+        let automationId = '';
         if (body.action === 'delete-community-record') {
           if (body.type === 'jobs' && index >= 0) {
             state.jobs[index].status = 'draft';
@@ -521,6 +578,7 @@ async function handler(request) {
           }
           if (body.type === 'events' && index >= 0) {
             const event = state.events[index];
+            automationId = enqueueAutomation(state, 'event_cancelled', { sourceId: id, version: `removed:${event.updatedAt || event.startsAt}`, title: event.title, summary: 'Dit evenement is verwijderd.', url: '/events/', actor: user.username });
             (state.eventRsvps || []).filter(rsvp => rsvp.eventId === id).forEach(rsvp => {
               addAdminNotification(state, rsvp.discordId, 'event', 'Evenement verwijderd', `Het evenement "${event.title}" is verwijderd.`, `event:${id}:deleted`);
             });
@@ -528,7 +586,7 @@ async function handler(request) {
           if (index >= 0) state[body.type].splice(index, 1);
           if (body.type === 'events') state.eventRsvps = (state.eventRsvps || []).filter(rsvp => rsvp.eventId !== id);
           appendAudit(state, user, 'verwijderd', body.type, raw.title || id);
-          return { ok: true };
+          return { ok: true, automationId };
         }
         const currentRecord = index >= 0 ? state[body.type][index] : null;
         const record = cleanCommunityRecord(body.type, raw, currentRecord);
@@ -539,6 +597,8 @@ async function handler(request) {
           const scheduleChanged = currentRecord.startsAt !== record.startsAt || currentRecord.endsAt !== record.endsAt ||
             currentRecord.location !== record.location || currentRecord.title !== record.title ||
             currentRecord.cancelled !== record.cancelled || currentRecord.status !== record.status;
+          if (scheduleChanged && (record.cancelled || record.status !== 'published')) automationId = enqueueAutomation(state, 'event_cancelled', { sourceId: id, version: record.updatedAt, title: record.title, summary: 'Dit evenement is geannuleerd of offline gehaald.', url: '/events/', actor: user.username });
+          else if (scheduleChanged && record.status === 'published' && !record.cancelled) automationId = enqueueAutomation(state, 'event_changed', { sourceId: id, version: record.updatedAt, title: record.title, summary: `${record.excerpt || record.description} ${record.location || ''}`.trim(), url: '/events/', actor: user.username });
           if (scheduleChanged) {
             const cancelled = record.cancelled || record.status !== 'published';
             const title = cancelled ? 'Evenement geannuleerd' : 'Evenement bijgewerkt';
@@ -554,6 +614,9 @@ async function handler(request) {
         else {
           if (state[body.type].length >= (body.type === 'applicationForms' ? 100 : 500)) throw new Error('Je hebt de maximale hoeveelheid items bereikt.');
           state[body.type].push(record);
+        }
+        if (body.type === 'events' && record.status === 'published' && !record.cancelled && (!currentRecord || currentRecord.status !== 'published' || currentRecord.cancelled)) {
+          automationId = enqueueAutomation(state, 'event_published', { sourceId: id, version: record.updatedAt, title: record.title, summary: `${record.excerpt || record.description} ${record.location || ''}`.trim(), url: '/events/', actor: user.username });
         }
         if (body.type === 'events' && record.status === 'published' && !record.cancelled) {
           state.eventRsvps ||= [];
@@ -576,8 +639,10 @@ async function handler(request) {
           });
         }
         appendAudit(state, user, index >= 0 ? 'aangepast' : 'aangemaakt', body.type, record.title || record.name || record.id);
-        return { ok: true, item: record };
+        return { ok: true, item: record, automationId };
       });
+      const automationId = result.automationId; delete result.automationId;
+      if (automationId) await dispatchAutomation(automationId).catch(error => console.error('[admin] Event notification could not be dispatched', error?.message));
       return json(result);
     }
 
@@ -634,6 +699,45 @@ async function handler(request) {
         }
         appendAudit(state, user, message ? 'beantwoord' : 'status gewijzigd', 'supportticket', ticket.subject);
         return { ok: true };
+      });
+      return json(result);
+    }
+
+    if (body.action === 'save-support-categories') {
+      if (!hasPermission(user, 'support:manage')) return json({ error: 'Je mag supportcategorieën niet beheren.' }, 403);
+      if (!Array.isArray(body.categories) || body.categories.length < 1 || body.categories.length > 30) return json({ error: 'Voeg 1 tot 30 supportcategorieën toe.' }, 400);
+      const ids = new Set();
+      const categories = [];
+      for (const [index, raw] of body.categories.entries()) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return json({ error: `Categorie ${index + 1} is ongeldig.` }, 400);
+        const id = cleanText(raw.id, 40, 'Categorie-ID');
+        if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(id) || ids.has(id)) return json({ error: `Ongeldig of dubbel categorie-ID: ${id}` }, 400);
+        ids.add(id);
+        if (raw.enabled !== undefined && typeof raw.enabled !== 'boolean') return json({ error: `Ongeldige status bij ${id}.` }, 400);
+        if (!Array.isArray(raw.questions || []) || (raw.questions || []).length > 20) return json({ error: `Categorie ${id} mag maximaal 20 vragen bevatten.` }, 400);
+        const questionIds = new Set();
+        const questions = [];
+        for (const [questionIndex, question] of (raw.questions || []).entries()) {
+          const qid = cleanText(question?.id, 40, 'Vraag-ID');
+          const type = question?.type;
+          if (!/^[a-z0-9][a-z0-9_-]{0,39}$/.test(qid) || questionIds.has(qid)) return json({ error: `Ongeldig of dubbel vraag-ID in ${id}.` }, 400);
+          if (!['short', 'long', 'choice', 'dropdown'].includes(type)) return json({ error: `Niet-ondersteund vraagtype bij vraag ${questionIndex + 1}.` }, 400);
+          if (question.required !== undefined && typeof question.required !== 'boolean') return json({ error: `Ongeldige verplicht-instelling bij ${qid}.` }, 400);
+          questionIds.add(qid);
+          const item = { id: qid, label: cleanText(question.label, 120, 'Vraag'), type, required: question.required === true };
+          if (type === 'choice' || type === 'dropdown') {
+            if (!Array.isArray(question.options) || question.options.length < 2 || question.options.length > 20) return json({ error: `Geef 2 tot 20 opties op voor ${qid}.` }, 400);
+            item.options = [...new Set(question.options.map(option => cleanText(option, 80, 'Keuzeoptie')))];
+            if (item.options.length < 2) return json({ error: `De opties voor ${qid} moeten uniek zijn.` }, 400);
+          }
+          questions.push(item);
+        }
+        categories.push({ id, name: cleanText(raw.name, 80, 'Categorienaam'), description: cleanText(raw.description || '', 240, 'Toelichting', true), enabled: raw.enabled !== false, questions });
+      }
+      const result = await updateContent(state => {
+        state.supportCategories = categories;
+        appendAudit(state, user, 'aangepast', 'supportformulier', `${categories.length} categorieën`);
+        return { ok: true, count: categories.length };
       });
       return json(result);
     }
@@ -782,7 +886,16 @@ async function handler(request) {
         const profile = await resolveDiscordProfile(item);
         item = { ...item, username: item.username || profile.username, avatar: item.avatar || profile.avatar };
       }
-      const result = await updateContent(state => recordAction(state, user, body.type, body.action, item));
+      const result = await updateContent(state => {
+        const previous = body.type === 'news' ? (state.news || []).find(record => record.id === item?.id) : null;
+        const saved = recordAction(state, user, body.type, body.action, item);
+        if (body.type === 'news' && body.action === 'save' && item?.status === 'published' && previous?.status !== 'published') {
+          saved.automationId = enqueueAutomation(state, 'news_published', { sourceId: item.id, version: item.updatedAt, title: item.title, summary: item.excerpt, url: '/nieuws/', actor: user.username });
+        }
+        return saved;
+      });
+      const automationId = result.automationId; delete result.automationId;
+      if (automationId) await dispatchAutomation(automationId).catch(error => console.error('[admin] News notification could not be dispatched', error?.message));
       return json(result);
     }
 

@@ -7,6 +7,8 @@
   var supportForm = document.getElementById("supportTicketForm");
   var savedBanner = "";
   var currentData = null;
+  var supportCategorySelect = document.getElementById("supportCategorySelect");
+  var supportDynamicFields = document.getElementById("supportDynamicFields");
 
   function node(tag, className, text) {
     var item = document.createElement(tag);
@@ -25,6 +27,13 @@
     var user = data.user;
     var profile = data.profile || {};
     currentData = data;
+    if (supportCategorySelect) {
+      var previousCategory = supportCategorySelect.value;
+      supportCategorySelect.replaceChildren();
+      (data.supportCategories || []).forEach(function (category) { supportCategorySelect.add(new Option(category.name, category.id)); });
+      if ((data.supportCategories || []).some(function (category) { return category.id === previousCategory; })) supportCategorySelect.value = previousCategory;
+      renderSupportQuestions();
+    }
     workspace.hidden = false;
     login.hidden = true;
     document.getElementById("residentUsername").textContent = user.username;
@@ -207,6 +216,30 @@
     });
   }
 
+  function renderSupportQuestions() {
+    if (!supportDynamicFields || !supportCategorySelect || !currentData) return;
+    supportDynamicFields.replaceChildren();
+    var category = (currentData.supportCategories || []).find(function (item) { return item.id === supportCategorySelect.value; });
+    if (!category) return;
+    if (category.description) supportDynamicFields.appendChild(node("p", "resident-muted", category.description));
+    (category.questions || []).forEach(function (question) {
+      var label = node("label");
+      var caption = node("span", "", question.label + (question.required ? " *" : ""));
+      label.appendChild(caption);
+      var input;
+      if (question.type === "long") { input = node("textarea"); input.rows = 3; input.maxLength = 2000; }
+      else if (question.type === "choice" || question.type === "dropdown") {
+        input = node("select"); input.add(new Option("Kies een optie", ""));
+        (question.options || []).forEach(function (option) { input.add(new Option(option, option)); });
+      } else { input = node("input"); input.type = "text"; input.maxLength = 300; }
+      input.name = "ticketField_" + question.id;
+      input.dataset.ticketField = question.id;
+      input.required = question.required === true;
+      label.appendChild(input);
+      supportDynamicFields.appendChild(label);
+    });
+  }
+
   function loadDashboard() {
     return fetch("/api/portal", { credentials: "same-origin", cache: "no-store" })
     .then(function (response) {
@@ -274,11 +307,13 @@
     var output = document.getElementById("supportTicketState");
     var form = event.currentTarget;
     output.textContent = "Versturen…";
+    var fields = {};
+    supportDynamicFields.querySelectorAll("[data-ticket-field]").forEach(function (input) { fields[input.dataset.ticketField] = input.value; });
     fetch("/api/portal", {
       method: "POST", credentials: "same-origin", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         action: "create-support-ticket", subject: form.elements.subject.value,
-        category: form.elements.category.value, content: form.elements.content.value
+        category: form.elements.category.value, content: form.elements.content.value, fields: fields
       })
     }).then(function (response) {
       return response.json().then(function (result) {
@@ -291,6 +326,7 @@
       return loadDashboard();
     }).catch(function (error) { output.textContent = error.message; });
   });
+  if (supportCategorySelect) supportCategorySelect.addEventListener("change", renderSupportQuestions);
 
   profileForm.addEventListener("submit", function (event) {
     event.preventDefault();

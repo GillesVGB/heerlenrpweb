@@ -29,6 +29,8 @@ const staticEntries = [
   'events',
   'solliciteren',
   'helpcentrum',
+  'zoeken',
+  'community',
   'profiel',
   'winkel'
 ];
